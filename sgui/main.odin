@@ -87,19 +87,23 @@ main :: proc() {
     handle := sgui_create()
 
     handle.widget =
-        vertical(
-            vertical(
+        vertical_box(
+            vertical_box(
                 text("Top pannel", Color{255, 255, 255, 255}),
-                props = LayoutProperties{.Fit, .Center},
-                background_color = Color{0, 0, 255, 255}
+                attr = BoxAttributes{
+                    props = BoxProperties{.Fit, .AlignCenter},
+                    style = BoxStyle{background_color = Color{0, 0, 255, 255}},
+                }
             ),
-            horizontal(
-                horizontal(
+            horizontal_box(
+                horizontal_box(
                     text("Side Pannel", Color{255, 255, 255, 255}),
-                    props = LayoutProperties{.Fit, .Center},
-                    background_color = Color{255, 0, 0, 255}
+                    attr = BoxAttributes{
+                        props = BoxProperties{.Fit, .AlignCenter},
+                        style = BoxStyle{background_color = Color{255, 0, 0, 255}},
+                    }
                 ),
-                draw_box(bit_set[DrawBoxAttribute]{.Zoomable, .WithScrollbar}, draw_data, update_data),
+                draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
             )
         )
     sgui_init(&handle)

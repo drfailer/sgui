@@ -14,8 +14,6 @@ import su "sdl_utils"
  * create the widget tree:
  * widget_init(handle, ...)
  *
- *
- * TODO: The Box widget should be used to force the size of widgets
  */
 
 import sdl "vendor:sdl3"
@@ -42,7 +40,7 @@ WidgetData :: union {
     Scrollbar,
     DrawBox,
     Text,
-    Layout,
+    Box,
 }
 
 widget_init :: proc(widget: ^Widget, handle: ^SGUIHandle) {
@@ -94,57 +92,66 @@ Texture :: struct {
     pixels: [dynamic]Pixel,
 }
 
-// layouts /////////////////////////////////////////////////////////////////////
+// boxs /////////////////////////////////////////////////////////////////////
+
+Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
+
+BorderSide :: enum { Top, Bottom, Left, Right }
+ActiveBorders :: bit_set[BorderSide]
 
 // TODO: we should enable having different kinds of dimentions unit (%, in, cm, px)
-LayoutDimensionsKind :: enum {
+BoxDimensionsKind :: enum {
     Pixel,
 }
 
-LayoutDimensions :: struct {
-    kind: LayoutDimensionsKind,
+BoxDimensions :: struct {
+    kind: BoxDimensionsKind,
     w: f32,
     h: f32,
 }
 
-// // TODO:
-// LayoutStyle :: struct {
-//     border_thickness: f32,
-//     border_color: Color,
-//     border_kind: ??, // {top, bottom, left, right}
-//     padding_top: f32,
-//     padding_bottom: f32,
-//     padding_left: f32,
-//     padding_right: f32,
-// }
+BoxStyle :: struct {
+    background_color: Color,
+    border_thickness: f32,
+    active_borders: ActiveBorders,
+    border_color: Color,
+    padding: Padding,
+    items_spacing: f32,
+}
 
-LayoutKind :: enum {
+BoxLayout :: enum {
     Vertical,
     Horizontal,
     Custom,
 }
 
 // TODO: put everything in one struct
-LayoutProperties :: bit_set[LayoutProperty]
-LayoutProperty :: enum {
-    Center,
+BoxProperties :: bit_set[BoxProperty]
+BoxProperty :: enum {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    AlignTop,
+    AlignBottom,
     Fit,
 }
 
+BoxAttributes :: struct {
+    style: BoxStyle,
+    props: BoxProperties,
+    dims: BoxDimensions,
+}
+
 // TODO: padding?
-Layout :: struct {
-    kind: LayoutKind,
-    props: LayoutProperties,
-    dims: LayoutDimensions,
-    background_color: Color,
+Box :: struct {
+    layout: BoxLayout,
+    attr: BoxAttributes,
     widgets: [dynamic]Widget,
 }
 
-layout :: proc(
-    kind: LayoutKind,
-    props: LayoutProperties,
-    dims: LayoutDimensions,
-    background_color: Color,
+box :: proc(
+    layout: BoxLayout,
+    attr: BoxAttributes,
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
@@ -159,47 +166,35 @@ layout :: proc(
         init = init,
         update = update,
         draw = draw,
-        data = Layout{
-            kind = kind,
-            props = props,
-            dims = dims,
-            background_color = background_color,
+        data = Box{
+            layout = layout,
+            attr = attr,
             widgets = widget_list,
         }
     }
 }
 
-vertical :: proc(
-    widgets: ..Widget,
-    props := LayoutProperties{},
-    dims := LayoutDimensions{},
-    background_color := Color{0, 0, 0, 255}
-) -> Widget {
-    return layout(.Vertical, props, dims, background_color, layout_init, layout_update, layout_draw, ..widgets)
+vertical_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
+    return box(.Vertical, attr, box_init, box_update, box_draw, ..widgets)
 }
 
-horizontal :: proc(
-    widgets: ..Widget,
-    props := LayoutProperties{},
-    dims := LayoutDimensions{},
-    background_color := Color{0, 0, 0, 255}
-) -> Widget {
-    return layout(.Horizontal, props, dims, background_color, layout_init, layout_update, layout_draw, ..widgets)
+horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
+    return box(.Horizontal, attr, box_init, box_update, box_draw, ..widgets)
 }
 
-layout_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    data := &self.data.(Layout)
+box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+    data := &self.data.(Box)
     self.x = parent.x
     self.y = parent.y
     self.h = parent.h
     self.w = parent.w
     h, w: f32
 
-    if data.kind == .Vertical {
+    if data.layout == .Vertical {
         for &widget in data.widgets {
             if widget.init != nil {
                 widget->init(handle, self)
-                if .Center in data.props {
+                if .AlignCenter in data.attr.props {
                     widget.x = self.x + (self.w - widget.w) / 2.
                 }
                 widget.y = self.y
@@ -208,14 +203,14 @@ layout_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
                 h += widget.h
             }
         }
-        if .Fit in data.props {
+        if .Fit in data.attr.props {
             self.h = h
         }
-    } else if data.kind == .Horizontal {
+    } else if data.layout == .Horizontal {
         for &widget in data.widgets {
             if widget.init != nil {
                 widget->init(handle, self)
-                if .Center in data.props {
+                if .AlignCenter in data.attr.props {
                     widget.y = self.y + (self.h - widget.h) / 2.
                 }
                 widget.x = self.x
@@ -224,20 +219,20 @@ layout_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
                 w += widget.w
             }
         }
-        if .Fit in data.props {
+        if .Fit in data.attr.props {
             self.w = w
         }
     }
     self.x = parent.x
     self.y = parent.y
-    if .Fit not_in data.props{
+    if .Fit not_in data.attr.props{
         self.h = parent.h
         self.w = parent.w
     }
 }
 
-layout_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    data := &self.data.(Layout)
+box_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
+    data := &self.data.(Box)
 
     for &widget in data.widgets {
         if widget.update != nil {
@@ -246,10 +241,10 @@ layout_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
     }
 }
 
-layout_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    data := &self.data.(Layout)
+box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+    data := &self.data.(Box)
 
-    handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, data.background_color)
+    handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, data.attr.style.background_color)
     for &widget in data.widgets {
         if widget.draw != nil {
             widget->draw(handle)
@@ -336,7 +331,8 @@ Button :: struct {
 
 // draw box ////////////////////////////////////////////////////////////////////
 
-DrawBoxAttribute :: enum {
+DrawBoxProperties :: bit_set[DrawBoxProperty]
+DrawBoxProperty :: enum {
     Zoomable,
     WithScrollbar,
 }
@@ -354,7 +350,7 @@ DrawBox :: struct {
     target_position_x: f32,
     target_position_y: f32,
     content_size: ContentSize,
-    attr: bit_set[DrawBoxAttribute],
+    props: DrawBoxProperties,
     user_init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
     user_update: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
@@ -364,11 +360,11 @@ DrawBox :: struct {
 }
 
 draw_box :: proc(
-    attr: bit_set[DrawBoxAttribute],
     draw: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
     update: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
     init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) = nil,
     data: rawptr = nil,
+    props := DrawBoxProperties{},
 ) -> Widget {
     vertical_scrollbar := new(Widget)
     vertical_scrollbar^ = scrollbar(.Vertical)
@@ -382,7 +378,7 @@ draw_box :: proc(
         enabled = true,
         data = DrawBox{
             zoom_lvl = 1,
-            attr = attr,
+            props = props,
             user_draw = draw,
             user_init = init,
             user_update = update,
@@ -514,7 +510,7 @@ draw_box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
 
     data.user_draw(handle, self, data.user_data)
 
-    if .WithScrollbar not_in data.attr {
+    if .WithScrollbar not_in data.props {
         return
     }
 
