@@ -1,8 +1,5 @@
 package sgui
 
-import "core:fmt"
-import su "sdl_utils"
-
 /*
  * How widgets should work:
  * - widget_name(args) -> create a widget (set user handlers, and properites)
@@ -16,6 +13,8 @@ import su "sdl_utils"
  *
  */
 
+import "core:fmt"
+import su "sdl_utils"
 import sdl "vendor:sdl3"
 import "core:log"
 
@@ -30,6 +29,8 @@ WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 Widget :: struct {
     x, y, w, h: f32,
     enabled: bool,
+    visible: bool,
+    focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
@@ -53,6 +54,22 @@ widget_init :: proc(widget: ^Widget, handle: ^SGUIHandle) {
         h = cast(f32)h,
     }
     widget->init(handle, &root)
+    widget_align(widget, root.x, root.y, root.w, root.h)
+}
+
+widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
+    #partial switch _ in widget.data {
+    case Box: box_align(widget, x, y, w, h)
+    case:
+        widget.x = x
+        widget.y = y
+        if widget.w == 0 {
+            widget.w = w
+        }
+        if widget.h == 0 {
+            widget.h = h
+        }
+    }
 }
 
 widget_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
@@ -122,10 +139,8 @@ BoxStyle :: struct {
 BoxLayout :: enum {
     Vertical,
     Horizontal,
-    Custom,
 }
 
-// TODO: put everything in one struct
 BoxProperties :: bit_set[BoxProperty]
 BoxProperty :: enum {
     AlignCenter,
@@ -133,7 +148,8 @@ BoxProperty :: enum {
     AlignRight,
     AlignTop,
     AlignBottom,
-    Fit,
+    FitW,
+    FitH,
 }
 
 BoxAttributes :: struct {
@@ -142,13 +158,14 @@ BoxAttributes :: struct {
     dims: BoxDimensions,
 }
 
-// TODO: padding?
+// TODO: scrollbars
 Box :: struct {
     layout: BoxLayout,
     attr: BoxAttributes,
     widgets: [dynamic]Widget,
 }
 
+// TODO: the box should also have scrollbars
 box :: proc(
     layout: BoxLayout,
     attr: BoxAttributes,
@@ -182,55 +199,84 @@ horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
     return box(.Horizontal, attr, box_init, box_update, box_draw, ..widgets)
 }
 
+box_align :: proc(self: ^Widget, x, y, w, h: f32) {
+    data := &self.data.(Box)
+
+    if data.layout == .Vertical {
+        vertical_box_align(self, x, y, w, h)
+    } else {
+        horizontal_box_align(self, x, y, w, h)
+    }
+}
+
+vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+    data := &self.data.(Box)
+    self.x = parent_x
+    self.y = parent_y
+
+    widget_x := self.x
+    widget_y := self.y
+    widget_h := self.h
+
+    for &widget in data.widgets {
+        if .AlignCenter in data.attr.props {
+            widget_x = self.x + (self.w - widget.w) / 2.
+        }
+        widget_align(&widget, widget_x, widget_y, self.w, widget_h)
+        widget_y += widget.h
+        widget_h -= widget.h
+    }
+}
+
+horizontal_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+    data := &self.data.(Box)
+    self.x = parent_x
+    self.y = parent_y
+
+    widget_x := self.x
+    widget_y := self.y
+    widget_w := self.w
+
+    for &widget in data.widgets {
+        if .AlignCenter in data.attr.props {
+            widget_y = self.y + (self.h - widget.h) / 2.
+        }
+        widget_align(&widget, widget_x, widget_y, widget_w, self.h)
+        widget_x += widget.w
+        widget_w -= widget.w
+    }
+}
+
 box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
     self.x = parent.x
     self.y = parent.y
     self.h = parent.h
     self.w = parent.w
-    h, w: f32
+    max_w := data.widgets[0].w
+    max_h := data.widgets[0].h
+    ttl_w, ttl_h: f32
+
+    for &widget in data.widgets {
+        widget->init(handle, self)
+        max_w = max(max_w, widget.w)
+        ttl_w += widget.w
+        max_h = max(max_h, widget.h)
+        ttl_h += widget.h
+    }
 
     if data.layout == .Vertical {
-        for &widget in data.widgets {
-            if widget.init != nil {
-                widget->init(handle, self)
-                if .AlignCenter in data.attr.props {
-                    widget.x = self.x + (self.w - widget.w) / 2.
-                }
-                widget.y = self.y
-                self.y += widget.h
-                self.h -= widget.h
-                h += widget.h
-            }
-        }
-        if .Fit in data.attr.props {
-            self.h = h
-        }
-    } else if data.layout == .Horizontal {
-        for &widget in data.widgets {
-            if widget.init != nil {
-                widget->init(handle, self)
-                if .AlignCenter in data.attr.props {
-                    widget.y = self.y + (self.h - widget.h) / 2.
-                }
-                widget.x = self.x
-                self.x += widget.w
-                self.w -= widget.w
-                w += widget.w
-            }
-        }
-        if .Fit in data.attr.props {
-            self.w = w
-        }
-    }
-    self.x = parent.x
-    self.y = parent.y
-    if .Fit not_in data.attr.props{
-        self.h = parent.h
-        self.w = parent.w
+        self.w = max_w if .FitW in data.attr.props else parent.w
+        self.h = ttl_h if .FitH in data.attr.props else parent.h
+        fmt.printfln("vertical: self.w = {}, self.h = {}, color = {}", self.w, self.h, data.attr.style.background_color)
+    } else {
+        self.w = ttl_w if .FitW in data.attr.props else parent.w
+        self.h = max_h if .FitH in data.attr.props else parent.h
+        fmt.printfln("horizontal: self.w = {}, self.h = {}, color = {}", self.w, self.h, data.attr.style.background_color)
     }
 }
 
+// TODO: the update should take the parent widget
 box_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
     data := &self.data.(Box)
 
@@ -301,6 +347,10 @@ text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     w, h := su.text_size(&data.text)
     self.w = w
     self.h = h
+
+    if self.w > parent.w || self.h > parent.h {
+        log.warn("text widget container too small")
+    }
 }
 
 text_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
@@ -391,8 +441,6 @@ draw_box :: proc(
 
 draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(DrawBox)
-    self.x = parent.x
-    self.y = parent.y
     self.w = parent.w
     self.h = parent.h
     data.content_size = ContentSize{self.h, self.w}
@@ -404,6 +452,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data.vertical_scrollbar->init(handle, self)
     data.horizontal_scrollbar->init(handle, self)
 
+    // TODO: factor this code v
     sgui_add_event_handler(handle, self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
         if type != .Down do return false
         data := &self.data.(DrawBox)

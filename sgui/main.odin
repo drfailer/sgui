@@ -89,9 +89,16 @@ main :: proc() {
     handle.widget =
         vertical_box(
             vertical_box(
-                text("Top pannel", Color{255, 255, 255, 255}),
+                horizontal_box(
+                    text("Top pannel", Color{255, 255, 255, 255}),
+                    text("Top pannel", Color{255, 255, 255, 255}),
+                    attr = BoxAttributes{
+                        props = BoxProperties{.FitH, .FitW},
+                        style = BoxStyle{background_color = Color{0, 100, 0, 255}},
+                    }
+                ),
                 attr = BoxAttributes{
-                    props = BoxProperties{.Fit, .AlignCenter},
+                    props = BoxProperties{.FitH, .AlignCenter},
                     style = BoxStyle{background_color = Color{0, 0, 255, 255}},
                 }
             ),
@@ -99,7 +106,7 @@ main :: proc() {
                 horizontal_box(
                     text("Side Pannel", Color{255, 255, 255, 255}),
                     attr = BoxAttributes{
-                        props = BoxProperties{.Fit, .AlignCenter},
+                        props = BoxProperties{.FitW, .AlignCenter},
                         style = BoxStyle{background_color = Color{255, 0, 0, 255}},
                     }
                 ),
