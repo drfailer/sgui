@@ -9,8 +9,8 @@ import sdl_ttf "vendor:sdl3/ttf"
 
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
-// WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
-WINDOW_FLAGS :: sdl.WindowFlags{}
+WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
+// WINDOW_FLAGS :: sdl.WindowFlags{}
 FPS :: 60
 
 SCROLLBAR_THICKNESS :: 10

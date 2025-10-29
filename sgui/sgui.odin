@@ -17,6 +17,7 @@ SGUIHandle :: struct {
     font: ^sdl_ttf.Font,
     text_engine: ^sdl_ttf.TextEngine,
     event_handlers: EventHandlers,
+    // TODO: focused widget
     widget: Widget, // TODO: we should have a list of widgets here in case there are multple independent menus
     // TODO: theme -> color palette
     // procs
@@ -42,10 +43,11 @@ MouseWheelEventHandlerProc :: proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMo
 // - Signal Handler
 // - Listener list
 // - signal queue (all signal sent durint the step)
-Signal :: struct {
-    sender: ^Widget,
+WidgetEvent :: struct {
+    emitter: ^Widget,
+    data: rawptr, // TODO
 }
-SignalEventHandlerProc :: proc(dest: ^Widget, singal: Signal) -> bool
+WidgetEventHandlerProc :: proc(dest: ^Widget, event: WidgetEvent) -> bool
 
 Color :: distinct [4]u8
 
@@ -129,7 +131,9 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
                 handle.event_handlers.mods |= { .Shift }
             }
             for handler in handle.event_handlers.key {
-                handler.exec(handler.widget, event.key.key, .Down, handle.event_handlers.mods)
+                if handler.widget.enabled {
+                    handler.exec(handler.widget, event.key.key, .Down, handle.event_handlers.mods)
+                }
             }
         case .KEY_UP:
             if event.key.key == sdl.K_LCTRL || event.key.key == sdl.K_RCTRL {
@@ -140,24 +144,32 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
                 handle.event_handlers.mods ~= { .Shift }
             }
             for handler in handle.event_handlers.key {
-                handler.exec(handler.widget, event.key.key, .Up, handle.event_handlers.mods)
+                if handler.widget.enabled {
+                    handler.exec(handler.widget, event.key.key, .Up, handle.event_handlers.mods)
+                }
             }
         case .MOUSE_WHEEL:
             for handler in handle.event_handlers.mouse_wheel {
-                handler.exec(handler.widget, event.wheel.integer_x, event.wheel.integer_y,
-                             handle.event_handlers.mods)
+                if handler.widget.enabled {
+                    handler.exec(handler.widget, event.wheel.integer_x, event.wheel.integer_y,
+                                 handle.event_handlers.mods)
+                }
             }
         case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
             for handler in handle.event_handlers.mouse_click {
-                handler.exec(handler.widget, event.button.button, event.button.down,
-                             event.button.clicks, event.button.x, event.button.y,
-                             handle.event_handlers.mods)
+                if handler.widget.enabled {
+                    handler.exec(handler.widget, event.button.button, event.button.down,
+                                 event.button.clicks, event.button.x, event.button.y,
+                                 handle.event_handlers.mods)
+                }
             }
         case .MOUSE_MOTION:
             for handler in handle.event_handlers.mouse_motion {
-                handler.exec(handler.widget, event.motion.x, event.motion.y,
-                             event.motion.xrel, event.motion.yrel,
-                             handle.event_handlers.mods)
+                if handler.widget.enabled {
+                    handler.exec(handler.widget, event.motion.x, event.motion.y,
+                                 event.motion.xrel, event.motion.yrel,
+                                 handle.event_handlers.mods)
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 
 Widget :: struct {
     x, y, w, h: f32,
+    resizable: bool,
     enabled: bool,
     visible: bool,
     focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
@@ -63,11 +64,8 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
     case:
         widget.x = x
         widget.y = y
-        if widget.w == 0 {
+        if widget.resizable {
             widget.w = w
-        }
-        if widget.h == 0 {
-            fmt.printfln("align height: {}", h)
             widget.h = h
         }
     }
@@ -82,6 +80,7 @@ widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
         w = cast(f32)w,
         h = cast(f32)h,
     }
+    widget_align(widget, root.x, root.y, root.w, root.h)
     widget->update(handle, &root)
 }
 
@@ -189,6 +188,7 @@ box :: proc(
         append(&widget_list, widget)
     }
     return Widget{
+        resizable = true,
         init = init,
         update = update,
         draw = draw,
@@ -276,6 +276,7 @@ box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         ttl_h += widget.h
     }
 
+    // TODO: this should be done in the update
     if data.layout == .Vertical {
         self.w = max_w if .FitW in data.attr.props else parent.w
         self.h = ttl_h if .FitH in data.attr.props else parent.h
@@ -290,6 +291,7 @@ box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
 
     // TODO: align
+    // box_align(self, parent.x, parent.y, parent.w, parent.h)
 
     for &widget in data.widgets {
         if widget.update != nil {
@@ -433,6 +435,7 @@ draw_box :: proc(
     horizontal_scrollbar^ = scrollbar(.Horizontal)
 
     return Widget{
+        resizable = true,
         init = draw_box_init,
         update = draw_box_update,
         draw = draw_box_draw,
