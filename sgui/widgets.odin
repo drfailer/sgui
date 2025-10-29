@@ -23,7 +23,7 @@ Pixel :: distinct [4]u8
 // widget //////////////////////////////////////////////////////////////////////
 
 WidgetInitProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
-WidgetUpdateProc :: proc(self: ^Widget, handle: ^SGUIHandle)
+WidgetUpdateProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
 WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 
 Widget :: struct {
@@ -67,17 +67,26 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
             widget.w = w
         }
         if widget.h == 0 {
+            fmt.printfln("align height: {}", h)
             widget.h = h
         }
     }
 }
 
-widget_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
-    widget->draw(handle)
+widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
+    w, h: i32
+    assert(sdl.GetWindowSize(handle.window, &w, &h));
+    root := Widget{
+        x = 0,
+        y = 0,
+        w = cast(f32)w,
+        h = cast(f32)h,
+    }
+    widget->update(handle, &root)
 }
 
-widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
-    widget->update(handle)
+widget_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
+    widget->draw(handle)
 }
 
 widget_is_clicked :: proc(widget: ^Widget, mx, my: f32) -> bool {
@@ -199,8 +208,18 @@ horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
     return box(.Horizontal, attr, box_init, box_update, box_draw, ..widgets)
 }
 
+// TODO: alignment should be done in the udpate function since we need to realign when the window is resized
+
 box_align :: proc(self: ^Widget, x, y, w, h: f32) {
     data := &self.data.(Box)
+    self.x = x
+    self.y = y
+    if .FitW not_in data.attr.props {
+        self.w = w
+    } // else error???
+    if .FitH not_in data.attr.props {
+        self.h = h
+    }
 
     if data.layout == .Vertical {
         vertical_box_align(self, x, y, w, h)
@@ -211,8 +230,6 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
 
 vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
-    self.x = parent_x
-    self.y = parent_y
 
     widget_x := self.x
     widget_y := self.y
@@ -230,8 +247,6 @@ vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h
 
 horizontal_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
-    self.x = parent_x
-    self.y = parent_y
 
     widget_x := self.x
     widget_y := self.y
@@ -249,10 +264,6 @@ horizontal_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent
 
 box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
-    self.x = parent.x
-    self.y = parent.y
-    self.h = parent.h
-    self.w = parent.w
     max_w := data.widgets[0].w
     max_h := data.widgets[0].h
     ttl_w, ttl_h: f32
@@ -268,21 +279,21 @@ box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     if data.layout == .Vertical {
         self.w = max_w if .FitW in data.attr.props else parent.w
         self.h = ttl_h if .FitH in data.attr.props else parent.h
-        fmt.printfln("vertical: self.w = {}, self.h = {}, color = {}", self.w, self.h, data.attr.style.background_color)
     } else {
         self.w = ttl_w if .FitW in data.attr.props else parent.w
         self.h = max_h if .FitH in data.attr.props else parent.h
-        fmt.printfln("horizontal: self.w = {}, self.h = {}, color = {}", self.w, self.h, data.attr.style.background_color)
     }
 }
 
 // TODO: the update should take the parent widget
-box_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
+box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
+
+    // TODO: align
 
     for &widget in data.widgets {
         if widget.update != nil {
-            widget->update(handle)
+            widget->update(handle, self)
         }
     }
 }
@@ -353,7 +364,7 @@ text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-text_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
+text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Text)
     if data.content_proc != nil {
         content, color := data.content_proc(data.content_proc_data)
@@ -441,9 +452,6 @@ draw_box :: proc(
 
 draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(DrawBox)
-    self.w = parent.w
-    self.h = parent.h
-    data.content_size = ContentSize{self.h, self.w}
 
     if data.user_init != nil {
         data.user_init(handle, self, data.user_data)
@@ -507,7 +515,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     })// }}}
 }
 
-draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
+draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     if !self.enabled do return
     data := &self.data.(DrawBox)
 
@@ -543,13 +551,13 @@ draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle) {
 
     if data.vertical_scrollbar.enabled {
         scrollbar_update(data.vertical_scrollbar, self.x + self.w - SCROLLBAR_THICKNESS, self.y,
-                         data.position_y, data.content_size.height, self.h)
+                         data.position_y, data.content_size.height, self.h, self)
     }
 
     if data.horizontal_scrollbar.enabled {
         size := self.w if !data.vertical_scrollbar.enabled else self.w - SCROLLBAR_THICKNESS
         scrollbar_update(data.horizontal_scrollbar, self.x, self.y + self.h - SCROLLBAR_THICKNESS,
-                         data.position_x, data.content_size.width, size)
+                         data.position_x, data.content_size.width, size, self)
     }
 }
 
@@ -596,22 +604,6 @@ scrollbar :: proc(direction: ScrollbarDirection) -> Widget {
 }
 
 scrollbar_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    data := &self.data.(Scrollbar)
-
-    if data.direction == .Vertical {
-        self.x = parent.x + parent.w - SCROLLBAR_THICKNESS
-        self.y = parent.y
-        self.w = SCROLLBAR_THICKNESS
-        self.h = parent.h
-        data.parent_size = parent.h
-    } else {
-        self.x = parent.x
-        self.y = parent.y + parent.h - SCROLLBAR_THICKNESS
-        self.w = parent.w
-        self.h = SCROLLBAR_THICKNESS
-        data.parent_size = parent.h
-    }
-
     sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
         data := &self.data.(Scrollbar)
         if button == sdl.BUTTON_LEFT {
@@ -645,10 +637,23 @@ scrollbar_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     })
 }
 
-scrollbar_update :: proc(self: ^Widget, x, y: f32, position: f32, content_size, parent_size: f32) {
+scrollbar_update :: proc(self: ^Widget, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
     if !self.enabled do return
     data := &self.data.(Scrollbar)
-    scale_factor := data.parent_size / data.content_size
+
+    if data.direction == .Vertical {
+        self.x = parent.x + parent.w - SCROLLBAR_THICKNESS
+        self.y = parent.y
+        self.w = SCROLLBAR_THICKNESS
+        self.h = parent.h
+        data.parent_size = parent.h
+    } else {
+        self.x = parent.x
+        self.y = parent.y + parent.h - SCROLLBAR_THICKNESS
+        self.w = parent.w
+        self.h = SCROLLBAR_THICKNESS
+        data.parent_size = parent.h
+    }
 
     self.x = x
     self.y = y
@@ -663,6 +668,8 @@ scrollbar_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     data := &self.data.(Scrollbar)
     scale_factor := data.parent_size / data.content_size
     rect := Rect{x = self.x, y = self.y}
+
+    // fmt.printfln("draw scrollbar: x = {}, y = {}, w = {}, h = {}", self.x, self.y, self.w, self.h)
 
     if data.direction == .Vertical {
         rect.w = SCROLLBAR_THICKNESS
