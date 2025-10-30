@@ -42,9 +42,9 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
         x = 0,
-        y = (box.h - box_data.zoom_lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbox.vertical.position,
+        y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbox.vertical.position,
         w = box.w,
-        h = box_data.zoom_lvl * DATA_BOX_HEIGHT,
+        h = box_data.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 
     if data_rect.y < 0 {
@@ -58,7 +58,7 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
 
     data_rect.x -= box_data.scrollbox.horizontal.position
     for data, idx in DATA {
-        data_rect.w = box_data.zoom_lvl * scaling_factor * cast(f32)(data.end - data.begin)
+        data_rect.w = box_data.zoombox.lvl * scaling_factor * cast(f32)(data.end - data.begin)
         if data_rect.x < 0 {
             data_rect.w += data_rect.x
             data_rect.x = 0
@@ -78,8 +78,8 @@ update_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) -> ContentSize
     scaling_factor := box.w / cast(f32)ttl_time
     box_data := &box.data.(DrawBox)
     return ContentSize{
-        box_data.zoom_lvl * scaling_factor * cast(f32)ttl_time,
-        box_data.zoom_lvl * DATA_BOX_HEIGHT,
+        box_data.zoombox.lvl * scaling_factor * cast(f32)ttl_time,
+        box_data.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 }
 

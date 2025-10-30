@@ -411,8 +411,8 @@ ContentSize :: struct {
 
 // TODO: the draw box should give a draw rect proc
 DrawBox :: struct {
-    zoom_lvl: f32,
     content_size: ContentSize,
+    zoombox: ZoomBox,
     scrollbox: ScrollBox,
     props: DrawBoxProperties,
     user_init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
@@ -435,8 +435,8 @@ draw_box :: proc(
         draw = draw_box_draw,
         enabled = true,
         data = DrawBox{
-            zoom_lvl = 1,
             props = props,
+            zoombox = zoombox(1., 10., 0.2),
             scrollbox = scrollbox(),
             user_draw = draw,
             user_init = init,
@@ -454,6 +454,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 
     scrollbox_init(&data.scrollbox, handle, self)
+    zoombox_init(&data.zoombox, self)
 
     // TODO: factor this code v
     sgui_add_event_handler(handle, self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
@@ -473,13 +474,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool {// {{{
         data := &self.data.(DrawBox)
         if .Control in mods {
-            if y == -1 {
-                data.zoom_lvl -= 0.2
-            } else if y == 1 {
-                data.zoom_lvl += 0.2
-            } else {
-                return false
-            }
+            return zoombox_zoom_handler(&data.zoombox, x, y, mods)
         } else {
             return scrollbox_scrolled_handler(&data.scrollbox, -y, 0, 100, 100)
         }
@@ -756,6 +751,35 @@ scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^SGUIHandle) {
 // zoom box ////////////////////////////////////////////////////////////////////
 
 ZoomBox :: struct {
-    container: ^Widget,
-    zoom_lvl: f32,
+    parent: ^Widget,
+    lvl: f32,
+    min, max, inc: f32,
+}
+
+zoombox :: proc(min, max, inc: f32, lvl: f32 = 1.) -> ZoomBox {
+    return ZoomBox{
+        lvl = lvl,
+        min = min,
+        max = max,
+        inc = inc,
+    }
+}
+
+zoombox_init :: proc(zoombox: ^ZoomBox, parent: ^Widget) {
+    zoombox.parent = parent
+}
+
+zoombox_zoom_handler :: proc(zoombox: ^ZoomBox, x, y: i32, mods: bit_set[KeyMod]) -> bool {
+    if .Control not_in mods {
+        return false
+    }
+    if y == -1 {
+        zoombox.lvl -= zoombox.inc
+    } else if y == 1 {
+        zoombox.lvl += zoombox.inc
+    } else {
+        return false
+    }
+    zoombox.lvl = clamp(zoombox.lvl, zoombox.min, zoombox.max)
+    return true
 }
