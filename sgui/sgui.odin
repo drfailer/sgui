@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:time"
 import "core:math"
 import "core:strings"
+import "core:container/queue"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
@@ -16,6 +17,7 @@ SGUIHandle :: struct {
     renderer: ^sdl.Renderer,
     font_cache: su.FontCache,
     text_engine: ^sdl_ttf.TextEngine,
+    widget_event_queue: queue.Queue(WidgetEvent),
     event_handlers: EventHandlers,
     mouse_x, mouse_y: f32,
     // TODO: focused widget
@@ -39,16 +41,13 @@ MouseClickEventHandlerProc :: proc(self: ^Widget, button: u8, down: bool, click_
 MouseMotionEventHandlerProc :: proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool
 MouseWheelEventHandlerProc :: proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool
 
-// TODO: implement a Qt like signal system so that widgets can communicate
-// - Signal
-// - Signal Handler
-// - Listener list
-// - signal queue (all signal sent durint the step)
+WidgetEventTag :: u64
 WidgetEvent :: struct {
+    tag: WidgetEventTag,
     emitter: ^Widget,
-    data: rawptr, // TODO
+    data: rawptr,
 }
-WidgetEventHandlerProc :: proc(dest: ^Widget, event: WidgetEvent) -> bool
+WidgetEventHandlerProc :: proc(dest: ^Widget, event: WidgetEvent, handle: ^SGUIHandle) -> bool
 
 Color :: distinct [4]u8
 
@@ -63,6 +62,7 @@ EventHandlers :: struct {
     mouse_click: [dynamic]EventHandler(MouseClickEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_motion: [dynamic]EventHandler(MouseMotionEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_wheel: [dynamic]EventHandler(MouseWheelEventHandlerProc),
+    widget_event: map[WidgetEventTag][dynamic]EventHandler(WidgetEventHandlerProc)
 }
 
 sgui_create :: proc() -> SGUIHandle {
@@ -94,6 +94,7 @@ sgui_init :: proc(handle: ^SGUIHandle) {
     }
 
     handle.font_cache = su.font_cache_create()
+    queue.init(&handle.widget_event_queue)
     handle.run = true
     widget_init(&handle.widget, handle)
 }
@@ -105,12 +106,37 @@ sgui_terminate :: proc(handle: ^SGUIHandle) {
     sdl.DestroyRenderer(handle.renderer)
     sdl.DestroyWindow(handle.window)
     sdl.Quit()
+    // TODO: use an arena
+    delete(handle.event_handlers.key)
+    delete(handle.event_handlers.mouse_click)
+    delete(handle.event_handlers.mouse_motion)
+    delete(handle.event_handlers.mouse_wheel)
+    for _, arr in handle.event_handlers.widget_event {
+        delete(arr)
+    }
+    delete(handle.event_handlers.widget_event)
+    queue.destroy(&handle.widget_event_queue)
 }
 
-// TODO: since we are not dealing with a game here, it might be nice to redraw
-// only when an event has been triggered. -> this function should return a bool
-// and the handlers will return true when a redraw is required.
+sgui_process_widget_events :: proc(handle: ^SGUIHandle) {
+    // We reset the queue to avoid event to constantly append new event into it.
+    // Here, if any handler emit a new event, it will be process during the
+    // next iteration so that we never get stuck into an infit loop here.
+    q := handle.widget_event_queue
+    defer queue.destroy(&q)
+    queue.init(&handle.widget_event_queue)
+
+    for queue.len(q) > 0 {
+        event := queue.dequeue(&q)
+        for handler in handle.event_handlers.widget_event[event.tag] {
+            handler.exec(handler.widget, event, handle)
+        }
+    }
+}
+
 sgui_process_events :: proc(handle: ^SGUIHandle) {
+    sgui_process_widget_events(handle)
+
     event: sdl.Event
     for sdl.PollEvent(&event) {
         #partial switch event.type {
@@ -226,11 +252,23 @@ sgui_add_mouse_motion_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget
     append(&handle.event_handlers.mouse_motion, EventHandler(MouseMotionEventHandlerProc){exec, widget})
 }
 
+sgui_add_widget_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc) {
+    if tag not_in handle.event_handlers.widget_event {
+        handle.event_handlers.widget_event[tag] = make([dynamic]EventHandler(WidgetEventHandlerProc))
+    }
+    append(&handle.event_handlers.widget_event[tag], EventHandler(WidgetEventHandlerProc){exec, widget})
+}
+
 sgui_add_event_handler :: proc {
     sgui_add_key_event_handler,
     sgui_add_mouse_wheel_event_handler,
     sgui_add_mouse_click_event_handler,
     sgui_add_mouse_motion_event_handler,
+    sgui_add_widget_event_handler,
+}
+
+sgui_emit :: proc(handle: ^SGUIHandle, tag: WidgetEventTag, emitter: ^Widget, data: rawptr = nil) {
+    queue.enqueue(&handle.widget_event_queue, WidgetEvent{tag, emitter, data})
 }
 
 sgui_draw_rect :: proc(handle: ^SGUIHandle, rect: Rect, color: Color) {

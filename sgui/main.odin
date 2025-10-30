@@ -42,6 +42,8 @@ DATA :: [?]MeasuredTime{
 }
 
 DATA_BOX_HEIGHT :: 100
+MS_TO_PIXEL :: 1
+
 draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
@@ -58,16 +60,17 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
 
     // compute the scale depending on the zoom level
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    scaling_factor := box.w / cast(f32)ttl_time
+    scaling_factor := box_data.zoombox.lvl * MS_TO_PIXEL
 
     data_rect.x -= box_data.scrollbox.horizontal.position
     for data, idx in DATA {
-        data_rect.w = box_data.zoombox.lvl * scaling_factor * cast(f32)(data.end - data.begin)
+        data_rect.w = scaling_factor * cast(f32)(data.end - data.begin)
         if data_rect.x < 0 {
             data_rect.w += data_rect.x
             data_rect.x = 0
         }
-        draw_rounded_box(handle, box.x + data_rect.x, box.y + data_rect.y, data_rect.w, data_rect.h, 10, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
+        draw_rounded_box(handle, box.x + data_rect.x, box.y + data_rect.y,
+            data_rect.w, data_rect.h, 10, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
         data_rect.x += data_rect.w
 
         if data_rect.x > box.w {
@@ -79,10 +82,9 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
 
 update_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) -> ContentSize {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    scaling_factor := box.w / cast(f32)ttl_time
     box_data := &box.data.(DrawBox)
     return ContentSize{
-        box_data.zoombox.lvl * scaling_factor * cast(f32)ttl_time,
+        box_data.zoombox.lvl * MS_TO_PIXEL * cast(f32)ttl_time,
         box_data.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 }
