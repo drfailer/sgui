@@ -235,58 +235,63 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
 vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
 
-    widget_x := self.x
-    widget_y := self.y
-    widget_h := self.h
+    widget_x := self.x + data.attr.style.padding.left
+    widget_y := self.y + data.attr.style.padding.top
+    widget_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
 
     for &widget in data.widgets {
         if .AlignCenter in data.attr.props {
-            widget_x = self.x + (self.w - widget.w) / 2.
+            widget_x = self.x + data.attr.style.padding.left \
+                     + (self.w - widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
         }
         widget_align(&widget, widget_x, widget_y, self.w, widget_h)
-        widget_y += widget.h
-        widget_h -= widget.h
+        widget_y += widget.h + data.attr.style.items_spacing
+        widget_h -= widget.h + data.attr.style.items_spacing
     }
 }
 
 horizontal_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
 
-    widget_x := self.x
-    widget_y := self.y
-    widget_w := self.w
+    widget_x := self.x + data.attr.style.padding.left
+    widget_y := self.y + data.attr.style.padding.top
+    widget_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
 
     for &widget in data.widgets {
         if .AlignCenter in data.attr.props {
-            widget_y = self.y + (self.h - widget.h) / 2.
+            widget_y = self.y + data.attr.style.padding.top \
+                     + (self.h - widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
         }
         widget_align(&widget, widget_x, widget_y, widget_w, self.h)
-        widget_x += widget.w
-        widget_w -= widget.w
+        widget_x += widget.w + data.attr.style.items_spacing
+        widget_w -= widget.w + data.attr.style.items_spacing
     }
 }
 
 box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
+    padding_w := data.attr.style.padding.left + data.attr.style.padding.right
+    padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
     max_w := data.widgets[0].w
     max_h := data.widgets[0].h
-    ttl_w, ttl_h: f32
+    ttl_w := padding_w
+    ttl_h := padding_h
 
     for &widget in data.widgets {
         widget->init(handle, self)
         max_w = max(max_w, widget.w)
-        ttl_w += widget.w
+        ttl_w += widget.w + data.attr.style.items_spacing
         max_h = max(max_h, widget.h)
-        ttl_h += widget.h
+        ttl_h += widget.h + data.attr.style.items_spacing
     }
 
     // TODO: this should be done in the update
     if data.layout == .Vertical {
-        self.w = max_w if .FitW in data.attr.props else parent.w
-        self.h = ttl_h if .FitH in data.attr.props else parent.h
+        self.w = max_w + padding_w if .FitW in data.attr.props else parent.w
+        self.h = ttl_h - data.attr.style.items_spacing if .FitH in data.attr.props else parent.h
     } else {
-        self.w = ttl_w if .FitW in data.attr.props else parent.w
-        self.h = max_h if .FitH in data.attr.props else parent.h
+        self.w = ttl_w - data.attr.style.items_spacing if .FitW in data.attr.props else parent.w
+        self.h = max_h + padding_h if .FitH in data.attr.props else parent.h
     }
 }
 

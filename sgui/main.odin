@@ -94,7 +94,11 @@ main :: proc() {
                     text("Top pannel", Color{255, 255, 255, 255}),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitH, .FitW},
-                        style = BoxStyle{background_color = Color{0, 100, 0, 255}},
+                        style = BoxStyle{
+                            background_color = Color{0, 100, 0, 255},
+                            items_spacing = 10,
+                            padding = Padding{ 10, 10, 10, 10 },
+                        },
                     }
                 ),
                 attr = BoxAttributes{
@@ -107,7 +111,10 @@ main :: proc() {
                     text("Side Pannel", Color{255, 255, 255, 255}),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitW, .AlignCenter},
-                        style = BoxStyle{background_color = Color{255, 0, 0, 255}},
+                        style = BoxStyle{
+                            background_color = Color{255, 0, 0, 255},
+                            padding = Padding{ 10, 10, 10, 10 },
+                        },
                     }
                 ),
                 draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
