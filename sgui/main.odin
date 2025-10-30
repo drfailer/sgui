@@ -119,7 +119,16 @@ main :: proc() {
             ),
             horizontal_box(
                 horizontal_box(
-                    text("Side Pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
+                    vertical_box(
+                        text("Side Pannel", FONT, FONT_SIZE, Color{0, 0, 0, 255}),
+                        button("hellope", FONT, FONT_SIZE, proc(_: rawptr) { fmt.println("clicked!!!") }),
+                        attr = BoxAttributes{
+                            props = BoxProperties{.FitH, .FitW, .AlignCenter},
+                            style = BoxStyle{
+                                items_spacing = 10,
+                            },
+                        }
+                    ),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitW, .AlignCenter},
                         style = BoxStyle{

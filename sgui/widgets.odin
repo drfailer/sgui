@@ -38,10 +38,10 @@ Widget :: struct {
 }
 
 WidgetData :: union {
-    Scrollbar,
-    DrawBox,
+    Button,
     Text,
     Box,
+    DrawBox,
 }
 
 widget_init :: proc(widget: ^Widget, handle: ^SGUIHandle) {
@@ -87,7 +87,7 @@ widget_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
     widget->draw(handle)
 }
 
-widget_is_clicked :: proc(widget: ^Widget, mx, my: f32) -> bool {
+widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
     return (widget.x <= mx && mx <= widget.x + widget.w) && (widget.y <= my && my <= widget.y + widget.h)
 }
 
@@ -178,6 +178,7 @@ text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         handle.text_engine,
         su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
         data.content)
+    su.text_update_color(&data.text, sdl.Color{data.color.r, data.color.g, data.color.b, data.color.a})
     w, h := su.text_size(&data.text)
     self.w = w
     self.h = h
@@ -191,7 +192,8 @@ text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Text)
     if data.content_proc != nil {
         content, color := data.content_proc(data.content_proc_data)
-        su.text_update_text(&data.text, content, sdl.Color{color.r, color.g, color.b, color.a})
+        su.text_update_text(&data.text, content)
+        su.text_update_color(&data.text, sdl.Color{color.r, color.g, color.b, color.a})
         w, h := su.text_size(&data.text)
         self.w = w
         self.h = h
@@ -200,6 +202,100 @@ text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 
 text_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     data := &self.data.(Text)
+    su.text_draw(&data.text, self.x, self.y)
+}
+
+// button //////////////////////////////////////////////////////////////////////
+
+ButtonState :: enum { Idle, Hovered, Clicked }
+
+ButtonClickedProc :: proc(clicked_data: rawptr)
+
+// TODO: button style (rounded corners?, border, ...)
+Button :: struct {
+    label: string,
+    state: ButtonState,
+    clicked: ButtonClickedProc,
+    clicked_data: rawptr,
+
+    text: su.Text,
+    font_path: su.FontPath,
+    font_size: su.FontSize,
+}
+
+button :: proc(
+    label: string,
+
+    font_path: su.FontPath,
+    font_size: su.FontSize,
+
+    // TODO: font (in style???, default_style???)
+    clicked: ButtonClickedProc,
+    clicked_data: rawptr = nil,
+) -> Widget {
+    return Widget{
+        enabled = true,
+        resizable = true,
+        init = button_init,
+        update = button_update,
+        draw = button_draw,
+        data = Button{
+            label = label,
+            font_path = font_path,
+            font_size = font_size,
+            clicked = clicked,
+            clicked_data = clicked_data,
+        }
+    }
+}
+
+button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+    data := &self.data.(Button)
+    data.text = su.text_create(
+        handle.text_engine,
+        su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
+        data.label)
+    self.w, self.h = su.text_size(&data.text)
+
+    sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+        if button != sdl.BUTTON_LEFT || !widget_is_hovered(self, x, y) do return false
+        data := &self.data.(Button)
+
+        if down {
+            data.state = .Clicked
+        } else if data.state == .Clicked {
+            data.state = .Idle
+            data.clicked(data.clicked_data)
+        }
+        return true
+    })
+}
+
+button_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+    data := &self.data.(Button)
+    if widget_is_hovered(self, handle.mouse_x, handle.mouse_y) {
+        if data.state == .Idle {
+            data.state = .Hovered
+        }
+    } else {
+        data.state = .Idle
+    }
+}
+
+button_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+    // TODO: style
+    data := &self.data.(Button)
+    switch data.state {
+    case .Idle:
+        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{150, 150, 150, 255})
+        su.text_update_color(&data.text, sdl.Color{0, 0, 0, 255})
+    case .Hovered:
+        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{250, 250, 250, 255})
+        su.text_update_color(&data.text, sdl.Color{0, 0, 0, 255})
+    case .Clicked:
+        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{50, 50, 50, 255})
+        su.text_update_color(&data.text, sdl.Color{255, 255, 255, 255})
+    }
     su.text_draw(&data.text, self.x, self.y)
 }
 
@@ -394,7 +490,9 @@ box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     data := &self.data.(Box)
 
-    handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, data.attr.style.background_color)
+    if data.attr.style.background_color.a > 0 {
+        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, data.attr.style.background_color)
+    }
     for &widget in data.widgets {
         if widget.draw != nil {
             widget->draw(handle)
@@ -414,16 +512,6 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     if .Right in data.attr.style.active_borders {
         handle->draw_rect(Rect{self.x + self.w - bt, self.y, bt, self.h}, bc)
     }
-}
-
-// button //////////////////////////////////////////////////////////////////////
-
-ButtonState :: enum { Idle, Hovered, Clicked }
-
-Button :: struct {
-    label: string,
-    state: ButtonState,
-    clicked: rawptr, // todo: callback (click on release)
 }
 
 // draw box ////////////////////////////////////////////////////////////////////

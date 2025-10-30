@@ -9,6 +9,19 @@ import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
 
+SGUIOpts :: struct {
+    // TODO
+    // - text font
+    // - button font
+    // - theme (color, attributes, ...)
+}
+
+SGUI_DEFAULTS :: SGUIOpts{
+    // TODO
+    // - default font
+    // - theme
+}
+
 SGUIHandle :: struct {
     run: bool,
     dt: f32,

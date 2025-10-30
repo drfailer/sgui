@@ -27,10 +27,14 @@ text_destroy :: proc(text: ^Text) {
     delete(text.value)
 }
 
-text_update_text :: proc(text: ^Text, value: string, color: sdl.Color) {
+text_update_text :: proc(text: ^Text, value: string) {
     delete(text.value)
     text.value = strings.clone_to_cstring(value)
     sdl_ttf.SetTextString(text.text, text.value, len(value))
+    sdl_ttf.UpdateText(text.text)
+}
+
+text_update_color :: proc(text: ^Text, color: sdl.Color) {
     sdl_ttf.SetTextColor(text.text, color.r, color.g, color.b, color.a)
     sdl_ttf.UpdateText(text.text)
 }
@@ -47,7 +51,8 @@ text_draw :: proc(text: ^Text, x, y: f32) {
 }
 
 text_update_and_draw :: proc(text: ^Text, value: string, x, y: f32, color: sdl.Color) {
-    text_update_text(text, value, color)
+    text_update_color(text, color)
+    text_update_text(text, value)
     text_draw(text, x, y)
 }
 
