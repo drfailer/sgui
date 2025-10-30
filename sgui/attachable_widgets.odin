@@ -50,7 +50,6 @@ scrollbox_scroll_data :: proc(data: ^ScrollBoxData, count: i32, step: f32) {
     if count == 0 || step == 0 || data.scrollbar.parent_size > data.scrollbar.content_size do return
     data.target_position += cast(f32)count * step
     data.target_position = clamp(data.target_position, 0, data.scrollbar.content_size - data.scrollbar.parent_size)
-    fmt.printfln("scrolling: target_position = {}, count = {}", data.target_position, count)
 }
 
 scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> bool {
