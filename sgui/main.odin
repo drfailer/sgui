@@ -9,8 +9,8 @@ import sdl_ttf "vendor:sdl3/ttf"
 
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
-WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
-// WINDOW_FLAGS :: sdl.WindowFlags{}
+// WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
+WINDOW_FLAGS :: sdl.WindowFlags{}
 FPS :: 60
 
 SCROLLBAR_THICKNESS :: 10
@@ -42,7 +42,7 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
         x = 0,
-        y = (box.h - box_data.zoom_lvl * DATA_BOX_HEIGHT) / 2. - box_data.position_y,
+        y = (box.h - box_data.zoom_lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbox.vertical.position,
         w = box.w,
         h = box_data.zoom_lvl * DATA_BOX_HEIGHT,
     }
@@ -56,7 +56,7 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
     scaling_factor := box.w / cast(f32)ttl_time
 
-    data_rect.x -= box_data.position_x
+    data_rect.x -= box_data.scrollbox.horizontal.position
     for data, idx in DATA {
         data_rect.w = box_data.zoom_lvl * scaling_factor * cast(f32)(data.end - data.begin)
         if data_rect.x < 0 {

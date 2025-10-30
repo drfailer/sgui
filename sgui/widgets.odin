@@ -171,6 +171,10 @@ Box :: struct {
     layout: BoxLayout,
     attr: BoxAttributes,
     widgets: [dynamic]Widget,
+    // TODO: add an optional ScrollBox that will contain the implementation of the scrollbars (The draw box must have it too)
+    // TODO: The standard boxes should be scrollable, but only the the draw box should be zoomable
+    // TODO: The the update function of the scrollbox will need to know the content size
+    // TODO: separate the logic of the scrollbar into the scrollbox that will also handle mouse wheel (if the box is hovered)
 }
 
 // TODO: the box should also have scrollbars
@@ -408,18 +412,13 @@ ContentSize :: struct {
 // TODO: the draw box should give a draw rect proc
 DrawBox :: struct {
     zoom_lvl: f32,
-    position_x: f32,
-    position_y: f32,
-    target_position_x: f32,
-    target_position_y: f32,
     content_size: ContentSize,
+    scrollbox: ScrollBox,
     props: DrawBoxProperties,
     user_init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
     user_update: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
     user_data: rawptr,
-    vertical_scrollbar: ^Widget,
-    horizontal_scrollbar: ^Widget,
 }
 
 draw_box :: proc(
@@ -429,11 +428,6 @@ draw_box :: proc(
     data: rawptr = nil,
     props := DrawBoxProperties{},
 ) -> Widget {
-    vertical_scrollbar := new(Widget)
-    vertical_scrollbar^ = scrollbar(.Vertical)
-    horizontal_scrollbar := new(Widget)
-    horizontal_scrollbar^ = scrollbar(.Horizontal)
-
     return Widget{
         resizable = true,
         init = draw_box_init,
@@ -443,12 +437,11 @@ draw_box :: proc(
         data = DrawBox{
             zoom_lvl = 1,
             props = props,
+            scrollbox = scrollbox(),
             user_draw = draw,
             user_init = init,
             user_update = update,
             user_data = data,
-            vertical_scrollbar = vertical_scrollbar,
-            horizontal_scrollbar = horizontal_scrollbar,
         }
     }
 }
@@ -460,35 +453,22 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         data.user_init(handle, self, data.user_data)
     }
 
-    data.vertical_scrollbar->init(handle, self)
-    data.horizontal_scrollbar->init(handle, self)
+    scrollbox_init(&data.scrollbox, handle, self)
 
     // TODO: factor this code v
     sgui_add_event_handler(handle, self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
         if type != .Down do return false
         data := &self.data.(DrawBox)
 
+        vcount, hcount: i32
+
         switch key {
-        case sdl.K_H:
-            if data.target_position_x > 0 {
-                data.target_position_x -= min(100, data.target_position_x)
-            }
-        case sdl.K_L:
-            increment := min(100, data.content_size.width - data.target_position_x - self.w)
-            if increment > 0 && data.target_position_x + self.w + increment <= data.content_size.width {
-                data.target_position_x += increment
-            }
-        case sdl.K_K:
-            if data.target_position_y > 0 {
-                data.target_position_y -= min(100, data.target_position_y)
-            }
-        case sdl.K_J:
-            increment := min(100, data.content_size.height - data.target_position_y - self.h)
-            if increment > 0 && data.target_position_y + self.h + increment <= data.content_size.height {
-                data.target_position_y += increment
-            }
+        case sdl.K_H: hcount = -1
+        case sdl.K_L: hcount = 1
+        case sdl.K_K: vcount = -1
+        case sdl.K_J: vcount = 1
         }
-        return true
+        return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
     })// }}}
     sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool {// {{{
         data := &self.data.(DrawBox)
@@ -501,81 +481,167 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
                 return false
             }
         } else {
-            if y == -1 {
-                increment := min(100, data.content_size.height - data.target_position_y - self.h)
-                if increment > 0 && data.target_position_y + self.h + increment <= data.content_size.height {
-                    data.target_position_y += increment
-                }
-            } else if y == 1 {
-                if data.target_position_y > 0 {
-                    data.target_position_y -= min(100, data.target_position_y)
-                }
-            } else {
-                return false
-            }
+            return scrollbox_scrolled_handler(&data.scrollbox, -y, 0, 100, 100)
         }
         return true
+    })// }}}
+    sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+        data := &self.data.(DrawBox)
+        return scrollbox_clicked_handler(&data.scrollbox, button, down, click_count, x, y, mods)
+    })// }}}
+    sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+        data := &self.data.(DrawBox)
+        return scrollbox_dragged_handler(&data.scrollbox, x, y, xd, yd, mods)
     })// }}}
 }
 
 draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     if !self.enabled do return
     data := &self.data.(DrawBox)
-
     if data.user_update != nil {
         data.content_size = data.user_update(handle, self, data.user_data)
     }
-
-    // TODO: this is for testing but a solution non fps dependent would be better!
-    if !data.vertical_scrollbar.data.(Scrollbar).selected {
-        if data.target_position_y > data.position_y {
-            data.position_y += min(10, data.target_position_y - data.position_y)
-        } else if data.target_position_y < data.position_y {
-            data.position_y -= min(10, data.position_y - data.target_position_y)
-        }
-    } else {
-        data.position_y = data.vertical_scrollbar.data.(Scrollbar).bar_position
-        data.target_position_y = data.position_y
-    }
-    if !data.horizontal_scrollbar.data.(Scrollbar).selected {
-        if data.target_position_x > data.position_x {
-            data.position_x += min(10, data.target_position_x - data.position_x)
-        } else if data.target_position_x < data.position_x {
-            data.position_x -= min(10, data.position_x - data.target_position_x)
-        }
-    } else {
-        data.position_x = data.horizontal_scrollbar.data.(Scrollbar).bar_position
-        data.target_position_x = data.position_x
-    }
-
-    // scrollbars
-    data.vertical_scrollbar.enabled = data.content_size.height > self.h
-    data.horizontal_scrollbar.enabled = data.content_size.width > self.w
-
-    if data.vertical_scrollbar.enabled {
-        scrollbar_update(data.vertical_scrollbar, self.x + self.w - SCROLLBAR_THICKNESS, self.y,
-                         data.position_y, data.content_size.height, self.h, self)
-    }
-
-    if data.horizontal_scrollbar.enabled {
-        size := self.w if !data.vertical_scrollbar.enabled else self.w - SCROLLBAR_THICKNESS
-        scrollbar_update(data.horizontal_scrollbar, self.x, self.y + self.h - SCROLLBAR_THICKNESS,
-                         data.position_x, data.content_size.width, size, self)
-    }
+    scrollbox_update(&data.scrollbox, data.content_size.width, data.content_size.height)
 }
 
 draw_box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     if !self.enabled do return
     data := &self.data.(DrawBox)
-
     data.user_draw(handle, self, data.user_data)
+    if .WithScrollbar in data.props {
+        scrollbox_draw(&data.scrollbox, handle)
+    }
+}
 
-    if .WithScrollbar not_in data.props {
-        return
+// scroll box //////////////////////////////////////////////////////////////////
+
+ScrollBoxProperties :: bit_set[ScrollBoxProperty]
+ScrollBoxProperty :: enum {
+    ScrollbarInvisible,
+    DisableHorizontalScroll,
+    DisableVerticalScroll,
+}
+
+ScrollBoxData :: struct {
+    enabled: bool,
+    position: f32,
+    target_position: f32,
+    scrollbar: Scrollbar,
+}
+
+ScrollBox :: struct {
+    parent: ^Widget,
+    props: ScrollBoxProperties,
+    vertical: ScrollBoxData,
+    horizontal: ScrollBoxData,
+}
+
+scrollbox :: proc(props := ScrollBoxProperties{}) -> ScrollBox {
+    return ScrollBox{
+        props = props,
+        vertical = ScrollBoxData{
+            scrollbar = scrollbar(.Vertical),
+        },
+        horizontal = ScrollBoxData{
+            scrollbar = scrollbar(.Horizontal),
+        },
+    }
+}
+
+scrollbox_scroll_data :: proc(data: ^ScrollBoxData, count: i32, step: f32) {
+    if count == 0 || step == 0 || data.scrollbar.parent_size > data.scrollbar.content_size do return
+    data.target_position += cast(f32)count * step
+    data.target_position = clamp(data.target_position, 0, data.scrollbar.content_size - data.scrollbar.parent_size)
+    fmt.printfln("scrolling: target_position = {}, count = {}", data.target_position, count)
+}
+
+scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> bool {
+    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+        scrollbox_scroll_data(&scrollbox.vertical, vcount, vstep)
+    }
+    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+        scrollbox_scroll_data(&scrollbox.horizontal, hcount, hstep)
+    }
+    return true
+}
+
+scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+    if button == sdl.BUTTON_LEFT {
+        if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+            scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, button, down, click_count, x, y, mods)
+        }
+        if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+            scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, button, down, click_count, x, y, mods)
+        }
+    }
+    return true
+}
+
+scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {
+    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+        scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, x, y, xd, yd, mods)
+    }
+    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+        scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, x, y, xd, yd, mods)
+    }
+    return true
+}
+
+scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^SGUIHandle, parent: ^Widget) {
+    scrollbox.parent = parent
+    if .DisableHorizontalScroll not_in scrollbox.props {
+        scrollbar_init(&scrollbox.horizontal.scrollbar, handle, parent)
+    }
+    if .DisableVerticalScroll not_in scrollbox.props {
+        scrollbar_init(&scrollbox.vertical.scrollbar, handle, parent)
+    }
+}
+
+scrollbox_data_udpate :: proc(data: ^ScrollBoxData) {
+    if data.scrollbar.selected {
+        data.position = data.scrollbar.bar_position
+        data.target_position = data.position
+    } else {
+        if data.target_position > data.position {
+            data.position += min(10, data.target_position - data.position)
+        } else if data.target_position < data.position {
+            data.position -= min(10, data.position - data.target_position)
+        }
+    }
+}
+
+// TODO: add content size in the scrollbox struct
+scrollbox_update :: proc(scrollbox: ^ScrollBox, content_w, content_h: f32) {
+    scrollbox_data_udpate(&scrollbox.vertical)
+    scrollbox_data_udpate(&scrollbox.horizontal)
+
+    // scrollbars
+    scrollbox.vertical.enabled = content_h > scrollbox.parent.h
+    scrollbox.horizontal.enabled = content_w > scrollbox.parent.w
+
+    if scrollbox.vertical.enabled {
+        scrollbar_update(&scrollbox.vertical.scrollbar,
+                         scrollbox.parent.x + scrollbox.parent.w - SCROLLBAR_THICKNESS,
+                         scrollbox.parent.y, scrollbox.vertical.position,
+                         content_h, scrollbox.parent.h, scrollbox.parent)
     }
 
-    data.vertical_scrollbar->draw(handle)
-    data.horizontal_scrollbar->draw(handle)
+    if scrollbox.horizontal.enabled {
+        size := scrollbox.parent.w if !scrollbox.vertical.enabled else scrollbox.parent.w - SCROLLBAR_THICKNESS
+        scrollbar_update(&scrollbox.horizontal.scrollbar,
+                         scrollbox.parent.x, scrollbox.parent.y + scrollbox.parent.h - SCROLLBAR_THICKNESS,
+                         scrollbox.horizontal.position,
+                         content_w, size, scrollbox.parent)
+    }
+}
+
+scrollbox_draw :: proc(scrollbox: ^ScrollBox, handle: ^SGUIHandle) {
+    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+        scrollbar_draw(&scrollbox.vertical.scrollbar, handle);
+    }
+    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+        scrollbar_draw(&scrollbox.horizontal.scrollbar, handle);
+    }
 }
 
 // scrollbar ///////////////////////////////////////////////////////////////////
@@ -587,6 +653,7 @@ ScrollbarDirection :: enum {
 
 // TODO: add a position (top, bottom, left, right)??
 Scrollbar :: struct {
+    x, y, w, h: f32,
     selected: bool,
     bar_size: f32,
     bar_position: f32,
@@ -595,100 +662,100 @@ Scrollbar :: struct {
     direction: ScrollbarDirection,
 }
 
-scrollbar :: proc(direction: ScrollbarDirection) -> Widget {
-    return Widget{
-        init = scrollbar_init,
-        update = nil,
-        draw = scrollbar_draw,
-        data = Scrollbar{
-            direction = direction,
-        }
+scrollbar :: proc(direction: ScrollbarDirection) -> Scrollbar {
+    return Scrollbar{
+        direction = direction,
     }
 }
 
-scrollbar_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
-        data := &self.data.(Scrollbar)
-        if button == sdl.BUTTON_LEFT {
-            if !down && data.selected {
-                data.selected = false
-            } else if widget_is_clicked(self, x, y) {
-                data.selected = true
-            }
-        }
-        return true
-    })
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {
-        data := &self.data.(Scrollbar)
-        scale_factor := data.parent_size / data.content_size
-
-        if !data.selected do return false
-
-        if data.direction == .Vertical {
-            data.bar_position += yd / scale_factor
-        } else {
-            data.bar_position += xd / scale_factor
-        }
-
-        if data.bar_position < 0 {
-            data.bar_position = 0
-        } else if data.bar_position > data.content_size - data.bar_size {
-            data.bar_position = data.content_size - data.bar_size
-        }
-
-        return true
-    })
+scrollbar_is_clicked :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> bool {
+    return (scrollbar.x <= mx && mx <= scrollbar.x + scrollbar.w) \
+        && (scrollbar.y <= my && my <= scrollbar.y + scrollbar.h)
 }
 
-scrollbar_update :: proc(self: ^Widget, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
-    if !self.enabled do return
-    data := &self.data.(Scrollbar)
+scrollbar_clicked_hander :: proc(bar: ^Scrollbar, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+    if !down && bar.selected {
+        bar.selected = false
+    } else if scrollbar_is_clicked(bar, x, y) {
+        bar.selected = true
+    }
+    return bar.selected
+}
 
-    if data.direction == .Vertical {
-        self.x = parent.x + parent.w - SCROLLBAR_THICKNESS
-        self.y = parent.y
-        self.w = SCROLLBAR_THICKNESS
-        self.h = parent.h
-        data.parent_size = parent.h
+scrollbar_dragged_handler :: proc(bar: ^Scrollbar, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {
+    if !bar.selected do return false
+
+    // TODO: invert
+    scale_factor := bar.parent_size / bar.content_size
+
+    if bar.direction == .Vertical {
+        bar.bar_position += yd / scale_factor
     } else {
-        self.x = parent.x
-        self.y = parent.y + parent.h - SCROLLBAR_THICKNESS
-        self.w = parent.w
-        self.h = SCROLLBAR_THICKNESS
-        data.parent_size = parent.h
+        bar.bar_position += xd / scale_factor
     }
 
-    self.x = x
-    self.y = y
-    data.bar_size = parent_size
-    data.bar_position = position
-    data.content_size = content_size
-    data.parent_size = parent_size
+    if bar.bar_position < 0 {
+        bar.bar_position = 0
+    } else if bar.bar_position > bar.content_size - bar.bar_size {
+        bar.bar_position = bar.content_size - bar.bar_size
+    }
+
+    return true
 }
 
-scrollbar_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    if !self.enabled do return
-    data := &self.data.(Scrollbar)
-    scale_factor := data.parent_size / data.content_size
-    rect := Rect{x = self.x, y = self.y}
+scrollbar_init :: proc(self: ^Scrollbar, handle: ^SGUIHandle, parent: ^Widget) {}
 
-    // fmt.printfln("draw scrollbar: x = {}, y = {}, w = {}, h = {}", self.x, self.y, self.w, self.h)
+scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
+    if bar.direction == .Vertical {
+        bar.x = parent.x + parent.w - SCROLLBAR_THICKNESS
+        bar.y = parent.y
+        bar.w = SCROLLBAR_THICKNESS
+        bar.h = parent.h
+        bar.parent_size = parent.h
+    } else {
+        bar.x = parent.x
+        bar.y = parent.y + parent.h - SCROLLBAR_THICKNESS
+        bar.w = parent.w
+        bar.h = SCROLLBAR_THICKNESS
+        bar.parent_size = parent.h
+    }
 
-    if data.direction == .Vertical {
+    bar.x = x
+    bar.y = y
+    bar.bar_size = parent_size
+    bar.bar_position = position
+    bar.content_size = content_size
+    bar.parent_size = parent_size
+}
+
+scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^SGUIHandle) {
+    scale_factor := bar.parent_size / bar.content_size
+    rect := Rect{x = bar.x, y = bar.y}
+
+    // fmt.printfln("draw scrollbar: x = {}, y = {}, w = {}, h = {}", bar.x, bar.y, bar.w, bar.h)
+
+    if bar.direction == .Vertical {
         rect.w = SCROLLBAR_THICKNESS
-        rect.h = data.parent_size
+        rect.h = bar.parent_size
     } else {
         rect.h = SCROLLBAR_THICKNESS
-        rect.w = data.parent_size
+        rect.w = bar.parent_size
     }
     handle->draw_rect(rect, Color{50, 50, 50, 255})
-    if data.direction == .Vertical {
-        rect.y = self.y + data.bar_position * scale_factor
-        rect.h = data.bar_size * scale_factor
+    if bar.direction == .Vertical {
+        rect.y = bar.y + bar.bar_position * scale_factor
+        rect.h = bar.bar_size * scale_factor
     } else {
-        rect.x = self.x + data.bar_position * scale_factor
-        rect.w = data.bar_size * scale_factor
+        rect.x = bar.x + bar.bar_position * scale_factor
+        rect.w = bar.bar_size * scale_factor
     }
     // handle->draw_rect(rect, Color{100, 100, 100, 255})
     draw_rounded_box(handle, rect, 5, Color{100, 100, 100, 255})
+}
+
+// zoom box ////////////////////////////////////////////////////////////////////
+
+ZoomBox :: struct {
+    container: ^Widget,
+    zoom_lvl: f32,
 }
