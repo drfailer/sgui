@@ -17,6 +17,7 @@ SGUIHandle :: struct {
     font_cache: su.FontCache,
     text_engine: ^sdl_ttf.TextEngine,
     event_handlers: EventHandlers,
+    mouse_x, mouse_y: f32,
     // TODO: focused widget
     widget: Widget, // TODO: we should have a list of widgets here in case there are multple independent menus
     // TODO: theme -> color palette
@@ -157,6 +158,8 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
                 }
             }
         case .MOUSE_MOTION:
+            handle.mouse_x = event.motion.x
+            handle.mouse_y = event.motion.y
             for handler in handle.event_handlers.mouse_motion {
                 if handler.widget.enabled {
                     handler.exec(handler.widget, event.motion.x, event.motion.y,
