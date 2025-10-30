@@ -30,7 +30,6 @@ Widget :: struct {
     x, y, w, h: f32,
     resizable: bool,
     enabled: bool,
-    visible: bool,
     focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
     init: WidgetInitProc,
     update: WidgetUpdateProc,
@@ -295,12 +294,8 @@ box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-// TODO: the update should take the parent widget
 box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Box)
-
-    // TODO: align
-    // box_align(self, parent.x, parent.y, parent.w, parent.h)
 
     for &widget in data.widgets {
         if widget.update != nil {
@@ -317,6 +312,20 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
         if widget.draw != nil {
             widget->draw(handle)
         }
+    }
+    bt := data.attr.style.border_thickness
+    bc := data.attr.style.border_color
+    if .Top in data.attr.style.active_borders {
+        handle->draw_rect(Rect{self.x, self.y, self.w, bt}, bc)
+    }
+    if .Bottom in data.attr.style.active_borders {
+        handle->draw_rect(Rect{self.x, self.y + self.h - bt, self.w, bt}, bc)
+    }
+    if .Left in data.attr.style.active_borders {
+        handle->draw_rect(Rect{self.x, self.y, bt, self.h}, bc)
+    }
+    if .Right in data.attr.style.active_borders {
+        handle->draw_rect(Rect{self.x + self.w - bt, self.y, bt, self.h}, bc)
     }
 }
 

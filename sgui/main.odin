@@ -103,7 +103,12 @@ main :: proc() {
                 ),
                 attr = BoxAttributes{
                     props = BoxProperties{.FitH, .AlignCenter},
-                    style = BoxStyle{background_color = Color{0, 0, 255, 255}},
+                    style = BoxStyle{
+                        background_color = Color{0, 0, 255, 255},
+                        border_thickness = 2,
+                        active_borders = ActiveBorders{.Bottom},
+                        border_color = Color{0, 200, 200, 255},
+                    },
                 }
             ),
             horizontal_box(
@@ -114,6 +119,9 @@ main :: proc() {
                         style = BoxStyle{
                             background_color = Color{255, 0, 0, 255},
                             padding = Padding{ 10, 10, 10, 10 },
+                            border_thickness = 2,
+                            active_borders = ActiveBorders{.Right},
+                            border_color = Color{200, 200, 0, 255},
                         },
                     }
                 ),
