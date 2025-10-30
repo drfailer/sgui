@@ -116,7 +116,94 @@ Texture :: struct {
     pixels: [dynamic]Pixel,
 }
 
-// boxs /////////////////////////////////////////////////////////////////////
+// text ////////////////////////////////////////////////////////////////////////
+
+Text :: struct {
+    text: su.Text,
+    content: string,
+    content_proc: proc(data: rawptr) -> (string, Color),
+    content_proc_data: rawptr,
+    color: Color,
+    font_path: su.FontPath,
+    font_size: su.FontSize,
+}
+
+text_from_string :: proc(
+    content: string,
+    font_path: su.FontPath,
+    font_size: su.FontSize,
+    color: Color
+) -> Widget {
+    return Widget{
+        init = text_init,
+        update = text_update,
+        draw = text_draw,
+        data = Text{
+            content = content,
+            color = color,
+            font_path = font_path,
+            font_size = font_size,
+        }
+    }
+}
+
+text_from_proc :: proc(
+    content_proc: proc(data: rawptr) -> (string, Color),
+    content_proc_data: rawptr,
+    font_path: su.FontPath,
+    font_size: su.FontSize,
+) -> Widget {
+    return Widget{
+        init = text_init,
+        update = text_update,
+        draw = text_draw,
+        data = Text{
+            content_proc = content_proc,
+            content_proc_data = content_proc_data,
+            font_path = font_path,
+            font_size = font_size,
+        }
+    }
+}
+
+// TODO: create a printf like version
+text :: proc {
+    text_from_string,
+    text_from_proc,
+}
+
+text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+    data := &self.data.(Text)
+    data.text = su.text_create(
+        handle.text_engine,
+        su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
+        data.content)
+    w, h := su.text_size(&data.text)
+    self.w = w
+    self.h = h
+
+    if self.w > parent.w || self.h > parent.h {
+        log.warn("text widget container too small")
+    }
+}
+
+text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+    data := &self.data.(Text)
+    if data.content_proc != nil {
+        content, color := data.content_proc(data.content_proc_data)
+        su.text_update_text(&data.text, content, sdl.Color{color.r, color.g, color.b, color.a})
+        w, h := su.text_size(&data.text)
+        self.w = w
+        self.h = h
+    }
+}
+
+text_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+    data := &self.data.(Text)
+    su.text_draw(&data.text, self.x, self.y)
+}
+
+// boxes ///////////////////////////////////////////////////////////////////////
 
 Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
 
@@ -327,77 +414,6 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     if .Right in data.attr.style.active_borders {
         handle->draw_rect(Rect{self.x + self.w - bt, self.y, bt, self.h}, bc)
     }
-}
-
-// text ////////////////////////////////////////////////////////////////////////
-
-Text :: struct {
-    text: su.Text,
-    content: string,
-    color: Color,
-    content_proc: proc(data: rawptr) -> (string, Color),
-    content_proc_data: rawptr,
-}
-
-text_from_string :: proc(content: string, color: Color) -> Widget {
-    return Widget{
-        init = text_init,
-        update = text_update,
-        draw = text_draw,
-        data = Text{
-            content = content,
-            color = color,
-        }
-    }
-}
-
-text_from_proc :: proc(
-    content_proc: proc(data: rawptr) -> (string, Color),
-    content_proc_data: rawptr
-) -> Widget {
-    return Widget{
-        init = text_init,
-        update = text_update,
-        draw = text_draw,
-        data = Text{
-            content_proc = content_proc,
-            content_proc_data = content_proc_data,
-        }
-    }
-}
-
-// TODO: create a printf like version
-text :: proc {
-    text_from_string,
-    text_from_proc,
-}
-
-text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    data := &self.data.(Text)
-    data.text = su.text_create(handle.text_engine, handle.font, data.content)
-    w, h := su.text_size(&data.text)
-    self.w = w
-    self.h = h
-
-    if self.w > parent.w || self.h > parent.h {
-        log.warn("text widget container too small")
-    }
-}
-
-text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    data := &self.data.(Text)
-    if data.content_proc != nil {
-        content, color := data.content_proc(data.content_proc_data)
-        su.text_update_text(&data.text, content, sdl.Color{color.r, color.g, color.b, color.a})
-        w, h := su.text_size(&data.text)
-        self.w = w
-        self.h = h
-    }
-}
-
-text_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    data := &self.data.(Text)
-    su.text_draw(&data.text, self.x, self.y)
 }
 
 // button //////////////////////////////////////////////////////////////////////

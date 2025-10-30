@@ -14,7 +14,7 @@ SGUIHandle :: struct {
     tick: time.Tick,
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
-    font: ^sdl_ttf.Font,
+    font_cache: su.FontCache,
     text_engine: ^sdl_ttf.TextEngine,
     event_handlers: EventHandlers,
     // TODO: focused widget
@@ -92,21 +92,14 @@ sgui_init :: proc(handle: ^SGUIHandle) {
         return
     }
 
-    // TODO: font cache
-    handle.font = sdl_ttf.OpenFont("/usr/share/fonts/TTF/FiraGO-Regular.ttf", 12)
-    if handle.font == nil {
-        fmt.printfln("error: couldn't open font.")
-        return
-    }
-
+    handle.font_cache = su.font_cache_create()
     handle.run = true
-
     widget_init(&handle.widget, handle)
 }
 
 sgui_terminate :: proc(handle: ^SGUIHandle) {
     sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
-    sdl_ttf.CloseFont(handle.font)
+    su.font_cache_destroy(&handle.font_cache)
     sdl_ttf.Quit()
     sdl.DestroyRenderer(handle.renderer)
     sdl.DestroyWindow(handle.window)
@@ -199,10 +192,10 @@ sgui_run :: proc(handle: ^SGUIHandle) {
 
         // draw fps text
         // TODO: optimize this v
-        fps_text := su.text_create(handle.text_engine, handle.font, "? FPS")
-        defer su.text_destroy(&fps_text)
-        fps_text_string := fmt.aprintf("%.1f FPS", 1./handle.dt, allocator = context.temp_allocator)
-        su.text_update_and_draw(&fps_text, fps_text_string, 0, 0, sdl.Color{0, 255, 0, 255})
+        // fps_text := su.text_create(handle.text_engine, handle.font, "? FPS")
+        // defer su.text_destroy(&fps_text)
+        // fps_text_string := fmt.aprintf("%.1f FPS", 1./handle.dt, allocator = context.temp_allocator)
+        // su.text_update_and_draw(&fps_text, fps_text_string, 0, 0, sdl.Color{0, 255, 0, 255})
 
         // present
         sdl.RenderPresent(handle.renderer)

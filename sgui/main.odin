@@ -7,6 +7,10 @@ import "core:strings"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+
+FONT :: "/usr/share/fonts/TTF/FiraGO-Regular.ttf"
+FONT_SIZE :: 18
+
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
 // WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
@@ -90,8 +94,8 @@ main :: proc() {
         vertical_box(
             vertical_box(
                 horizontal_box(
-                    text("Top pannel", Color{255, 255, 255, 255}),
-                    text("Top pannel", Color{255, 255, 255, 255}),
+                    text("Top pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
+                    text("Top pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitH, .FitW},
                         style = BoxStyle{
@@ -113,7 +117,7 @@ main :: proc() {
             ),
             horizontal_box(
                 horizontal_box(
-                    text("Side Pannel", Color{255, 255, 255, 255}),
+                    text("Side Pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitW, .AlignCenter},
                         style = BoxStyle{
