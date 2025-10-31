@@ -75,13 +75,11 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
 }
 
 widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
-    w, h: i32
-    assert(sdl.GetWindowSize(handle.window, &w, &h));
     root := Widget{
-        x = 0,
-        y = 0,
-        w = cast(f32)w,
-        h = cast(f32)h,
+        x = handle.rel_rect.x,
+        y = handle.rel_rect.y,
+        w = handle.rel_rect.w,
+        h = handle.rel_rect.h,
     }
     widget_align(widget, root.x, root.y, root.w, root.h)
     widget->update(handle, &root)
@@ -685,7 +683,10 @@ draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 draw_box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     if self.disabled do return
     data := &self.data.(DrawBox)
+    old_rel_rect := handle.rel_rect
+    handle.rel_rect = Rect{self.x, self.y, self.w, self.h}
     data.user_draw(handle, self, data.user_data)
+    handle.rel_rect = old_rel_rect
     if .WithScrollbar in data.props {
         scrollbox_draw(&data.scrollbox, handle)
     }

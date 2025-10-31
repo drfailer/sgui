@@ -87,14 +87,21 @@ SGUIHandle :: struct {
     processing_ordered_draws: bool,
 
     /* procs */
-    draw_rect: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color),
+
+    /** layers **/
     add_layer: proc(handle: ^SGUIHandle, widget: Widget),
     switch_to_layer: proc(handle: ^SGUIHandle, layer_idx: int) -> bool,
+
+    /** events handlers **/
     key_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: KeyEventHandlerProc),
     scroll_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseWheelEventHandlerProc),
     click_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseClickEventHandlerProc),
     mouse_move_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseMotionEventHandlerProc),
     widget_event_handler: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc),
+
+    /** draw **/
+    draw_rect: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color),
+    rel_rect: Rect,
 }
 
 OrderedDraw :: struct {
@@ -296,6 +303,9 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
 }
 
 sgui_update :: proc(handle: ^SGUIHandle) {
+    w, h: i32
+    assert(sdl.GetWindowSize(handle.window, &w, &h));
+    handle.rel_rect = Rect{0, 0, cast(f32)w, cast(f32)h}
     widget_update(handle, &handle.layers[handle.current_layer])
 }
 
@@ -374,7 +384,12 @@ sgui_emit :: proc(handle: ^SGUIHandle, tag: WidgetEventTag, emitter: ^Widget, da
 
 sgui_draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
-    sdl.RenderFillRect(handle.renderer, &Rect{x, y, w, h})
+    sdl.RenderFillRect(handle.renderer, &Rect{
+        x + handle.rel_rect.x,
+        y + handle.rel_rect.y,
+        min(w, handle.rel_rect.w),
+        min(h, handle.rel_rect.h),
+    })
 }
 
 sgui_add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
