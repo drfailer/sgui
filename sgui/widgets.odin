@@ -28,8 +28,9 @@ WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 
 Widget :: struct {
     x, y, w, h: f32,
-    resizable: bool, // TODO: resizable_h, resizable_w, min_h, min_w
-    enabled: bool,
+    min_w, min_h: f32,
+    resizable_w, resizable_h: bool,
+    disabled: bool,
     focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
     init: WidgetInitProc,
     update: WidgetUpdateProc,
@@ -63,9 +64,11 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
     case:
         widget.x = x
         widget.y = y
-        if widget.resizable {
-            widget.w = w
-            widget.h = h
+        if widget.resizable_w {
+            widget.w = max(widget.min_w, w)
+        }
+        if widget.resizable_h {
+            widget.h = max(widget.min_h, h)
         }
     }
 }
@@ -240,8 +243,8 @@ button :: proc(
     clicked_data: rawptr = nil,
 ) -> Widget {
     return Widget{
-        enabled = true,
-        resizable = true,
+        resizable_w = true,
+        resizable_h = true,
         init = button_init,
         update = button_update,
         draw = button_draw,
@@ -262,6 +265,8 @@ button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
         data.label)
     self.w, self.h = su.text_size(&data.text)
+    // self.min_w = self.w
+    // self.min_h = self.h
 
     sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
         if button != sdl.BUTTON_LEFT || !widget_is_hovered(self, x, y) do return false
@@ -380,7 +385,8 @@ box :: proc(
         append(&widget_list, widget)
     }
     return Widget{
-        resizable = true,
+        resizable_h = true,
+        resizable_w = true,
         init = init,
         update = update,
         draw = draw,
@@ -408,9 +414,11 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
     self.y = y
     if .FitW not_in data.attr.props {
         self.w = w
-    } // else error???
+        self.min_w = w
+    }
     if .FitH not_in data.attr.props {
         self.h = h
+        self.min_h = h
     }
 
     if data.layout == .Vertical {
@@ -553,11 +561,11 @@ draw_box :: proc(
     props := DrawBoxProperties{},
 ) -> Widget {
     return Widget{
-        resizable = true,
+        resizable_h = true,
+        resizable_w = true,
         init = draw_box_init,
         update = draw_box_update,
         draw = draw_box_draw,
-        enabled = true,
         data = DrawBox{
             props = props,
             zoombox = zoombox(1., 10., 0.2),
@@ -615,7 +623,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 }
 
 draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
-    if !self.enabled do return
+    if self.disabled do return
     data := &self.data.(DrawBox)
     if data.user_update != nil {
         data.content_size = data.user_update(handle, self, data.user_data)
@@ -624,7 +632,7 @@ draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 }
 
 draw_box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    if !self.enabled do return
+    if self.disabled do return
     data := &self.data.(DrawBox)
     data.user_draw(handle, self, data.user_data)
     if .WithScrollbar in data.props {

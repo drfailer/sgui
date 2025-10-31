@@ -47,7 +47,7 @@ MS_TO_PIXEL :: 1
 draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
-        x = 0,
+        x = -box_data.scrollbox.horizontal.position,
         y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbox.vertical.position,
         w = box.w,
         h = box_data.zoombox.lvl * DATA_BOX_HEIGHT,
@@ -62,7 +62,6 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
     scaling_factor := box_data.zoombox.lvl * MS_TO_PIXEL
 
-    data_rect.x -= box_data.scrollbox.horizontal.position
     for data, idx in DATA {
         data_rect.w = scaling_factor * cast(f32)(data.end - data.begin)
         if data_rect.x < 0 {

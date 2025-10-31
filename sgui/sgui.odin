@@ -174,7 +174,7 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
                 handle.event_handlers.mods |= { .Shift }
             }
             for handler in handle.event_handlers.key {
-                if handler.widget.enabled {
+                if !handler.widget.disabled {
                     handler.exec(handler.widget, event.key.key, .Down, handle.event_handlers.mods)
                 }
             }
@@ -187,20 +187,20 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
                 handle.event_handlers.mods ~= { .Shift }
             }
             for handler in handle.event_handlers.key {
-                if handler.widget.enabled {
+                if !handler.widget.disabled {
                     handler.exec(handler.widget, event.key.key, .Up, handle.event_handlers.mods)
                 }
             }
         case .MOUSE_WHEEL:
             for handler in handle.event_handlers.mouse_wheel {
-                if handler.widget.enabled {
+                if !handler.widget.disabled {
                     handler.exec(handler.widget, event.wheel.integer_x, event.wheel.integer_y,
                                  handle.event_handlers.mods)
                 }
             }
         case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
             for handler in handle.event_handlers.mouse_click {
-                if handler.widget.enabled {
+                if !handler.widget.disabled {
                     handler.exec(handler.widget, event.button.button, event.button.down,
                                  event.button.clicks, event.button.x, event.button.y,
                                  handle.event_handlers.mods)
@@ -210,7 +210,7 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
             handle.mouse_x = event.motion.x
             handle.mouse_y = event.motion.y
             for handler in handle.event_handlers.mouse_motion {
-                if handler.widget.enabled {
+                if !handler.widget.disabled {
                     handler.exec(handler.widget, event.motion.x, event.motion.y,
                                  event.motion.xrel, event.motion.yrel,
                                  handle.event_handlers.mods)
