@@ -219,33 +219,39 @@ ButtonState :: enum { Idle, Hovered, Clicked }
 
 ButtonClickedProc :: proc(clicked_data: rawptr)
 
-// TODO: button style (rounded corners?, border, ...)
-// - padding
-// - button color [idle, hovered, clicked]:
-//   - background
-//   - text
-//   - border
-// - box type (round corner?)
+ButtonColors :: struct {
+    text: Color,
+    border: Color,
+    bg: Color,
+}
+
+ButtonStyle :: struct {
+    label_font_path: su.FontPath,
+    label_font_size: su.FontSize,
+    padding: Padding,
+    border_thickness: f32,
+    corner_radius: f32,
+    colors: [ButtonState]ButtonColors,
+}
+
+ButtonAttributes :: struct {
+    style: ButtonStyle,
+}
+
 Button :: struct {
     label: string,
+    text: su.Text,
     state: ButtonState,
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
-
-    text: su.Text,
-    font_path: su.FontPath,
-    font_size: su.FontSize,
+    attr: ButtonAttributes,
 }
 
 button :: proc(
     label: string,
-
-    font_path: su.FontPath,
-    font_size: su.FontSize,
-
-    // TODO: font (in style???, default_style???)
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
+    attr: ButtonAttributes = ButtonAttributes{},
 ) -> Widget {
     return Widget{
         resizable_w = true,
@@ -255,10 +261,9 @@ button :: proc(
         draw = button_draw,
         data = Button{
             label = label,
-            font_path = font_path,
-            font_size = font_size,
             clicked = clicked,
             clicked_data = clicked_data,
+            attr = attr,
         }
     }
 }
@@ -267,11 +272,13 @@ button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Button)
     data.text = su.text_create(
         handle.text_engine,
-        su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
+        su.font_cache_get_font(&handle.font_cache, data.attr.style.label_font_path, data.attr.style.label_font_size),
         data.label)
     self.w, self.h = su.text_size(&data.text)
-    // self.min_w = self.w
-    // self.min_h = self.h
+    self.w += data.attr.style.padding.left + data.attr.style.padding.right
+    self.h += data.attr.style.padding.top + data.attr.style.padding.bottom
+    self.min_w = self.w
+    self.min_h = self.h
 
     handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
         if button != sdl.BUTTON_LEFT || !widget_is_hovered(self, x, y) do return false
@@ -299,20 +306,32 @@ button_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
 }
 
 button_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
-    // TODO: style
     data := &self.data.(Button)
-    switch data.state {
-    case .Idle:
-        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{150, 150, 150, 255})
-        su.text_update_color(&data.text, sdl.Color{0, 0, 0, 255})
-    case .Hovered:
-        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{250, 250, 250, 255})
-        su.text_update_color(&data.text, sdl.Color{0, 0, 0, 255})
-    case .Clicked:
-        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, Color{50, 50, 50, 255})
-        su.text_update_color(&data.text, sdl.Color{255, 255, 255, 255})
+    text_color := data.attr.style.colors[data.state].text
+    bg_color := data.attr.style.colors[data.state].bg
+    border_color := data.attr.style.colors[data.state].border
+    border_thickness := data.attr.style.border_thickness
+
+    su.text_update_color(&data.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
+    if data.attr.style.corner_radius > 0 {
+        if border_thickness > 0 {
+            draw_rounded_box(handle, self.x, self.y, self.w, self.h, data.attr.style.corner_radius, border_color)
+        }
+        draw_rounded_box(handle, self.x + border_thickness, self.y + border_thickness,
+                         self.w - 2 * border_thickness, self.h - 2 * border_thickness,
+                         data.attr.style.corner_radius, bg_color)
+    } else {
+        if border_thickness > 0 {
+            handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, border_color)
+        }
+        handle->draw_rect(Rect{self.x + border_thickness, self.y + border_thickness,
+                               self.w - 2 * border_thickness, self.h - 2 * border_thickness},
+                          bg_color)
     }
-    su.text_draw(&data.text, self.x, self.y)
+    label_w, label_h := su.text_size(&data.text)
+    label_x := self.x + (self.w - label_w) / 2.
+    label_y := self.y + (self.h - label_h) / 2.
+    su.text_draw(&data.text, label_x, label_y)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
