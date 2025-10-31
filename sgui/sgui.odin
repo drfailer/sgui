@@ -42,6 +42,11 @@ SGUIHandle :: struct {
     draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
     add_layer: proc(handle: ^SGUIHandle, widget: Widget),
     switch_to_layer: proc(handle: ^SGUIHandle, layer_idx: int) -> bool,
+    key_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: KeyEventHandlerProc),
+    scroll_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseWheelEventHandlerProc),
+    click_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseClickEventHandlerProc),
+    mouse_move_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseMotionEventHandlerProc),
+    widget_event_handler: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc),
 }
 
 Rect :: sdl.FRect
@@ -84,10 +89,15 @@ EventHandlers :: struct {
 
 sgui_create :: proc() -> SGUIHandle { // TODO: allocator
     return SGUIHandle{
+        layers = make([dynamic]Widget),
         draw_rect = sgui_draw_rect,
         add_layer = sgui_add_layer,
         switch_to_layer = sgui_switch_to_layer,
-        layers = make([dynamic]Widget)
+        key_handler = sgui_add_key_event_handler,
+        scroll_handler = sgui_add_mouse_wheel_event_handler,
+        click_handler = sgui_add_mouse_click_event_handler,
+        mouse_move_handler = sgui_add_mouse_motion_event_handler,
+        widget_event_handler = sgui_add_widget_event_handler,
     }
 }
 

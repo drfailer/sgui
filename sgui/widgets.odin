@@ -268,7 +268,7 @@ button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     // self.min_w = self.w
     // self.min_h = self.h
 
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
         if button != sdl.BUTTON_LEFT || !widget_is_hovered(self, x, y) do return false
         data := &self.data.(Button)
 
@@ -589,7 +589,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     zoombox_init(&data.zoombox, self)
 
     // TODO: factor this code v
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->key_handler(self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
         if type != .Down do return false
         data := &self.data.(DrawBox)
 
@@ -603,7 +603,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         }
         return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
     })// }}}
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->scroll_handler(self, proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool {// {{{
         data := &self.data.(DrawBox)
         if .Control in mods {
             return zoombox_zoom_handler(&data.zoombox, x, y, mods)
@@ -612,11 +612,11 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         }
         return true
     })// }}}
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {// {{{
         data := &self.data.(DrawBox)
         return scrollbox_clicked_handler(&data.scrollbox, button, down, click_count, x, y, mods)
     })// }}}
-    sgui_add_event_handler(handle, self, proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->mouse_move_handler(self, proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {// {{{
         data := &self.data.(DrawBox)
         return scrollbox_dragged_handler(&data.scrollbox, x, y, xd, yd, mods)
     })// }}}
