@@ -25,7 +25,7 @@ SGUIOpts :: struct {
 
 // TODO: add a #config for some variables
 
-SGUI_DEFAULTS :: SGUIOpts{
+SGUI_OPTS :: SGUIOpts{
     style = SGUIStyle{
         clear_color = Color{0, 0, 0, 255},
         button_style = ButtonStyle{
@@ -299,7 +299,8 @@ sgui_update :: proc(handle: ^SGUIHandle) {
 }
 
 sgui_draw :: proc(handle: ^SGUIHandle) {
-    sdl.SetRenderDrawColor(handle.renderer, 0, 0, 0, 255) // TODO: default clear color?
+    clear_color := SGUI_OPTS.style.clear_color
+    sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
     sdl.RenderClear(handle.renderer)
     widget_draw(&handle.layers[handle.current_layer], handle)
     handle.processing_ordered_draws = true

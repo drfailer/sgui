@@ -260,7 +260,7 @@ button :: proc(
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
     attr: ButtonAttributes = ButtonAttributes{
-        style = SGUI_DEFAULTS.style.button_style,
+        style = SGUI_OPTS.style.button_style,
     },
 ) -> Widget {
     return Widget{
