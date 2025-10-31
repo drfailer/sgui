@@ -25,6 +25,7 @@ Pixel :: distinct [4]u8
 WidgetInitProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
 WidgetUpdateProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
 WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
+WidgetValueProc :: proc(self: ^Widget) -> WidgetValue
 
 Widget :: struct {
     x, y, w, h: f32,
@@ -36,6 +37,7 @@ Widget :: struct {
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
+    value: WidgetValueProc,
     data: WidgetData,
 }
 
@@ -45,6 +47,8 @@ WidgetData :: union {
     Box,
     DrawBox,
 }
+
+WidgetValue :: union { string, bool, int, f64 }
 
 widget_init :: proc(widget: ^Widget, handle: ^SGUIHandle) {
     w, h: i32
