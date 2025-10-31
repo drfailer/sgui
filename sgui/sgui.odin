@@ -101,6 +101,7 @@ SGUIHandle :: struct {
 
     /** draw **/
     draw_rect: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color),
+    draw_text: proc(handle: ^SGUIHandle, text: ^su.Text, x, y: f32),
     rel_rect: Rect,
 }
 
@@ -151,6 +152,7 @@ sgui_create :: proc() -> SGUIHandle { // TODO: allocator
     return SGUIHandle{
         layers = make([dynamic]Widget),
         draw_rect = sgui_draw_rect,
+        draw_text = sgui_draw_text,
         add_layer = sgui_add_layer,
         switch_to_layer = sgui_switch_to_layer,
         key_handler = sgui_add_key_event_handler,
@@ -390,6 +392,10 @@ sgui_draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
         min(w, handle.rel_rect.w),
         min(h, handle.rel_rect.h),
     })
+}
+
+sgui_draw_text :: proc(handle: ^SGUIHandle, text: ^su.Text, x, y: f32) {
+    su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
 sgui_add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
