@@ -101,10 +101,11 @@ widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Vertical :: distinct [dynamic]Widget
-Horizontal :: distinct [dynamic]Widget
+// QUESTION:
+// Should input widgets have a value function so that we can make forms that
+// will be submited in one callback instead of multiple.
 
-TextInput :: struct {
+OnelineInput :: struct {
     label: string,
 }
 
@@ -115,16 +116,23 @@ Slider :: struct {
     // config...
 }
 
+RadioButton :: struct {
+}
+
+Menu :: struct { // top menu
+}
+
+Line :: struct { // separator line
+}
+
 Image :: struct {
     lable: string,
     path: string,
 }
 
-Texture :: struct {
-    pixels: [dynamic]Pixel,
-}
-
 // text ////////////////////////////////////////////////////////////////////////
+
+// TODO: text wrapping
 
 Text :: struct {
     text: su.Text,
@@ -251,7 +259,9 @@ button :: proc(
     label: string,
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
-    attr: ButtonAttributes = ButtonAttributes{},
+    attr: ButtonAttributes = ButtonAttributes{
+        style = SGUI_DEFAULTS.style.button_style,
+    },
 ) -> Widget {
     return Widget{
         resizable_w = true,

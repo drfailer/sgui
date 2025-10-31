@@ -10,41 +10,82 @@ import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
 
-SGUIOpts :: struct {
-    // TODO
-    // - text font
-    // - button font
-    // - theme (color, attributes, ...)
+SGUIStyle :: struct {
+    clear_color: Color,
+    button_style: ButtonStyle,
+    // TODO: we should have different styles depending on the type of text
+    text_font_path: su.FontPath, // TODO: TextStyle???
+    text_font_size: su.FontSize,
+    text_font_color: Color,
 }
 
+SGUIOpts :: struct {
+    style: SGUIStyle,
+}
+
+// TODO: add a #config for some variables
+
 SGUI_DEFAULTS :: SGUIOpts{
-    // TODO
-    // - default font
-    // - theme
+    style = SGUIStyle{
+        clear_color = Color{0, 0, 0, 255},
+        button_style = ButtonStyle{
+            label_font_path = FONT,
+            label_font_size = FONT_SIZE,
+            padding = {2, 2, 2, 2},
+            border_thickness = 1,
+            colors = [ButtonState]ButtonColors{
+                .Idle = ButtonColors{
+                    text = Color{0, 0, 0, 255},
+                    border = Color{0, 0, 0, 255},
+                    bg = Color{255, 255, 255, 255},
+                },
+                .Hovered = ButtonColors{
+                    text = Color{0, 0, 0, 255},
+                    border = Color{0, 0, 0, 255},
+                    bg = Color{100, 100, 100, 255},
+                },
+                .Clicked = ButtonColors{
+                    text = Color{255, 255, 255, 255},
+                    border = Color{255, 255, 255, 255},
+                    bg = Color{0, 0, 0, 255},
+                },
+            },
+        },
+        text_font_path = FONT,
+        text_font_size = FONT_SIZE,
+        text_font_color = Color{255, 255, 255, 255},
+    }
 }
 
 SGUIHandle :: struct {
     run: bool,
+
+    /* fps variables */
     dt: f32,
     tick: time.Tick,
+
+    /* sdl */
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
     font_cache: su.FontCache,
     text_engine: ^sdl_ttf.TextEngine,
-    widget_event_queue: queue.Queue(WidgetEvent),
-    event_handlers: EventHandlers,
     mouse_x, mouse_y: f32,
+
+    /* event handlers */
+    event_handlers: EventHandlers,
+    widget_event_queue: queue.Queue(WidgetEvent),
+
     // TODO: focused widget
+
+    /* layers */
     layers: [dynamic]Widget,
     current_layer: int,
-    // TODO: priority queue of draw callbacks
-    // TODO: theme -> color palette
 
-    // when widgets need to be drawn in order
+    /* draw ordering (when widget.z_index > 0, it is added to the queue) */
     ordered_draws: priority_queue.Priority_Queue(OrderedDraw),
     processing_ordered_draws: bool,
 
-    // procs
+    /* procs */
     draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
     add_layer: proc(handle: ^SGUIHandle, widget: Widget),
     switch_to_layer: proc(handle: ^SGUIHandle, layer_idx: int) -> bool,

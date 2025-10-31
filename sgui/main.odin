@@ -122,34 +122,7 @@ main :: proc() {
                 horizontal_box(
                     vertical_box(
                         text("Side Pannel", FONT, FONT_SIZE, Color{0, 0, 0, 255}),
-                        button(
-                            "hellope", proc(_: rawptr) { fmt.println("clicked!!!") },
-                            attr = ButtonAttributes{
-                                style = ButtonStyle{
-                                    label_font_path = FONT,
-                                    label_font_size = FONT_SIZE,
-                                    padding = {4, 4, 4, 4},
-                                    border_thickness = 2,
-                                    colors = [ButtonState]ButtonColors{
-                                        .Idle = ButtonColors{
-                                            text = Color{0, 0, 0, 255},
-                                            border = Color{0, 0, 0, 255},
-                                            bg = Color{255, 255, 255, 255},
-                                        },
-                                        .Hovered = ButtonColors{
-                                            text = Color{0, 0, 0, 255},
-                                            border = Color{0, 0, 0, 255},
-                                            bg = Color{100, 100, 100, 255},
-                                        },
-                                        .Clicked = ButtonColors{
-                                            text = Color{255, 255, 255, 255},
-                                            border = Color{255, 255, 255, 255},
-                                            bg = Color{0, 0, 0, 255},
-                                        },
-                                    },
-                                },
-                            },
-                        ),
+                        button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
                         attr = BoxAttributes{
                             props = BoxProperties{.FitH, .FitW, .AlignCenter},
                             style = BoxStyle{
