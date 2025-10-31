@@ -447,11 +447,11 @@ box :: proc(
     }
 }
 
-vertical_box :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+vbox :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
     return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
-horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+hbox :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
     return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
@@ -471,13 +471,13 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
     }
 
     if data.layout == .Vertical {
-        vertical_box_align(self, x, y, w, h)
+        vbox_align(self, x, y, w, h)
     } else {
-        horizontal_box_align(self, x, y, w, h)
+        hbox_align(self, x, y, w, h)
     }
 }
 
-vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
 
     widget_x := self.x + data.attr.style.padding.left
@@ -495,7 +495,7 @@ vertical_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h
     }
 }
 
-horizontal_box_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
 
     widget_x := self.x + data.attr.style.padding.left

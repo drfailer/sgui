@@ -93,9 +93,9 @@ main :: proc() {
     handle := sgui_create()
 
     handle->add_layer(
-        vertical_box(
-            vertical_box(
-                horizontal_box(
+        vbox(
+            vbox(
+                hbox(
                     text("Top pannel"),
                     text("Top pannel"),
                     attr = BoxAttributes{
@@ -117,9 +117,9 @@ main :: proc() {
                     },
                 }
             ),
-            horizontal_box(
-                horizontal_box(
-                    vertical_box(
+            hbox(
+                hbox(
+                    vbox(
                         text("Side Pannel",
                             attr = TextAttributes{
                                 style = TextStyle{
