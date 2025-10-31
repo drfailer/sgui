@@ -10,29 +10,27 @@ import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
 
-SGUIStyle :: struct {
-    clear_color: Color,
-    // TODO: we should have different styles depending on the type of text
-    text: TextStyle,
-    button: ButtonStyle,
-}
-
 SGUIOpts :: struct {
-    style: SGUIStyle,
+    clear_color: Color,
+    text_attr: TextAttributes,
+    button_attr: ButtonAttributes,
 }
 
 // TODO: add a #config for some variables
+// TODO: we should have different attributes depending on the type of text (Header, ...)
 
-SGUI_OPTS :: SGUIOpts{
-    style = SGUIStyle{
-        clear_color = Color{0, 0, 0, 255},
-        text = TextStyle{
+SGUI_OPTS := SGUIOpts{
+    clear_color = Color{0, 0, 0, 255},
+    text_attr = TextAttributes{
+        style = TextStyle{
             font = FONT,
             font_size = FONT_SIZE,
             color = Color{255, 255, 255, 255},
             wrap_width = 0,
         },
-        button = ButtonStyle{
+    },
+    button_attr = ButtonAttributes{
+        style = ButtonStyle{
             label_font_path = FONT,
             label_font_size = FONT_SIZE,
             padding = {2, 2, 2, 2},
@@ -55,7 +53,7 @@ SGUI_OPTS :: SGUIOpts{
                 },
             },
         },
-    }
+    },
 }
 
 SGUIHandle :: struct {
@@ -312,7 +310,7 @@ update :: proc(handle: ^SGUIHandle) {
 }
 
 draw :: proc(handle: ^SGUIHandle) {
-    clear_color := SGUI_OPTS.style.clear_color
+    clear_color := SGUI_OPTS.clear_color
     sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
     sdl.RenderClear(handle.renderer)
     widget_draw(&handle.layers[handle.current_layer], handle)

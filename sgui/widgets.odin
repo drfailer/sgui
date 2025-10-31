@@ -157,12 +157,7 @@ Text :: struct {
     attr: TextAttributes,
 }
 
-text_from_string :: proc(
-    content: string,
-    attr := TextAttributes{
-        style = SGUI_OPTS.style.text
-    }
-) -> Widget {
+text_from_string :: proc(content: string, attr := SGUI_OPTS.text_attr) -> Widget {
     return Widget{
         init = text_init,
         update = text_update,
@@ -177,9 +172,7 @@ text_from_string :: proc(
 text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
-    attr := TextAttributes{
-        style = SGUI_OPTS.style.text
-    }
+    attr := SGUI_OPTS.text_attr,
 ) -> Widget {
     return Widget{
         init = text_init,
@@ -278,9 +271,7 @@ button :: proc(
     label: string,
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
-    attr: ButtonAttributes = ButtonAttributes{
-        style = SGUI_OPTS.style.button,
-    },
+    attr := SGUI_OPTS.button_attr,
 ) -> Widget {
     return Widget{
         resizable_w = true,
