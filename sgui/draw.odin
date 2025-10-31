@@ -1,6 +1,9 @@
 package sgui
 
 import "core:math"
+import sdl "vendor:sdl3"
+
+import "core:fmt"
 
 // TODO
 
@@ -15,11 +18,11 @@ multiply_color :: proc(color: Color, a: f32) -> Color {
 }
 
 distance_ceil :: proc(r, y: f32) -> f32 {
-    x := math.sqrt(r * r - y * y)
+    x := math.sqrt(abs(r * r - y * y))
     return math.ceil(x) - x
 }
 
-draw_circle :: proc (handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
+draw_circle :: proc(handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
     x := 0
     y := cast(int)-radius
     p := cast(int)-radius
@@ -50,7 +53,7 @@ draw_circle :: proc (handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
     }
 }
 
-draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radius: f32, color: Color) {
+draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radius: f32, color: Color, anti_aliazing: bool = false) {
     if bw < radius || bh < radius {
         return
     }
@@ -86,6 +89,29 @@ draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radiu
         bw2 := cx - cast(f32)y - bx2
         handle->draw_rect(Rect{bx1 - w, cy - cast(f32)y + h, bw1 + w, 1.}, color)
         handle->draw_rect(Rect{bx2 - w, cy + cast(f32)x + h, bw2 + w, 1.}, color)
+
+        if anti_aliazing {
+            // (x - cx)^2 + (y - cy)^2 <= r^2
+            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            if diff > 0 {
+                color := multiply_color(color, 1. - diff)
+                // top right
+                handle->draw_rect(Rect{cx + cast(f32)x - 1, cy + cast(f32)y, 1., 1.}, color)
+                handle->draw_rect(Rect{cx - cast(f32)y - 1, cy - cast(f32)x, 1., 1.}, color)
+
+                // top left
+                handle->draw_rect(Rect{tx1 - w, cy + cast(f32)y, 1., 1.}, color)
+                handle->draw_rect(Rect{tx2 - w, cy - cast(f32)x, 1., 1.}, color)
+
+                // bottom right
+                handle->draw_rect(Rect{cx + cast(f32)x - 1, cy - cast(f32)y + h, 1., 1.}, color)
+                handle->draw_rect(Rect{cx - cast(f32)y - 1, cy + cast(f32)x + h, 1., 1.}, color)
+
+                // bottom left
+                handle->draw_rect(Rect{bx1 - w, cy - cast(f32)y + h, 1., 1.}, color)
+                handle->draw_rect(Rect{bx2 - w, cy + cast(f32)x + h, 1., 1.}, color)
+            }
+        }
 
         x += 1
     }

@@ -28,7 +28,7 @@ WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 
 Widget :: struct {
     x, y, w, h: f32,
-    resizable: bool,
+    resizable: bool, // TODO: resizable_h, resizable_w, min_h, min_w
     enabled: bool,
     focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
     init: WidgetInitProc,
@@ -212,6 +212,12 @@ ButtonState :: enum { Idle, Hovered, Clicked }
 ButtonClickedProc :: proc(clicked_data: rawptr)
 
 // TODO: button style (rounded corners?, border, ...)
+// - padding
+// - button color [idle, hovered, clicked]:
+//   - background
+//   - text
+//   - border
+// - box type (round corner?)
 Button :: struct {
     label: string,
     state: ButtonState,

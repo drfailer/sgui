@@ -70,7 +70,9 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
             data_rect.x = 0
         }
         draw_rounded_box(handle, box.x + data_rect.x, box.y + data_rect.y,
-            data_rect.w, data_rect.h, 10, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
+            data_rect.w, data_rect.h, box_data.zoombox.lvl * 10, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
+        draw_rounded_box(handle, box.x + data_rect.x + 2, box.y + data_rect.y + 2,
+            data_rect.w - 4, data_rect.h - 4, box_data.zoombox.lvl * 10, Color{100, 100 * cast(u8)(idx % 2), 100, 255})
         data_rect.x += data_rect.w
 
         if data_rect.x > box.w {

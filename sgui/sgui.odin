@@ -34,7 +34,8 @@ SGUIHandle :: struct {
     event_handlers: EventHandlers,
     mouse_x, mouse_y: f32,
     // TODO: focused widget
-    widget: Widget, // TODO: we should have a list of widgets here in case there are multple independent menus
+    widget: Widget, // TODO: we should have a list of widgets here in case there are multple independent menus (add_layer function)
+    // TODO: priority queue of draw callbacks
     // TODO: theme -> color palette
     // procs
     draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
