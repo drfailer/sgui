@@ -35,20 +35,20 @@ draw_circle :: proc(handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
             p += 2 * x + 1
         }
         // top right
-        handle->draw_rect(Rect{cx + cast(f32)x, cy + cast(f32)y, 1., 1.}, color)
-        handle->draw_rect(Rect{cx - cast(f32)y, cy - cast(f32)x, 1., 1.}, color)
+        handle->draw_rect(cx + cast(f32)x, cy + cast(f32)y, 1., 1., color)
+        handle->draw_rect(cx - cast(f32)y, cy - cast(f32)x, 1., 1., color)
 
         // top left
-        handle->draw_rect(Rect{cx - cast(f32)x, cy + cast(f32)y, 1., 1.}, color)
-        handle->draw_rect(Rect{cx + cast(f32)y, cy - cast(f32)x, 1., 1.}, color)
+        handle->draw_rect(cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
+        handle->draw_rect(cx + cast(f32)y, cy - cast(f32)x, 1., 1., color)
 
         // bottom right
-        handle->draw_rect(Rect{cx + cast(f32)x, cy - cast(f32)y, 1., 1.}, color)
-        handle->draw_rect(Rect{cx - cast(f32)y, cy + cast(f32)x, 1., 1.}, color)
+        handle->draw_rect(cx + cast(f32)x, cy - cast(f32)y, 1., 1., color)
+        handle->draw_rect(cx - cast(f32)y, cy + cast(f32)x, 1., 1., color)
 
         // bottom left
-        handle->draw_rect(Rect{cx - cast(f32)x, cy - cast(f32)y, 1., 1.}, color)
-        handle->draw_rect(Rect{cx + cast(f32)y, cy + cast(f32)x, 1., 1.}, color)
+        handle->draw_rect(cx - cast(f32)x, cy - cast(f32)y, 1., 1., color)
+        handle->draw_rect(cx + cast(f32)y, cy + cast(f32)x, 1., 1., color)
         x += 1
     }
 }
@@ -79,16 +79,16 @@ draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radiu
         tw1 := cx + cast(f32)x - tx1
         tx2 := cx + cast(f32)y
         tw2 := cx - cast(f32)y - tx2
-        handle->draw_rect(Rect{tx1 - w, cy + cast(f32)y, tw1 + w, 1.}, color)
-        handle->draw_rect(Rect{tx2 - w, cy - cast(f32)x, tw2 + w, 1.}, color)
+        handle->draw_rect(tx1 - w, cy + cast(f32)y, tw1 + w, 1., color)
+        handle->draw_rect(tx2 - w, cy - cast(f32)x, tw2 + w, 1., color)
 
         // bottom
         bx1 := cx - cast(f32)x
         bw1 := cx + cast(f32)x - bx1
         bx2 := cx + cast(f32)y
         bw2 := cx - cast(f32)y - bx2
-        handle->draw_rect(Rect{bx1 - w, cy - cast(f32)y + h, bw1 + w, 1.}, color)
-        handle->draw_rect(Rect{bx2 - w, cy + cast(f32)x + h, bw2 + w, 1.}, color)
+        handle->draw_rect(bx1 - w, cy - cast(f32)y + h, bw1 + w, 1., color)
+        handle->draw_rect(bx2 - w, cy + cast(f32)x + h, bw2 + w, 1., color)
 
         if anti_aliazing {
             // (x - cx)^2 + (y - cy)^2 <= r^2
@@ -96,26 +96,26 @@ draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radiu
             if diff > 0 {
                 color := multiply_color(color, 1. - diff)
                 // top right
-                handle->draw_rect(Rect{cx + cast(f32)x - 1, cy + cast(f32)y, 1., 1.}, color)
-                handle->draw_rect(Rect{cx - cast(f32)y - 1, cy - cast(f32)x, 1., 1.}, color)
+                handle->draw_rect(cx + cast(f32)x - 1, cy + cast(f32)y, 1., 1., color)
+                handle->draw_rect(cx - cast(f32)y - 1, cy - cast(f32)x, 1., 1., color)
 
                 // top left
-                handle->draw_rect(Rect{tx1 - w, cy + cast(f32)y, 1., 1.}, color)
-                handle->draw_rect(Rect{tx2 - w, cy - cast(f32)x, 1., 1.}, color)
+                handle->draw_rect(tx1 - w, cy + cast(f32)y, 1., 1., color)
+                handle->draw_rect(tx2 - w, cy - cast(f32)x, 1., 1., color)
 
                 // bottom right
-                handle->draw_rect(Rect{cx + cast(f32)x - 1, cy - cast(f32)y + h, 1., 1.}, color)
-                handle->draw_rect(Rect{cx - cast(f32)y - 1, cy + cast(f32)x + h, 1., 1.}, color)
+                handle->draw_rect(cx + cast(f32)x - 1, cy - cast(f32)y + h, 1., 1., color)
+                handle->draw_rect(cx - cast(f32)y - 1, cy + cast(f32)x + h, 1., 1., color)
 
                 // bottom left
-                handle->draw_rect(Rect{bx1 - w, cy - cast(f32)y + h, 1., 1.}, color)
-                handle->draw_rect(Rect{bx2 - w, cy + cast(f32)x + h, 1., 1.}, color)
+                handle->draw_rect(bx1 - w, cy - cast(f32)y + h, 1., 1., color)
+                handle->draw_rect(bx2 - w, cy + cast(f32)x + h, 1., 1., color)
             }
         }
 
         x += 1
     }
-    handle->draw_rect(Rect{bx, by + radius, bw, h}, color)
+    handle->draw_rect(bx, by + radius, bw, h, color)
 }
 
 draw_rounded_box_from_rect :: proc (handle: ^SGUIHandle, rect: Rect, radius: f32, color: Color) {

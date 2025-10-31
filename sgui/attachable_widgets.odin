@@ -226,24 +226,24 @@ scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size
 
 scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^SGUIHandle) {
     scale_factor := bar.parent_size / bar.content_size
-    rect := Rect{x = bar.x, y = bar.y}
+    x, y, w, h := bar.x, bar.y, bar.w, bar.h
 
     if bar.direction == .Vertical {
-        rect.w = SCROLLBAR_THICKNESS
-        rect.h = bar.parent_size
+        w = SCROLLBAR_THICKNESS
+        h = bar.parent_size
     } else {
-        rect.h = SCROLLBAR_THICKNESS
-        rect.w = bar.parent_size
+        h = SCROLLBAR_THICKNESS
+        w = bar.parent_size
     }
-    handle->draw_rect(rect, Color{50, 50, 50, 255})
+    handle->draw_rect(x, y, w, h, Color{50, 50, 50, 255})
     if bar.direction == .Vertical {
-        rect.y = bar.y + bar.bar_position * scale_factor
-        rect.h = bar.bar_size * scale_factor
+        y = bar.y + bar.bar_position * scale_factor
+        h = bar.bar_size * scale_factor
     } else {
-        rect.x = bar.x + bar.bar_position * scale_factor
-        rect.w = bar.bar_size * scale_factor
+        x = bar.x + bar.bar_position * scale_factor
+        w = bar.bar_size * scale_factor
     }
-    draw_rounded_box(handle, rect, 5, Color{100, 100, 100, 255})
+    draw_rounded_box(handle, x, y, w, h, 5, Color{100, 100, 100, 255})
 }
 
 // zoom box ////////////////////////////////////////////////////////////////////

@@ -347,10 +347,10 @@ button_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
                          data.attr.style.corner_radius, bg_color)
     } else {
         if border_thickness > 0 {
-            handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, border_color)
+            handle->draw_rect(self.x, self.y, self.w, self.h, border_color)
         }
-        handle->draw_rect(Rect{self.x + border_thickness, self.y + border_thickness,
-                               self.w - 2 * border_thickness, self.h - 2 * border_thickness},
+        handle->draw_rect(self.x + border_thickness, self.y + border_thickness,
+                          self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                           bg_color)
     }
     label_w, label_h := su.text_size(&data.text)
@@ -556,7 +556,7 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     data := &self.data.(Box)
 
     if data.attr.style.background_color.a > 0 {
-        handle->draw_rect(Rect{self.x, self.y, self.w, self.h}, data.attr.style.background_color)
+        handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
     for &widget in data.widgets {
         if widget.draw != nil {
@@ -566,16 +566,16 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     bt := data.attr.style.border_thickness
     bc := data.attr.style.border_color
     if .Top in data.attr.style.active_borders {
-        handle->draw_rect(Rect{self.x, self.y, self.w, bt}, bc)
+        handle->draw_rect(self.x, self.y, self.w, bt, bc)
     }
     if .Bottom in data.attr.style.active_borders {
-        handle->draw_rect(Rect{self.x, self.y + self.h - bt, self.w, bt}, bc)
+        handle->draw_rect(self.x, self.y + self.h - bt, self.w, bt, bc)
     }
     if .Left in data.attr.style.active_borders {
-        handle->draw_rect(Rect{self.x, self.y, bt, self.h}, bc)
+        handle->draw_rect(self.x, self.y, bt, self.h, bc)
     }
     if .Right in data.attr.style.active_borders {
-        handle->draw_rect(Rect{self.x + self.w - bt, self.y, bt, self.h}, bc)
+        handle->draw_rect(self.x + self.w - bt, self.y, bt, self.h, bc)
     }
 }
 

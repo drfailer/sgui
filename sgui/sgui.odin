@@ -87,7 +87,7 @@ SGUIHandle :: struct {
     processing_ordered_draws: bool,
 
     /* procs */
-    draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
+    draw_rect: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color),
     add_layer: proc(handle: ^SGUIHandle, widget: Widget),
     switch_to_layer: proc(handle: ^SGUIHandle, layer_idx: int) -> bool,
     key_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: KeyEventHandlerProc),
@@ -372,10 +372,9 @@ sgui_emit :: proc(handle: ^SGUIHandle, tag: WidgetEventTag, emitter: ^Widget, da
     queue.enqueue(&handle.widget_event_queue, WidgetEvent{tag, emitter, data})
 }
 
-sgui_draw_rect :: proc(handle: ^SGUIHandle, rect: Rect, color: Color) {
-    rect := rect
+sgui_draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
-    sdl.RenderFillRect(handle.renderer, &rect)
+    sdl.RenderFillRect(handle.renderer, &Rect{x, y, w, h})
 }
 
 sgui_add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
