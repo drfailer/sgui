@@ -84,7 +84,7 @@ scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, x, y, xd, yd: f32, mods
     return true
 }
 
-scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^SGUIHandle, parent: ^Widget) {
+scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^Handle, parent: ^Widget) {
     scrollbox.parent = parent
     if .DisableHorizontalScroll not_in scrollbox.props {
         scrollbar_init(&scrollbox.horizontal.scrollbar, handle, parent)
@@ -131,7 +131,7 @@ scrollbox_update :: proc(scrollbox: ^ScrollBox, content_w, content_h: f32) {
     }
 }
 
-scrollbox_draw :: proc(scrollbox: ^ScrollBox, handle: ^SGUIHandle) {
+scrollbox_draw :: proc(scrollbox: ^ScrollBox, handle: ^Handle) {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
         scrollbar_draw(&scrollbox.vertical.scrollbar, handle);
     }
@@ -199,7 +199,7 @@ scrollbar_dragged_handler :: proc(bar: ^Scrollbar, x, y, xd, yd: f32, mods: bit_
     return true
 }
 
-scrollbar_init :: proc(self: ^Scrollbar, handle: ^SGUIHandle, parent: ^Widget) {}
+scrollbar_init :: proc(self: ^Scrollbar, handle: ^Handle, parent: ^Widget) {}
 
 scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
     if bar.direction == .Vertical {
@@ -224,7 +224,7 @@ scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size
     bar.parent_size = parent_size
 }
 
-scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^SGUIHandle) {
+scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^Handle) {
     scale_factor := bar.parent_size / bar.content_size
     x, y, w, h := bar.x, bar.y, bar.w, bar.h
 

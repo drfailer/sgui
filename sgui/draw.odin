@@ -22,7 +22,7 @@ distance_ceil :: proc(r, y: f32) -> f32 {
     return math.ceil(x) - x
 }
 
-draw_circle :: proc(handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
+draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
     x := 0
     y := cast(int)-radius
     p := cast(int)-radius
@@ -53,7 +53,7 @@ draw_circle :: proc(handle: ^SGUIHandle, cx, cy, radius: f32, color: Color) {
     }
 }
 
-draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radius: f32, color: Color, anti_aliazing: bool = false) {
+draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color, anti_aliazing: bool = false) {
     if bw < radius || bh < radius {
         return
     }
@@ -118,7 +118,7 @@ draw_rounded_box_from_values :: proc (handle: ^SGUIHandle, bx, by, bw, bh, radiu
     handle->draw_rect(bx, by + radius, bw, h, color)
 }
 
-draw_rounded_box_from_rect :: proc (handle: ^SGUIHandle, rect: Rect, radius: f32, color: Color) {
+draw_rounded_box_from_rect :: proc (handle: ^Handle, rect: Rect, radius: f32, color: Color) {
     draw_rounded_box_from_values(handle, rect.x, rect.y, rect.w, rect.h, radius, color)
 }
 

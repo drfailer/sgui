@@ -7,6 +7,8 @@ import "core:strings"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+// TODO: move this elsewhere and add #config
+// TODO: most of this should also appear in the opts
 
 FONT :: "/usr/share/fonts/TTF/FiraGO-Regular.ttf"
 FONT_SIZE :: 18
@@ -44,7 +46,7 @@ DATA :: [?]MeasuredTime{
 DATA_BOX_HEIGHT :: 100
 MS_TO_PIXEL :: 1
 
-draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
+draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
         x = -box_data.scrollbox.horizontal.position,
@@ -80,7 +82,7 @@ draw_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) {
     }
 }
 
-update_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) -> ContentSize {
+update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
     box_data := &box.data.(DrawBox)
     return ContentSize{

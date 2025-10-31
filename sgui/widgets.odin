@@ -22,9 +22,9 @@ Pixel :: distinct [4]u8
 
 // widget //////////////////////////////////////////////////////////////////////
 
-WidgetInitProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
-WidgetUpdateProc :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget)
-WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
+WidgetInitProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
+WidgetUpdateProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
+WidgetDrawProc :: proc(self: ^Widget, handle: ^Handle)
 WidgetValueProc :: proc(self: ^Widget) -> WidgetValue
 
 Widget :: struct {
@@ -50,7 +50,7 @@ WidgetData :: union {
 
 WidgetValue :: union { string, bool, int, f64 }
 
-widget_init :: proc(widget: ^Widget, handle: ^SGUIHandle) {
+widget_init :: proc(widget: ^Widget, handle: ^Handle) {
     w, h: i32
     assert(sdl.GetWindowSize(handle.window, &w, &h));
     root := Widget{
@@ -78,7 +78,7 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
     }
 }
 
-widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
+widget_update :: proc(handle: ^Handle, widget: ^Widget) {
     root := Widget{
         x = handle.rel_rect.x,
         y = handle.rel_rect.y,
@@ -89,7 +89,7 @@ widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
     widget->update(handle, &root)
 }
 
-widget_draw :: proc(widget: ^Widget, handle: ^SGUIHandle) {
+widget_draw :: proc(widget: ^Widget, handle: ^Handle) {
     if !handle.processing_ordered_draws && widget.z_index > 0 {
         add_ordered_draw(handle, widget)
     } else {
@@ -157,7 +157,7 @@ Text :: struct {
     attr: TextAttributes,
 }
 
-text_from_string :: proc(content: string, attr := SGUI_OPTS.text_attr) -> Widget {
+text_from_string :: proc(content: string, attr := OPTS.text_attr) -> Widget {
     return Widget{
         init = text_init,
         update = text_update,
@@ -172,7 +172,7 @@ text_from_string :: proc(content: string, attr := SGUI_OPTS.text_attr) -> Widget
 text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
-    attr := SGUI_OPTS.text_attr,
+    attr := OPTS.text_attr,
 ) -> Widget {
     return Widget{
         init = text_init,
@@ -192,7 +192,7 @@ text :: proc {
     text_from_proc,
 }
 
-text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+text_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Text)
     data.text = su.text_create(
         handle.text_engine,
@@ -213,7 +213,7 @@ text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Text)
     if data.content_proc != nil {
         content, color := data.content_proc(data.content_proc_data)
@@ -228,7 +228,7 @@ text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-text_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+text_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Text)
     su.text_draw(&data.text, self.x, self.y)
 }
@@ -271,7 +271,7 @@ button :: proc(
     label: string,
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
-    attr := SGUI_OPTS.button_attr,
+    attr := OPTS.button_attr,
 ) -> Widget {
     return Widget{
         resizable_w = true,
@@ -288,7 +288,7 @@ button :: proc(
     }
 }
 
-button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Button)
     data.text = su.text_create(
         handle.text_engine,
@@ -314,7 +314,7 @@ button_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     })
 }
 
-button_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+button_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Button)
     if widget_is_hovered(self, handle.mouse_x, handle.mouse_y) {
         if data.state == .Idle {
@@ -325,7 +325,7 @@ button_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-button_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+button_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Button)
     text_color := data.attr.style.colors[data.state].text
     bg_color := data.attr.style.colors[data.state].bg
@@ -510,7 +510,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     }
 }
 
-box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
@@ -537,7 +537,7 @@ box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
 
     for &widget in data.widgets {
@@ -547,7 +547,7 @@ box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     }
 }
 
-box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+box_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Box)
 
     if data.attr.style.background_color.a > 0 {
@@ -593,16 +593,16 @@ DrawBox :: struct {
     zoombox: ZoomBox,
     scrollbox: ScrollBox,
     props: DrawBoxProperties,
-    user_init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
-    user_update: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) -> ContentSize,
-    user_draw: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
+    user_init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
+    user_update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize,
+    user_draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     user_data: rawptr,
 }
 
 draw_box :: proc(
-    draw: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr),
-    update: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
-    init: proc(handle: ^SGUIHandle, widget: ^Widget, user_data: rawptr) = nil,
+    draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
+    update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
+    init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
     data: rawptr = nil,
     props := DrawBoxProperties{},
 ) -> Widget {
@@ -624,7 +624,7 @@ draw_box :: proc(
     }
 }
 
-draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(DrawBox)
 
     if data.user_init != nil {
@@ -668,7 +668,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     })// }}}
 }
 
-draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
+draw_box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     if self.disabled do return
     data := &self.data.(DrawBox)
     if data.user_update != nil {
@@ -677,7 +677,7 @@ draw_box_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     scrollbox_update(&data.scrollbox, data.content_size.width, data.content_size.height)
 }
 
-draw_box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
+draw_box_draw :: proc(self: ^Widget, handle: ^Handle) {
     if self.disabled do return
     data := &self.data.(DrawBox)
     old_rel_rect := handle.rel_rect
