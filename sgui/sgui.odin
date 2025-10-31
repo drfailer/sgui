@@ -5,6 +5,7 @@ import "core:time"
 import "core:math"
 import "core:strings"
 import "core:container/queue"
+import "core:container/priority_queue"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
@@ -38,6 +39,11 @@ SGUIHandle :: struct {
     current_layer: int,
     // TODO: priority queue of draw callbacks
     // TODO: theme -> color palette
+
+    // when widgets need to be drawn in order
+    ordered_draws: priority_queue.Priority_Queue(OrderedDraw),
+    processing_ordered_draws: bool,
+
     // procs
     draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
     add_layer: proc(handle: ^SGUIHandle, widget: Widget),
@@ -47,6 +53,11 @@ SGUIHandle :: struct {
     click_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseClickEventHandlerProc),
     mouse_move_handler: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseMotionEventHandlerProc),
     widget_event_handler: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc),
+}
+
+OrderedDraw :: struct {
+    z_index: u64,
+    widget: ^Widget,
 }
 
 Rect :: sdl.FRect
@@ -125,6 +136,17 @@ sgui_init :: proc(handle: ^SGUIHandle) {
 
     handle.font_cache = su.font_cache_create()
     queue.init(&handle.widget_event_queue)
+    priority_queue.init(
+        &handle.ordered_draws,
+        less = proc(a, b: OrderedDraw) -> bool {
+            return a.z_index < b.z_index
+        },
+        swap = proc(q: []OrderedDraw, i, j: int) {
+            tmp := q[i]
+            q[i] = q[j]
+            q[j] = tmp
+        }
+    )
     handle.run = true
     for &layer in handle.layers {
         widget_init(&layer, handle)
@@ -148,6 +170,7 @@ sgui_terminate :: proc(handle: ^SGUIHandle) {
     }
     delete(handle.event_handlers.widget_event)
     queue.destroy(&handle.widget_event_queue)
+    priority_queue.destroy(&handle.ordered_draws)
     delete(handle.layers)
 }
 
@@ -235,13 +258,15 @@ sgui_update :: proc(handle: ^SGUIHandle) {
 }
 
 sgui_draw :: proc(handle: ^SGUIHandle) {
-    // clear screen
-    sdl.SetRenderDrawColor(handle.renderer, 0, 0, 0, 255)
+    sdl.SetRenderDrawColor(handle.renderer, 0, 0, 0, 255) // TODO: default clear color?
     sdl.RenderClear(handle.renderer)
-    widget_draw(handle, &handle.layers[handle.current_layer])
-
-    // draw_circle(handle, 100, 100, 50, Color{255, 255, 255, 255})
-    // draw_rounded_box(handle, 100, 200, 100, 40, 10, Color{255, 255, 255, 255})
+    widget_draw(&handle.layers[handle.current_layer], handle)
+    handle.processing_ordered_draws = true
+    for priority_queue.len(handle.ordered_draws) > 0 {
+        od := priority_queue.pop(&handle.ordered_draws)
+        od.widget->draw(handle)
+    }
+    handle.processing_ordered_draws = false
 }
 
 sgui_run :: proc(handle: ^SGUIHandle) {
@@ -320,4 +345,11 @@ sgui_switch_to_layer :: proc(handle: ^SGUIHandle, layer_idx: int) -> bool {
     }
     handle.current_layer = layer_idx
     return true
+}
+
+sgui_add_ordered_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
+    priority_queue.push(&handle.ordered_draws, OrderedDraw{
+        z_index = widget.z_index,
+        widget = widget,
+    })
 }

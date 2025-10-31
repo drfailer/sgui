@@ -29,6 +29,7 @@ WidgetDrawProc :: proc(self: ^Widget, handle: ^SGUIHandle)
 Widget :: struct {
     x, y, w, h: f32,
     min_w, min_h: f32,
+    z_index: u64,
     resizable_w, resizable_h: bool,
     disabled: bool,
     focused: bool, // TODO: we need a focused widget in the handle (will be used for text input)
@@ -86,8 +87,12 @@ widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
     widget->update(handle, &root)
 }
 
-widget_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
-    widget->draw(handle)
+widget_draw :: proc(widget: ^Widget, handle: ^SGUIHandle) {
+    if !handle.processing_ordered_draws && widget.z_index > 0 {
+        sgui_add_ordered_draw(handle, widget)
+    } else {
+        widget->draw(handle)
+    }
 }
 
 widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
@@ -377,6 +382,7 @@ box :: proc(
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
+    z_index: u64,
     widgets: ..Widget,
 ) -> Widget {
     widget_list := make([dynamic]Widget)
@@ -385,6 +391,7 @@ box :: proc(
         append(&widget_list, widget)
     }
     return Widget{
+        z_index = z_index,
         resizable_h = true,
         resizable_w = true,
         init = init,
@@ -398,12 +405,12 @@ box :: proc(
     }
 }
 
-vertical_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
-    return box(.Vertical, attr, box_init, box_update, box_draw, ..widgets)
+vertical_box :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+    return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
-horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}) -> Widget {
-    return box(.Horizontal, attr, box_init, box_update, box_draw, ..widgets)
+horizontal_box :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+    return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
 // TODO: alignment should be done in the udpate function since we need to realign when the window is resized
@@ -509,7 +516,7 @@ box_draw :: proc(self: ^Widget, handle: ^SGUIHandle) {
     }
     for &widget in data.widgets {
         if widget.draw != nil {
-            widget->draw(handle)
+            widget_draw(&widget, handle)
         }
     }
     bt := data.attr.style.border_thickness
