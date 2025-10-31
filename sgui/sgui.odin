@@ -34,11 +34,14 @@ SGUIHandle :: struct {
     event_handlers: EventHandlers,
     mouse_x, mouse_y: f32,
     // TODO: focused widget
-    widget: Widget, // TODO: we should have a list of widgets here in case there are multple independent menus (add_layer function)
+    layers: [dynamic]Widget,
+    current_layer: int,
     // TODO: priority queue of draw callbacks
     // TODO: theme -> color palette
     // procs
     draw_rect: proc(handle: ^SGUIHandle, rect: Rect, color: Color),
+    add_layer: proc(handle: ^SGUIHandle, widget: Widget),
+    switch_to_layer: proc(handle: ^SGUIHandle, layer_idx: int) -> bool,
 }
 
 Rect :: sdl.FRect
@@ -79,9 +82,12 @@ EventHandlers :: struct {
     widget_event: map[WidgetEventTag][dynamic]EventHandler(WidgetEventHandlerProc)
 }
 
-sgui_create :: proc() -> SGUIHandle {
+sgui_create :: proc() -> SGUIHandle { // TODO: allocator
     return SGUIHandle{
         draw_rect = sgui_draw_rect,
+        add_layer = sgui_add_layer,
+        switch_to_layer = sgui_switch_to_layer,
+        layers = make([dynamic]Widget)
     }
 }
 
@@ -110,7 +116,9 @@ sgui_init :: proc(handle: ^SGUIHandle) {
     handle.font_cache = su.font_cache_create()
     queue.init(&handle.widget_event_queue)
     handle.run = true
-    widget_init(&handle.widget, handle)
+    for &layer in handle.layers {
+        widget_init(&layer, handle)
+    }
 }
 
 sgui_terminate :: proc(handle: ^SGUIHandle) {
@@ -130,6 +138,7 @@ sgui_terminate :: proc(handle: ^SGUIHandle) {
     }
     delete(handle.event_handlers.widget_event)
     queue.destroy(&handle.widget_event_queue)
+    delete(handle.layers)
 }
 
 sgui_process_widget_events :: proc(handle: ^SGUIHandle) {
@@ -212,14 +221,14 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
 }
 
 sgui_update :: proc(handle: ^SGUIHandle) {
-    widget_update(handle, &handle.widget)
+    widget_update(handle, &handle.layers[handle.current_layer])
 }
 
 sgui_draw :: proc(handle: ^SGUIHandle) {
     // clear screen
     sdl.SetRenderDrawColor(handle.renderer, 0, 0, 0, 255)
     sdl.RenderClear(handle.renderer)
-    widget_draw(handle, &handle.widget)
+    widget_draw(handle, &handle.layers[handle.current_layer])
 
     // draw_circle(handle, 100, 100, 50, Color{255, 255, 255, 255})
     // draw_rounded_box(handle, 100, 200, 100, 40, 10, Color{255, 255, 255, 255})
@@ -289,4 +298,16 @@ sgui_draw_rect :: proc(handle: ^SGUIHandle, rect: Rect, color: Color) {
     rect := rect
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
     sdl.RenderFillRect(handle.renderer, &rect)
+}
+
+sgui_add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
+    append(&handle.layers, widget)
+}
+
+sgui_switch_to_layer :: proc(handle: ^SGUIHandle, layer_idx: int) -> bool {
+    if layer_idx > len(handle.layers) {
+        return false
+    }
+    handle.current_layer = layer_idx
+    return true
 }

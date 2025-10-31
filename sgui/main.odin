@@ -94,7 +94,7 @@ update_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) -> ContentSize
 main :: proc() {
     handle := sgui_create()
 
-    handle.widget =
+    handle->add_layer(
         vertical_box(
             vertical_box(
                 horizontal_box(
@@ -145,6 +145,7 @@ main :: proc() {
                 draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
             )
         )
+    )
     sgui_init(&handle)
     sgui_run(&handle)
     sgui_terminate(&handle)
