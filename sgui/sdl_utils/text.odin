@@ -44,6 +44,11 @@ text_update_font :: proc(text: ^Text, font: ^sdl_ttf.Font) {
     sdl_ttf.UpdateText(text.text)
 }
 
+text_update_wrap_width :: proc(text: ^Text, wrap_width: f32) {
+    sdl_ttf.SetTextWrapWidth(text.text, cast(c.int)wrap_width)
+    sdl_ttf.UpdateText(text.text)
+}
+
 text_draw :: proc(text: ^Text, x, y: f32) {
 	if !sdl_ttf.DrawRendererText(text.text, x, y) {
         fmt.printfln("error: cannot draw updateable text (text = {}).", text)

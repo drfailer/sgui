@@ -12,11 +12,9 @@ import su "sdl_utils"
 
 SGUIStyle :: struct {
     clear_color: Color,
-    button_style: ButtonStyle,
     // TODO: we should have different styles depending on the type of text
-    text_font_path: su.FontPath, // TODO: TextStyle???
-    text_font_size: su.FontSize,
-    text_font_color: Color,
+    text: TextStyle,
+    button: ButtonStyle,
 }
 
 SGUIOpts :: struct {
@@ -28,7 +26,13 @@ SGUIOpts :: struct {
 SGUI_OPTS :: SGUIOpts{
     style = SGUIStyle{
         clear_color = Color{0, 0, 0, 255},
-        button_style = ButtonStyle{
+        text = TextStyle{
+            font = FONT,
+            font_size = FONT_SIZE,
+            color = Color{255, 255, 255, 255},
+            wrap_width = 0,
+        },
+        button = ButtonStyle{
             label_font_path = FONT,
             label_font_size = FONT_SIZE,
             padding = {2, 2, 2, 2},
@@ -51,9 +55,6 @@ SGUI_OPTS :: SGUIOpts{
                 },
             },
         },
-        text_font_path = FONT,
-        text_font_size = FONT_SIZE,
-        text_font_color = Color{255, 255, 255, 255},
     }
 }
 

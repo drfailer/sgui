@@ -97,8 +97,8 @@ main :: proc() {
         vertical_box(
             vertical_box(
                 horizontal_box(
-                    text("Top pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
-                    text("Top pannel", FONT, FONT_SIZE, Color{255, 255, 255, 255}),
+                    text("Top pannel"),
+                    text("Top pannel"),
                     attr = BoxAttributes{
                         props = BoxProperties{.FitH, .FitW},
                         style = BoxStyle{
@@ -121,7 +121,14 @@ main :: proc() {
             horizontal_box(
                 horizontal_box(
                     vertical_box(
-                        text("Side Pannel", FONT, FONT_SIZE, Color{0, 0, 0, 255}),
+                        text("Side Pannel",
+                            attr = TextAttributes{
+                                style = TextStyle{
+                                    font = FONT,
+                                    font_size = FONT_SIZE,
+                                    color = Color{0, 0, 0, 255},
+                                },
+                            }),
                         button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
                         attr = BoxAttributes{
                             props = BoxProperties{.FitH, .FitW, .AlignCenter},

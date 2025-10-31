@@ -134,21 +134,30 @@ Image :: struct {
 
 // TODO: text wrapping
 
+TextStyle :: struct {
+    font: su.FontPath,
+    font_size: su.FontSize,
+    color: Color,
+    wrap_width: f32,
+}
+
+TextAttributes :: struct {
+    style: TextStyle,
+}
+
 Text :: struct {
     text: su.Text,
     content: string,
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
-    color: Color,
-    font_path: su.FontPath,
-    font_size: su.FontSize,
+    attr: TextAttributes,
 }
 
 text_from_string :: proc(
     content: string,
-    font_path: su.FontPath,
-    font_size: su.FontSize,
-    color: Color
+    attr := TextAttributes{
+        style = SGUI_OPTS.style.text
+    }
 ) -> Widget {
     return Widget{
         init = text_init,
@@ -156,9 +165,7 @@ text_from_string :: proc(
         draw = text_draw,
         data = Text{
             content = content,
-            color = color,
-            font_path = font_path,
-            font_size = font_size,
+            attr = attr,
         }
     }
 }
@@ -166,8 +173,9 @@ text_from_string :: proc(
 text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
-    font_path: su.FontPath,
-    font_size: su.FontSize,
+    attr := TextAttributes{
+        style = SGUI_OPTS.style.text
+    }
 ) -> Widget {
     return Widget{
         init = text_init,
@@ -176,8 +184,7 @@ text_from_proc :: proc(
         data = Text{
             content_proc = content_proc,
             content_proc_data = content_proc_data,
-            font_path = font_path,
-            font_size = font_size,
+            attr = attr
         }
     }
 }
@@ -192,9 +199,14 @@ text_init :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
     data := &self.data.(Text)
     data.text = su.text_create(
         handle.text_engine,
-        su.font_cache_get_font(&handle.font_cache, data.font_path, data.font_size),
+        su.font_cache_get_font(&handle.font_cache, data.attr.style.font, data.attr.style.font_size),
         data.content)
-    su.text_update_color(&data.text, sdl.Color{data.color.r, data.color.g, data.color.b, data.color.a})
+    su.text_update_color(&data.text, sdl.Color{
+        data.attr.style.color.r,
+        data.attr.style.color.g,
+        data.attr.style.color.b,
+        data.attr.style.color.a
+    })
     w, h := su.text_size(&data.text)
     self.w = w
     self.h = h
@@ -210,6 +222,9 @@ text_update :: proc(self: ^Widget, handle: ^SGUIHandle, parent: ^Widget) {
         content, color := data.content_proc(data.content_proc_data)
         su.text_update_text(&data.text, content)
         su.text_update_color(&data.text, sdl.Color{color.r, color.g, color.b, color.a})
+        if data.attr.style.wrap_width > 0 {
+            su.text_update_wrap_width(&data.text, data.attr.style.wrap_width)
+        }
         w, h := su.text_size(&data.text)
         self.w = w
         self.h = h
@@ -260,7 +275,7 @@ button :: proc(
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
     attr: ButtonAttributes = ButtonAttributes{
-        style = SGUI_OPTS.style.button_style,
+        style = SGUI_OPTS.style.button,
     },
 ) -> Widget {
     return Widget{
