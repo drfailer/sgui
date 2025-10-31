@@ -91,7 +91,7 @@ widget_update :: proc(handle: ^SGUIHandle, widget: ^Widget) {
 
 widget_draw :: proc(widget: ^Widget, handle: ^SGUIHandle) {
     if !handle.processing_ordered_draws && widget.z_index > 0 {
-        sgui_add_ordered_draw(handle, widget)
+        add_ordered_draw(handle, widget)
     } else {
         widget->draw(handle)
     }
@@ -103,9 +103,11 @@ widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// QUESTION:
-// Should input widgets have a value function so that we can make forms that
-// will be submited in one callback instead of multiple.
+// TODO: takes a list of input widgest and get their values
+// TODO: special submit button
+Form :: struct {
+    widgets: [dynamic]Widget,
+}
 
 OnelineInput :: struct {
     label: string,

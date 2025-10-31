@@ -148,22 +148,22 @@ EventHandlers :: struct {
     widget_event: map[WidgetEventTag][dynamic]EventHandler(WidgetEventHandlerProc)
 }
 
-sgui_create :: proc() -> SGUIHandle { // TODO: allocator
+create :: proc() -> SGUIHandle { // TODO: allocator
     return SGUIHandle{
         layers = make([dynamic]Widget),
-        draw_rect = sgui_draw_rect,
-        draw_text = sgui_draw_text,
-        add_layer = sgui_add_layer,
-        switch_to_layer = sgui_switch_to_layer,
-        key_handler = sgui_add_key_event_handler,
-        scroll_handler = sgui_add_mouse_wheel_event_handler,
-        click_handler = sgui_add_mouse_click_event_handler,
-        mouse_move_handler = sgui_add_mouse_motion_event_handler,
-        widget_event_handler = sgui_add_widget_event_handler,
+        draw_rect = draw_rect,
+        draw_text = draw_text,
+        add_layer = add_layer,
+        switch_to_layer = switch_to_layer,
+        key_handler = add_key_event_handler,
+        scroll_handler = add_mouse_wheel_event_handler,
+        click_handler = add_mouse_click_event_handler,
+        mouse_move_handler = add_mouse_motion_event_handler,
+        widget_event_handler = add_widget_event_handler,
     }
 }
 
-sgui_init :: proc(handle: ^SGUIHandle) {
+init :: proc(handle: ^SGUIHandle) {
     if !sdl.Init(sdl.InitFlags{.VIDEO, .EVENTS}) {
         fmt.printfln("error: {}", sdl.GetError())
         return
@@ -204,7 +204,7 @@ sgui_init :: proc(handle: ^SGUIHandle) {
     }
 }
 
-sgui_terminate :: proc(handle: ^SGUIHandle) {
+terminate :: proc(handle: ^SGUIHandle) {
     sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
     su.font_cache_destroy(&handle.font_cache)
     sdl_ttf.Quit()
@@ -225,7 +225,7 @@ sgui_terminate :: proc(handle: ^SGUIHandle) {
     delete(handle.layers)
 }
 
-sgui_process_widget_events :: proc(handle: ^SGUIHandle) {
+process_widget_events :: proc(handle: ^SGUIHandle) {
     // We reset the queue to avoid event to constantly append new event into it.
     // Here, if any handler emit a new event, it will be process during the
     // next iteration so that we never get stuck into an infit loop here.
@@ -241,8 +241,8 @@ sgui_process_widget_events :: proc(handle: ^SGUIHandle) {
     }
 }
 
-sgui_process_events :: proc(handle: ^SGUIHandle) {
-    sgui_process_widget_events(handle)
+process_events :: proc(handle: ^SGUIHandle) {
+    process_widget_events(handle)
 
     event: sdl.Event
     for sdl.PollEvent(&event) {
@@ -304,14 +304,14 @@ sgui_process_events :: proc(handle: ^SGUIHandle) {
     }
 }
 
-sgui_update :: proc(handle: ^SGUIHandle) {
+update :: proc(handle: ^SGUIHandle) {
     w, h: i32
     assert(sdl.GetWindowSize(handle.window, &w, &h));
     handle.rel_rect = Rect{0, 0, cast(f32)w, cast(f32)h}
     widget_update(handle, &handle.layers[handle.current_layer])
 }
 
-sgui_draw :: proc(handle: ^SGUIHandle) {
+draw :: proc(handle: ^SGUIHandle) {
     clear_color := SGUI_OPTS.style.clear_color
     sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
     sdl.RenderClear(handle.renderer)
@@ -324,13 +324,13 @@ sgui_draw :: proc(handle: ^SGUIHandle) {
     handle.processing_ordered_draws = false
 }
 
-sgui_run :: proc(handle: ^SGUIHandle) {
+run :: proc(handle: ^SGUIHandle) {
     for handle.run {
         handle.dt = cast(f32)time.duration_seconds(time.tick_lap_time(&handle.tick))
 
-        sgui_process_events(handle)
-        sgui_update(handle)
-        sgui_draw(handle)
+        process_events(handle)
+        update(handle)
+        draw(handle)
 
         // draw fps text
         // TODO: optimize this v
@@ -349,42 +349,42 @@ sgui_run :: proc(handle: ^SGUIHandle) {
     }
 }
 
-sgui_add_key_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: KeyEventHandlerProc) {
+add_key_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: KeyEventHandlerProc) {
     append(&handle.event_handlers.key, EventHandler(KeyEventHandlerProc){exec, widget})
 }
 
-sgui_add_mouse_wheel_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseWheelEventHandlerProc) {
+add_mouse_wheel_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseWheelEventHandlerProc) {
     append(&handle.event_handlers.mouse_wheel, EventHandler(MouseWheelEventHandlerProc){exec, widget})
 }
 
-sgui_add_mouse_click_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseClickEventHandlerProc) {
+add_mouse_click_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseClickEventHandlerProc) {
     append(&handle.event_handlers.mouse_click, EventHandler(MouseClickEventHandlerProc){exec, widget})
 }
 
-sgui_add_mouse_motion_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseMotionEventHandlerProc) {
+add_mouse_motion_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, exec: MouseMotionEventHandlerProc) {
     append(&handle.event_handlers.mouse_motion, EventHandler(MouseMotionEventHandlerProc){exec, widget})
 }
 
-sgui_add_widget_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc) {
+add_widget_event_handler :: proc(handle: ^SGUIHandle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc) {
     if tag not_in handle.event_handlers.widget_event {
         handle.event_handlers.widget_event[tag] = make([dynamic]EventHandler(WidgetEventHandlerProc))
     }
     append(&handle.event_handlers.widget_event[tag], EventHandler(WidgetEventHandlerProc){exec, widget})
 }
 
-sgui_add_event_handler :: proc {
-    sgui_add_key_event_handler,
-    sgui_add_mouse_wheel_event_handler,
-    sgui_add_mouse_click_event_handler,
-    sgui_add_mouse_motion_event_handler,
-    sgui_add_widget_event_handler,
+add_event_handler :: proc {
+    add_key_event_handler,
+    add_mouse_wheel_event_handler,
+    add_mouse_click_event_handler,
+    add_mouse_motion_event_handler,
+    add_widget_event_handler,
 }
 
-sgui_emit :: proc(handle: ^SGUIHandle, tag: WidgetEventTag, emitter: ^Widget, data: rawptr = nil) {
+emit :: proc(handle: ^SGUIHandle, tag: WidgetEventTag, emitter: ^Widget, data: rawptr = nil) {
     queue.enqueue(&handle.widget_event_queue, WidgetEvent{tag, emitter, data})
 }
 
-sgui_draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
+draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
     sdl.RenderFillRect(handle.renderer, &Rect{
         x + handle.rel_rect.x,
@@ -394,15 +394,15 @@ sgui_draw_rect :: proc(handle: ^SGUIHandle, x, y, w, h: f32, color: Color) {
     })
 }
 
-sgui_draw_text :: proc(handle: ^SGUIHandle, text: ^su.Text, x, y: f32) {
+draw_text :: proc(handle: ^SGUIHandle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
-sgui_add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
+add_layer :: proc(handle: ^SGUIHandle, widget: Widget) {
     append(&handle.layers, widget)
 }
 
-sgui_switch_to_layer :: proc(handle: ^SGUIHandle, layer_idx: int) -> bool {
+switch_to_layer :: proc(handle: ^SGUIHandle, layer_idx: int) -> bool {
     if layer_idx > len(handle.layers) {
         return false
     }
@@ -410,7 +410,7 @@ sgui_switch_to_layer :: proc(handle: ^SGUIHandle, layer_idx: int) -> bool {
     return true
 }
 
-sgui_add_ordered_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
+add_ordered_draw :: proc(handle: ^SGUIHandle, widget: ^Widget) {
     priority_queue.push(&handle.ordered_draws, OrderedDraw{
         z_index = widget.z_index,
         widget = widget,

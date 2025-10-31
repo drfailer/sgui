@@ -90,7 +90,7 @@ update_data :: proc(handle: ^SGUIHandle, box: ^Widget, _: rawptr) -> ContentSize
 }
 
 main :: proc() {
-    handle := sgui_create()
+    handle := create()
 
     handle->add_layer(
         vbox(
@@ -151,7 +151,7 @@ main :: proc() {
             )
         )
     )
-    sgui_init(&handle)
-    sgui_run(&handle)
-    sgui_terminate(&handle)
+    init(&handle)
+    run(&handle)
+    terminate(&handle)
 }
