@@ -512,6 +512,8 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
 
 box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
+    self.h = parent.h
+    self.w = parent.w
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
     max_w := data.widgets[0].w
