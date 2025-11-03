@@ -53,7 +53,7 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
     }
 }
 
-draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color, anti_aliazing: bool = false) {
+draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
     if bw < radius || bh < radius {
         return
     }
@@ -66,6 +66,8 @@ draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f
     w := bw - 2 * radius
     h := bh - 2 * radius
 
+    a := cast(f32)color.a
+
     for x < -y {
         if p > 0 {
             y += 1
@@ -74,43 +76,53 @@ draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f
             p += 2 * x + 1
         }
 
-        // top
-        tx1 := cx - cast(f32)x
-        tw1 := cx + cast(f32)x - tx1
-        tx2 := cx + cast(f32)y
-        tw2 := cx - cast(f32)y - tx2
-        handle->draw_rect(tx1 - w, cy + cast(f32)y, tw1 + w, 1., color)
-        handle->draw_rect(tx2 - w, cy - cast(f32)x, tw2 + w, 1., color)
+        xl1 := cx - cast(f32)x - w
+        xr1 := cx + cast(f32)x
+        xl2 := cx + cast(f32)y - w
+        xr2 := cx - cast(f32)y
+        w1 := xr1 - xl1
+        w2 := xr2 - xl2
 
-        // bottom
-        bx1 := cx - cast(f32)x
-        bw1 := cx + cast(f32)x - bx1
-        bx2 := cx + cast(f32)y
-        bw2 := cx - cast(f32)y - bx2
-        handle->draw_rect(bx1 - w, cy - cast(f32)y + h, bw1 + w, 1., color)
-        handle->draw_rect(bx2 - w, cy + cast(f32)x + h, bw2 + w, 1., color)
-
-        if anti_aliazing {
-            // (x - cx)^2 + (y - cy)^2 <= r^2
-            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
-            if diff > 0 {
-                color := multiply_color(color, 1. - diff)
-                // top right
-                handle->draw_rect(cx + cast(f32)x - 1, cy + cast(f32)y, 1., 1., color)
-                handle->draw_rect(cx - cast(f32)y - 1, cy - cast(f32)x, 1., 1., color)
+        diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+        if 0 < diff && diff < 1  {
+            {
+                color := color
+                color.a = cast(u8)(a * (1 - diff))
 
                 // top left
-                handle->draw_rect(tx1 - w, cy + cast(f32)y, 1., 1., color)
-                handle->draw_rect(tx2 - w, cy - cast(f32)x, 1., 1., color)
+                handle->draw_rect(xl1, cy + cast(f32)y, 1., 1., color)
+                handle->draw_rect(xl2, cy - cast(f32)x, 1., 1., color)
 
-                // bottom right
-                handle->draw_rect(cx + cast(f32)x - 1, cy - cast(f32)y + h, 1., 1., color)
-                handle->draw_rect(cx - cast(f32)y - 1, cy + cast(f32)x + h, 1., 1., color)
+                // top right
+                handle->draw_rect(xr1 - 1, cy + cast(f32)y, 1., 1., color)
+                handle->draw_rect(xr2 - 1, cy - cast(f32)x, 1., 1., color)
 
                 // bottom left
-                handle->draw_rect(bx1 - w, cy - cast(f32)y + h, 1., 1., color)
-                handle->draw_rect(bx2 - w, cy + cast(f32)x + h, 1., 1., color)
+                handle->draw_rect(xl1, cy - cast(f32)y + h, 1., 1., color)
+                handle->draw_rect(xl2, cy + cast(f32)x + h, 1., 1., color)
+
+                // bottom right
+                handle->draw_rect(xr1 - 1, cy - cast(f32)y + h, 1., 1., color)
+                handle->draw_rect(xr2 - 1, cy + cast(f32)x + h, 1., 1., color)
             }
+
+            // draw inside
+
+            // top
+            handle->draw_rect(xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
+            handle->draw_rect(xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
+
+            // bottom
+            handle->draw_rect(xl1 + 1, cy - cast(f32)y + h, w1 - 2, 1., color)
+            handle->draw_rect(xl2 + 1, cy + cast(f32)x + h, w2 - 2, 1., color)
+        } else {
+            // top
+            handle->draw_rect(xl1, cy + cast(f32)y, w1, 1., color)
+            handle->draw_rect(xl2, cy - cast(f32)x, w2, 1., color)
+
+            // bottom
+            handle->draw_rect(xl1, cy - cast(f32)y + h, w1, 1., color)
+            handle->draw_rect(xl2, cy + cast(f32)x + h, w2, 1., color)
         }
 
         x += 1

@@ -183,6 +183,8 @@ init :: proc(handle: ^Handle) {
         return
     }
 
+    sdl.SetRenderDrawBlendMode(handle.renderer, sdl.BLENDMODE_BLEND)
+
     handle.font_cache = su.font_cache_create()
     queue.init(&handle.widget_event_queue)
     priority_queue.init(
