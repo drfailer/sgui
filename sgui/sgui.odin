@@ -97,7 +97,7 @@ Handle :: struct {
     scroll_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseWheelEventHandlerProc),
     click_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseClickEventHandlerProc),
     mouse_move_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseMotionEventHandlerProc),
-    widget_event_handler: proc(handle: ^Handle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc),
+    widget_event_handler: proc(handle: ^Handle, widget: ^Widget, emitter: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc, exec_data: rawptr),
 
     /** draw **/
     draw_rect: proc(handle: ^Handle, x, y, w, h: f32, color: Color),
@@ -132,7 +132,13 @@ WidgetEvent :: struct {
     emitter: ^Widget,
     data: rawptr,
 }
-WidgetEventHandlerProc :: proc(dest: ^Widget, event: WidgetEvent, handle: ^Handle) -> bool
+WidgetEventHandlerProc :: proc(dest: ^Widget, data: rawptr, event: WidgetEvent, handle: ^Handle) -> bool
+WidgetEventHandler :: struct {
+    widget: ^Widget,
+    emitter: ^Widget,
+    exec: WidgetEventHandlerProc,
+    exec_data: rawptr
+}
 
 Color :: distinct [4]u8
 
@@ -147,9 +153,7 @@ EventHandlers :: struct {
     mouse_click: [dynamic]EventHandler(MouseClickEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_motion: [dynamic]EventHandler(MouseMotionEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_wheel: [dynamic]EventHandler(MouseWheelEventHandlerProc),
-    // TODO: group on the widget (we can listen a widget)!
-    // TODO: if the tag widget is nil, a listen the tag for any widget!
-    widget_event: map[WidgetEventTag][dynamic]EventHandler(WidgetEventHandlerProc)
+    widget_event: map[WidgetEventTag][dynamic]WidgetEventHandler
 }
 
 create :: proc() -> Handle { // TODO: allocator
@@ -244,7 +248,9 @@ process_widget_events :: proc(handle: ^Handle) {
     for queue.len(q) > 0 {
         event := queue.dequeue(&q)
         for handler in handle.event_handlers.widget_event[event.tag] {
-            handler.exec(handler.widget, event, handle)
+            if handler.emitter == nil || handler.emitter == event.emitter {
+                handler.exec(handler.widget, handler.exec_data, event, handle)
+            }
         }
     }
 }
@@ -377,11 +383,23 @@ add_mouse_motion_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: M
     append(&handle.event_handlers.mouse_motion, EventHandler(MouseMotionEventHandlerProc){exec, widget})
 }
 
-add_widget_event_handler :: proc(handle: ^Handle, widget: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc) {
+add_widget_event_handler :: proc(
+    handle: ^Handle,
+    widget: ^Widget,
+    emitter: ^Widget,
+    tag: WidgetEventTag,
+    exec: WidgetEventHandlerProc,
+    exec_data: rawptr = nil
+) {
     if tag not_in handle.event_handlers.widget_event {
-        handle.event_handlers.widget_event[tag] = make([dynamic]EventHandler(WidgetEventHandlerProc))
+        handle.event_handlers.widget_event[tag] = make([dynamic]WidgetEventHandler)
     }
-    append(&handle.event_handlers.widget_event[tag], EventHandler(WidgetEventHandlerProc){exec, widget})
+    append(&handle.event_handlers.widget_event[tag], WidgetEventHandler{
+        widget = widget,
+        emitter = emitter,
+        exec = exec,
+        exec_data = exec_data,
+    })
 }
 
 add_event_handler :: proc {
