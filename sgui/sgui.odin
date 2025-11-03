@@ -386,12 +386,11 @@ emit :: proc(handle: ^Handle, tag: WidgetEventTag, emitter: ^Widget, data: rawpt
 
 draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
-    sdl.RenderFillRect(handle.renderer, &Rect{
-        x + handle.rel_rect.x,
-        y + handle.rel_rect.y,
-        min(w, handle.rel_rect.w),
-        min(h, handle.rel_rect.h),
-    })
+    sx := clamp(x, 0, handle.rel_rect.w)
+    sy := clamp(y, 0, handle.rel_rect.h)
+    sw := max(0, w - abs(sx - abs(x)))
+    sh := max(0, h - abs(sy - abs(y)))
+    sdl.RenderFillRect(handle.renderer, &Rect{sx + handle.rel_rect.x, sy + handle.rel_rect.y, sw, sh})
 }
 
 draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {

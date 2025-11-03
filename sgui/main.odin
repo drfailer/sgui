@@ -66,10 +66,6 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
 
     for data, idx in DATA {
         data_rect.w = scaling_factor * cast(f32)(data.end - data.begin)
-        if data_rect.x < 0 {
-            data_rect.w += data_rect.x
-            data_rect.x = 0
-        }
         draw_rounded_box(handle, data_rect.x, data_rect.y,
             data_rect.w, data_rect.h, box_data.zoombox.lvl * 20, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
         draw_rounded_box(handle, data_rect.x + 1, data_rect.y + 1,
