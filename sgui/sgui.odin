@@ -86,6 +86,8 @@ Handle :: struct {
 
     /* procs */
 
+    // TODO: make_widget() // allocate a widget using internal allocator
+
     /** layers **/
     add_layer: proc(handle: ^Handle, widget: Widget),
     switch_to_layer: proc(handle: ^Handle, layer_idx: int) -> bool,
@@ -104,8 +106,10 @@ Handle :: struct {
 }
 
 OrderedDraw :: struct {
-    z_index: u64,
+    priority: u64,
     widget: ^Widget,
+    draw_proc: proc(handle: ^Handle, draw_data: rawptr),
+    draw_data: rawptr,
 }
 
 Rect :: sdl.FRect
@@ -143,6 +147,8 @@ EventHandlers :: struct {
     mouse_click: [dynamic]EventHandler(MouseClickEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_motion: [dynamic]EventHandler(MouseMotionEventHandlerProc), // TODO: use a more efficent data stucture?
     mouse_wheel: [dynamic]EventHandler(MouseWheelEventHandlerProc),
+    // TODO: group on the widget (we can listen a widget)!
+    // TODO: if the tag widget is nil, a listen the tag for any widget!
     widget_event: map[WidgetEventTag][dynamic]EventHandler(WidgetEventHandlerProc)
 }
 
@@ -190,7 +196,9 @@ init :: proc(handle: ^Handle) {
     priority_queue.init(
         &handle.ordered_draws,
         less = proc(a, b: OrderedDraw) -> bool {
-            return a.z_index < b.z_index
+            // it is a widget priority, not a draw priority, which means that
+            // widgets with higher priority should be drawn last
+            return a.priority > b.priority
         },
         swap = proc(q: []OrderedDraw, i, j: int) {
             tmp := q[i]
@@ -319,7 +327,11 @@ draw :: proc(handle: ^Handle) {
     handle.processing_ordered_draws = true
     for priority_queue.len(handle.ordered_draws) > 0 {
         od := priority_queue.pop(&handle.ordered_draws)
-        od.widget->draw(handle)
+        if od.draw_proc == nil {
+            od.widget->draw(handle)
+        } else {
+            od.draw_proc(handle, od.draw_data)
+        }
     }
     handle.processing_ordered_draws = false
 }
@@ -397,6 +409,13 @@ draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
+mouse_on_region :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
+    x := x + handle.rel_rect.x
+    y := y + handle.rel_rect.y
+    return x <= handle.mouse_x && handle.mouse_x <= (x + w) \
+        && y <= handle.mouse_y && handle.mouse_y <= (y + h)
+}
+
 add_layer :: proc(handle: ^Handle, widget: Widget) {
     append(&handle.layers, widget)
 }
@@ -409,9 +428,27 @@ switch_to_layer :: proc(handle: ^Handle, layer_idx: int) -> bool {
     return true
 }
 
-add_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {
+add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {
     priority_queue.push(&handle.ordered_draws, OrderedDraw{
-        z_index = widget.z_index,
+        priority = widget.z_index,
         widget = widget,
     })
+}
+
+add_proc_ordered_draw :: proc(
+    handle: ^Handle,
+    priority: u64,
+    draw_proc: proc(handel: ^Handle, draw_data: rawptr),
+    draw_data: rawptr = nil
+) {
+    priority_queue.push(&handle.ordered_draws, OrderedDraw{
+        priority = priority,
+        draw_proc = draw_proc,
+        draw_data = draw_data,
+    })
+}
+
+add_ordered_draw :: proc{
+    add_widget_ordered_draw,
+    add_proc_ordered_draw,
 }

@@ -587,6 +587,8 @@ DrawBoxProperty :: enum {
     WithScrollbar,
 }
 
+// TODO: draw box attribute -> allow changing zoombox attr
+
 ContentSize :: struct {
     width: f32,
     height: f32,
