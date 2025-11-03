@@ -386,6 +386,9 @@ BoxLayout :: enum {
     Horizontal,
 }
 
+// TODO: current alignment stratigies are bad!
+// IDEA: create left, right, top, and center functions and store a list of aligned widgets in the box
+// TODO: might need a grid box as well
 BoxProperties :: bit_set[BoxProperty]
 BoxProperty :: enum {
     AlignCenter,

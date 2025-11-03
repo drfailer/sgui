@@ -6,6 +6,8 @@ import "core:strings"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+Color :: sdl.Color
+
 Text :: struct {
     text_engine: ^sdl_ttf.TextEngine,
     font: ^sdl_ttf.Font,
