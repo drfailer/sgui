@@ -118,7 +118,7 @@ draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: i
     handle->draw_rect(xr2, cy + cast(f32)x + h, 1., 1., color)
 }
 
-draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
+draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
     if bw < radius || bh < radius {
         return
     }
@@ -180,11 +180,105 @@ draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f
     handle->draw_rect(bx, by + radius, bw, h, color)
 }
 
-draw_rounded_box_from_rect :: proc (handle: ^Handle, rect: Rect, radius: f32, color: Color) {
-    draw_rounded_box_from_values(handle, rect.x, rect.y, rect.w, rect.h, radius, color)
+draw_rounded_box_with_border :: proc (
+    handle: ^Handle, bx, by, bw, bh, radius, border_thickness: f32, border_color: Color, color: Color) {
+    // since the interior of the circle is not anti-alized yet, we use the draw
+    // stack technique even though it's not the most efficient
+    draw_rounded_box(handle, bx, by, bw, bh, radius, border_color)
+    draw_rounded_box(
+        handle,
+        bx + border_thickness, by + border_thickness,
+        bw - 2 * border_thickness, bh - 2 * border_thickness,
+        radius - 2 * border_thickness,
+        color)
 }
 
-draw_rounded_box :: proc {
-    draw_rounded_box_from_values,
-    draw_rounded_box_from_rect,
+// source: https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
+
+fpart :: proc(x: f32) -> f32 {
+    return x - math.floor(x)
 }
+
+rfpart :: proc(x: f32) -> f32 {
+    return 1 - fpart(x)
+}
+
+draw_point_with_alpha :: proc(handle: ^Handle, x, y: f32, color: Color, intensity: f32) {
+    color := color
+    color.a = cast(u8)(cast(f32)color.a * intensity)
+    handle->draw_rect(x, y, 1, 1, color)
+}
+
+swap :: proc(a, b: ^f32) {
+    tmp := a^
+    a^ = b^
+    b^ = tmp
+}
+
+draw_line :: proc(handle: ^Handle, x0, y0, x1, y1: f32, color: Color) {
+    steep := abs(y1 - y0) > abs(x1 - x0)
+    x0, y0, x1, y1 := x0, y0, x1, y1
+
+    if steep {
+        swap(&x0, &y0)
+        swap(&x1, &y1)
+    }
+
+    if x0 > x1 {
+        swap(&x0, &x1)
+        swap(&y0, &y1)
+    }
+
+    dx := x1 - x0
+    dy := y1 - y0
+
+    gradient := cast(f32)1.0
+    if dx != 0 {
+        gradient = dy / dx
+    }
+
+    // handle first endpoint
+    xend := math.floor(x0)
+    yend := y0 + gradient * (xend - x0)
+    xgap := 1 - (x0 - xend)
+    xpxl1 := xend
+    ypxl1 := math.floor(yend)
+    if steep {
+        draw_point_with_alpha(handle, ypxl1, xpxl1, color, rfpart(yend) * xgap)
+        draw_point_with_alpha(handle, ypxl1 + 1, xpxl1, color,  fpart(yend) * xgap)
+    } else {
+        draw_point_with_alpha(handle, xpxl1, ypxl1, color, rfpart(yend) * xgap)
+        draw_point_with_alpha(handle, xpxl1, ypxl1 + 1, color, fpart(yend) * xgap)
+    }
+    intery := yend + gradient // first y-intersection for the main loop
+
+    // handle second endpoint
+    xend = math.ceil(x1)
+    yend = y1 + gradient * (xend - x1)
+    xgap = 1 - (xend - x1)
+    xpxl2 := xend //this will be used in the main loop
+    ypxl2 := math.floor(yend)
+    if steep {
+        draw_point_with_alpha(handle, ypxl2, xpxl2, color, rfpart(yend) * xgap)
+        draw_point_with_alpha(handle, ypxl2+1, xpxl2, color, fpart(yend) * xgap)
+    } else {
+        draw_point_with_alpha(handle, xpxl2, ypxl2, color, rfpart(yend) * xgap)
+        draw_point_with_alpha(handle, xpxl2, ypxl2+1, color, fpart(yend) * xgap)
+    }
+
+    // main loop
+    if steep {
+        for x in (xpxl1 + 1)..<xpxl2 {
+            draw_point_with_alpha(handle, math.floor(intery), x, color, rfpart(intery))
+            draw_point_with_alpha(handle, math.floor(intery) + 1, x, color,  fpart(intery))
+            intery = intery + gradient
+        }
+    } else {
+        for x in (xpxl1 + 1)..<xpxl2 {
+            draw_point_with_alpha(handle, x, math.floor(intery), color, rfpart(intery))
+            draw_point_with_alpha(handle, x, math.floor(intery) + 1, color, fpart(intery))
+            intery = intery + gradient
+        }
+    }
+}
+

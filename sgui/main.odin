@@ -61,6 +61,10 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
         data_rect.y = 0
     }
 
+    draw_line(handle, 0, 0, 200, 100, Color{255, 255, 255, 255})
+    draw_line(handle, 0, 0, 200, 300, Color{255, 255, 255, 255})
+    draw_line(handle, 0, 0, 100, 300, Color{255, 255, 255, 255})
+
     // compute the scale depending on the zoom level
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
     scaling_factor := box_data.zoombox.lvl * MS_TO_PIXEL
