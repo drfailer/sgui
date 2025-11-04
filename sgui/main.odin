@@ -100,14 +100,14 @@ side_pannel_widget :: proc() -> (widget: Widget) {
                 }),
             button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
             attr = BoxAttributes{
-                props = BoxProperties{.FitH, .FitW, .AlignCenter},
+                props = BoxProperties{.FitH, .FitW},
                 style = BoxStyle{
                     items_spacing = 10,
                 },
             }
         ),
         attr = BoxAttributes{
-            props = BoxProperties{.FitW, .AlignCenter},
+            props = BoxProperties{.FitW},
             style = BoxStyle{
                 background_color = Color{255, 0, 0, 255},
                 padding = Padding{ 10, 10, 10, 10 },
@@ -143,7 +143,7 @@ main :: proc() {
                     alignment = Alignment{.Top, .HCenter},
                 ),
                 attr = BoxAttributes{
-                    props = BoxProperties{.FitH, .AlignCenter},
+                    props = BoxProperties{.FitH},
                     style = BoxStyle{
                         background_color = Color{0, 0, 255, 255},
                         border_thickness = 2,
@@ -155,7 +155,7 @@ main :: proc() {
             vbox(
                 align_widgets(
                     vbox(
-                        align_widgets(text("footer"), alignment = Alignment{.HCenter}),
+                        center(text("footer")),
                         attr = BoxAttributes{
                             props = BoxProperties{.FitH},
                             style = BoxStyle{
@@ -169,6 +169,7 @@ main :: proc() {
                 ),
                 hbox(
                     side_pannel_widget(),
+                    // the draw box is at the end: since it is resizable, all the other parts needs to be align first
                     draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
                 ),
             )

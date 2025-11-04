@@ -400,16 +400,8 @@ AlignmentFlag :: enum {
     HCenter,
 }
 
-// TODO: current alignment stratigies are bad!
-// IDEA: create left, right, top, and center functions and store a list of aligned widgets in the box
-// TODO: might need a grid box as well
 BoxProperties :: bit_set[BoxProperty]
 BoxProperty :: enum {
-    AlignCenter,
-    AlignLeft,
-    AlignRight,
-    AlignTop,
-    AlignBottom,
     FitW,
     FitH,
 }
@@ -724,6 +716,10 @@ align_widgets :: proc(widgets: ..Widget, alignment: Alignment = {.Top, .Left}) -
         append(&result, AlignedWidget{widget = widget, alignment = alignment})
     }
     return result
+}
+
+center :: proc(widgets: ..Widget) -> [dynamic]AlignedWidget {
+    return align_widgets(..widgets, alignment = Alignment{.HCenter, .VCenter})
 }
 
 // draw box ////////////////////////////////////////////////////////////////////
