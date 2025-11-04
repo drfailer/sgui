@@ -159,8 +159,9 @@ Text :: struct {
     attr: TextAttributes,
 }
 
-text_from_string :: proc(content: string, attr := OPTS.text_attr) -> Widget {
-    return Widget{
+text_from_string :: proc(content: string, attr := OPTS.text_attr) -> (text: ^Widget) {
+    text = new(Widget)
+    text^ = Widget{
         init = text_init,
         update = text_update,
         draw = text_draw,
@@ -169,14 +170,16 @@ text_from_string :: proc(content: string, attr := OPTS.text_attr) -> Widget {
             attr = attr,
         }
     }
+    return text
 }
 
 text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
     attr := OPTS.text_attr,
-) -> Widget {
-    return Widget{
+) -> (text: ^Widget) {
+    text = new(Widget)
+    text^ = Widget{
         init = text_init,
         update = text_update,
         draw = text_draw,
@@ -186,6 +189,7 @@ text_from_proc :: proc(
             attr = attr
         }
     }
+    return text
 }
 
 // TODO: create a printf like version
@@ -274,8 +278,9 @@ button :: proc(
     clicked: ButtonClickedProc,
     clicked_data: rawptr = nil,
     attr := OPTS.button_attr,
-) -> Widget {
-    return Widget{
+) -> (button: ^Widget) {
+    button = new(Widget)
+    button^ = Widget{
         resizable_w = true,
         resizable_h = true,
         init = button_init,
@@ -288,6 +293,7 @@ button :: proc(
             attr = attr,
         }
     }
+    return button
 }
 
 button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
@@ -414,7 +420,7 @@ BoxAttributes :: struct {
 
 AlignedWidget :: struct {
     alignment: Alignment,
-    widget: Widget,
+    widget: ^Widget,
 }
 
 // TODO: scrollbars
@@ -429,7 +435,7 @@ Box :: struct {
 }
 
 BoxInput :: union {
-    Widget,
+    ^Widget,
     [dynamic]AlignedWidget,
 }
 
@@ -442,7 +448,8 @@ box :: proc(
     draw: WidgetDrawProc,
     z_index: u64,
     widgets: ..BoxInput,
-) -> Widget {
+) -> (box: ^Widget) {
+    box = new(Widget)
     widget_list := make([dynamic]AlignedWidget)
 
     for widget in widgets {
@@ -452,10 +459,10 @@ box :: proc(
                 append(&widget_list, aw)
             }
             delete(v)
-        case Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
+        case ^Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
         }
     }
-    return Widget{
+    box^ = Widget{
         z_index = z_index,
         resizable_h = true,
         resizable_w = true,
@@ -468,13 +475,14 @@ box :: proc(
             widgets = widget_list,
         }
     }
+    return box
 }
 
-vbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+vbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {
     return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
-hbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+hbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {
     return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
@@ -515,9 +523,9 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
     remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
 
-    for &aw in data.widgets {
+    for aw in data.widgets {
         if aw.widget.disabled do continue
-        if !box_ensure_alignment_conditions(&aw.widget, remaining_w, remaining_h) do continue
+        if !box_ensure_alignment_conditions(aw.widget, remaining_w, remaining_h) do continue
 
         wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
 
@@ -556,7 +564,7 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             }
         }
 
-        widget_align(&aw.widget, wx, wy, ww, wh)
+        widget_align(aw.widget, wx, wy, ww, wh)
     }
 
     // TODO: update self
@@ -574,9 +582,9 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
     remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
 
-    for &aw in data.widgets {
+    for aw in data.widgets {
         if aw.widget.disabled do continue
-        if !box_ensure_alignment_conditions(&aw.widget, remaining_w, remaining_h) do continue
+        if !box_ensure_alignment_conditions(aw.widget, remaining_w, remaining_h) do continue
 
         wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
 
@@ -616,7 +624,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             }
         }
 
-        widget_align(&aw.widget, wx, wy, ww, wh)
+        widget_align(aw.widget, wx, wy, ww, wh)
     }
 
     // TODO: update self
@@ -653,7 +661,7 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     ttl_w := padding_w
     ttl_h := padding_h
 
-    for &aw in data.widgets {
+    for aw in data.widgets {
         aw.widget->init(handle, self)
         max_w = max(max_w, aw.widget.w)
         ttl_w += aw.widget.w + data.attr.style.items_spacing
@@ -674,7 +682,7 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
 
-    for &aw in data.widgets {
+    for aw in data.widgets {
         if aw.widget.update != nil {
             aw.widget->update(handle, self)
         }
@@ -687,9 +695,9 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
     if data.attr.style.background_color.a > 0 {
         handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
-    for &aw in data.widgets {
+    for aw in data.widgets {
         if aw.widget.draw != nil {
-            widget_draw(&aw.widget, handle)
+            widget_draw(aw.widget, handle)
         }
     }
     bt := data.attr.style.border_thickness
@@ -711,14 +719,14 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
 // align functions //
 
 // TODO: this function should create a widget group!
-align_widgets :: proc(widgets: ..Widget, alignment: Alignment = {.Top, .Left}) -> (result: [dynamic]AlignedWidget) {
+align_widgets :: proc(widgets: ..^Widget, alignment: Alignment = {.Top, .Left}) -> (result: [dynamic]AlignedWidget) {
     for widget in widgets {
         append(&result, AlignedWidget{widget = widget, alignment = alignment})
     }
     return result
 }
 
-center :: proc(widgets: ..Widget) -> [dynamic]AlignedWidget {
+center :: proc(widgets: ..^Widget) -> [dynamic]AlignedWidget {
     return align_widgets(..widgets, alignment = Alignment{.HCenter, .VCenter})
 }
 
@@ -755,8 +763,9 @@ draw_box :: proc(
     init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
     data: rawptr = nil,
     props := DrawBoxProperties{},
-) -> Widget {
-    return Widget{
+) -> (draw_box: ^Widget) {
+    draw_box = new(Widget)
+    draw_box^ = Widget{
         resizable_h = true,
         resizable_w = true,
         init = draw_box_init,
@@ -772,6 +781,7 @@ draw_box :: proc(
             user_data = data,
         }
     }
+    return draw_box
 }
 
 draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {

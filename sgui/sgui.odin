@@ -82,7 +82,7 @@ Handle :: struct {
     // TODO: focused widget
 
     /* layers */
-    layers: [dynamic]Widget,
+    layers: [dynamic]^Widget,
     current_layer: int,
 
     /* draw ordering (when widget.z_index > 0, it is added to the queue) */
@@ -94,8 +94,9 @@ Handle :: struct {
     // TODO: make_widget() // allocate a widget using internal allocator
 
     /** layers **/
-    add_layer: proc(handle: ^Handle, widget: Widget),
+    add_layer: proc(handle: ^Handle, widget: ^Widget),
     switch_to_layer: proc(handle: ^Handle, layer_idx: int) -> bool,
+    make_widget: proc(handle: ^Handle, widget_proc: proc() -> ^Widget) -> ^Widget,
 
     /** events handlers **/
     key_handler: proc(handle: ^Handle, widget: ^Widget, exec: KeyEventHandlerProc),
@@ -166,11 +167,12 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
 
     /* base */
     handle^ = Handle{
-        layers = make([dynamic]Widget),
+        layers = make([dynamic]^Widget),
         draw_rect = draw_rect,
         draw_text = draw_text,
         add_layer = add_layer,
         switch_to_layer = switch_to_layer,
+        make_widget = make_widget,
         key_handler = add_key_event_handler,
         scroll_handler = add_mouse_wheel_event_handler,
         click_handler = add_mouse_click_event_handler,
@@ -230,8 +232,8 @@ init :: proc(handle: ^Handle) {
     )
 
     /* layers */
-    for &layer in handle.layers {
-        widget_init(&layer, handle)
+    for layer in handle.layers {
+        widget_init(layer, handle)
     }
     handle.run = true
 }
@@ -344,14 +346,14 @@ update :: proc(handle: ^Handle) {
     w, h: i32
     assert(sdl.GetWindowSize(handle.window, &w, &h));
     handle.rel_rect = Rect{0, 0, cast(f32)w, cast(f32)h}
-    widget_update(handle, &handle.layers[handle.current_layer])
+    widget_update(handle, handle.layers[handle.current_layer])
 }
 
 draw :: proc(handle: ^Handle) {
     clear_color := OPTS.clear_color
     sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
     sdl.RenderClear(handle.renderer)
-    widget_draw(&handle.layers[handle.current_layer], handle)
+    widget_draw(handle.layers[handle.current_layer], handle)
     handle.processing_ordered_draws = true
     for priority_queue.len(handle.ordered_draws) > 0 {
         od := priority_queue.pop(&handle.ordered_draws)
@@ -456,7 +458,7 @@ mouse_on_region :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
         && y <= handle.mouse_y && handle.mouse_y <= (y + h)
 }
 
-add_layer :: proc(handle: ^Handle, widget: Widget) {
+add_layer :: proc(handle: ^Handle, widget: ^Widget) {
     append(&handle.layers, widget)
 }
 
@@ -466,6 +468,11 @@ switch_to_layer :: proc(handle: ^Handle, layer_idx: int) -> bool {
     }
     handle.current_layer = layer_idx
     return true
+}
+
+make_widget :: proc(handle: ^Handle, widget_proc: proc() -> ^Widget) -> ^Widget {
+    context.allocator = handle.widget_allocator
+    return widget_proc()
 }
 
 add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {

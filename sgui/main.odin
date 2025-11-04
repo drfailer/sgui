@@ -87,7 +87,7 @@ update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {
     }
 }
 
-side_pannel_widget :: proc() -> (widget: Widget) {
+side_pannel_widget :: proc() -> (widget: ^Widget) {
     widget = hbox(
         vbox(
             text("Side Pannel",
@@ -121,8 +121,7 @@ side_pannel_widget :: proc() -> (widget: Widget) {
     return widget
 }
 
-main_layer :: proc(handle: ^Handle) -> Widget {
-    context.allocator = handle.widget_allocator
+main_layer :: proc() -> ^Widget {
     return vbox(
         vbox(
             align_widgets(
@@ -176,7 +175,7 @@ main_layer :: proc(handle: ^Handle) -> Widget {
 
 main :: proc() {
     handle := create()
-    handle->add_layer(main_layer(handle))
+    handle->add_layer(handle->make_widget(main_layer))
     init(handle)
     run(handle)
     destroy(handle)
