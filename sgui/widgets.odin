@@ -649,6 +649,14 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
     }
 }
 
+box_add_widget :: proc(box_widget: ^Widget, input: BoxInput) {
+    data := &box_widget.data.(Box)
+    switch v in input {
+    case AlignedWidget: append(&data.widgets, v)
+    case ^Widget: append(&data.widgets, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
+    }
+}
+
 box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
@@ -767,6 +775,7 @@ RadioButton :: struct {
 radio_button :: proc(
     label: string,
     attr := OPTS.radio_button_attr,
+    default_checked := false,
 ) -> (radio_button: ^Widget) {
     radio_button = new(Widget)
     radio_button^ = Widget{
@@ -775,7 +784,7 @@ radio_button :: proc(
         draw = radio_button_draw,
         value = radio_button_value,
         data = RadioButton {
-            checked = false,
+            checked = default_checked,
             label = label,
             attr = attr,
         }
