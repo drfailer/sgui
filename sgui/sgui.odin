@@ -141,13 +141,36 @@ Event :: sdl.Event
 EventType :: sdl.EventType
 Keycode :: sdl.Keycode
 
-KeyEventType :: enum { Up, Down }
+KeyMods :: bit_set[KeyMod]
 KeyMod :: enum { Control, Alt, Shift }
 
-KeyEventHandlerProc :: proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool
-MouseClickEventHandlerProc :: proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool
-MouseMotionEventHandlerProc :: proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool
-MouseWheelEventHandlerProc :: proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool
+KeyEvent :: struct {
+    key: Keycode,
+    down: bool,
+    mods: KeyMods,
+}
+KeyEventHandlerProc :: proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool
+
+MouseClickEvent :: struct {
+    button: u8,
+    down: bool,
+    click_count: u8,
+    x, y: f32,
+    mods: KeyMods,
+}
+MouseClickEventHandlerProc :: proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool
+
+MouseMotionEvent :: struct {
+    x, y, xd, yd: f32,
+    mods: KeyMods,
+}
+MouseMotionEventHandlerProc :: proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool
+
+MouseWheelEvent :: struct {
+    x, y: i32,
+    mods: KeyMods,
+}
+MouseWheelEventHandlerProc :: proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool
 
 WidgetEventTag :: u64
 WidgetEvent :: struct {
@@ -155,7 +178,7 @@ WidgetEvent :: struct {
     emitter: ^Widget,
     data: rawptr,
 }
-WidgetEventHandlerProc :: proc(dest: ^Widget, data: rawptr, event: WidgetEvent, handle: ^Handle) -> bool
+WidgetEventHandlerProc :: proc(self: ^Widget, event: WidgetEvent, handle: ^Handle) -> bool
 WidgetEventHandler :: struct {
     widget: ^Widget,
     emitter: ^Widget,
@@ -291,7 +314,7 @@ process_widget_events :: proc(handle: ^Handle) {
         event := queue.dequeue(&q)
         for handler in handle.event_handlers.widget_event[event.tag] {
             if handler.emitter == nil || handler.emitter == event.emitter {
-                handler.exec(handler.widget, handler.exec_data, event, handle)
+                handler.exec(handler.widget, event, handle)
             }
         }
     }
@@ -313,10 +336,11 @@ process_events :: proc(handle: ^Handle) {
             } else if event.key.key == sdl.K_LSHIFT || event.key.key == sdl.K_RSHIFT {
                 handle.event_handlers.mods |= { .Shift }
             }
+            key_event := KeyEvent{ event.key.key, true, handle.event_handlers.mods }
             for handler in handle.event_handlers.key {
                 if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
-                    handler.exec(handler.widget, event.key.key, .Down, handle.event_handlers.mods)
+                    handler.exec(handler.widget, key_event, handle)
                 }
             }
         case .KEY_UP:
@@ -327,38 +351,50 @@ process_events :: proc(handle: ^Handle) {
             } else if event.key.key == sdl.K_LSHIFT || event.key.key == sdl.K_RSHIFT {
                 handle.event_handlers.mods ~= { .Shift }
             }
+            key_event := KeyEvent{ event.key.key, false, handle.event_handlers.mods }
             for handler in handle.event_handlers.key {
                 if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
-                    handler.exec(handler.widget, event.key.key, .Up, handle.event_handlers.mods)
+                    handler.exec(handler.widget, key_event, handle)
                 }
             }
         case .MOUSE_WHEEL:
+            wheel_event := MouseWheelEvent{
+                event.wheel.integer_x,
+                event.wheel.integer_y,
+                handle.event_handlers.mods,
+            }
             for handler in handle.event_handlers.mouse_wheel {
                 if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
-                    handler.exec(handler.widget, event.wheel.integer_x, event.wheel.integer_y,
-                                 handle.event_handlers.mods)
+                    handler.exec(handler.widget, wheel_event, handle)
                 }
             }
         case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
+            mouse_click_event := MouseClickEvent{
+                event.button.button,
+                event.button.down,
+                event.button.clicks,
+                event.button.x, event.button.y,
+                handle.event_handlers.mods,
+            }
             for handler in handle.event_handlers.mouse_click {
                 if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
-                    handler.exec(handler.widget, event.button.button, event.button.down,
-                                 event.button.clicks, event.button.x, event.button.y,
-                                 handle.event_handlers.mods)
+                    handler.exec(handler.widget, mouse_click_event, handle)
                 }
             }
         case .MOUSE_MOTION:
             handle.mouse_x = event.motion.x
             handle.mouse_y = event.motion.y
+            mouse_motion_event := MouseMotionEvent{
+                event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel,
+                handle.event_handlers.mods,
+            }
             for handler in handle.event_handlers.mouse_motion {
                 if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
-                    handler.exec(handler.widget, event.motion.x, event.motion.y,
-                                 event.motion.xrel, event.motion.yrel,
-                                 handle.event_handlers.mods)
+                    handler.exec(handler.widget, mouse_motion_event, handle)
                 }
             }
         }

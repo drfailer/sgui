@@ -99,7 +99,7 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                         color = Color{0, 0, 0, 255},
                     },
                 }),
-            button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
+            button("hellope", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH, .FitW},

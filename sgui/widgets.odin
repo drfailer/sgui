@@ -243,7 +243,7 @@ text_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 ButtonState :: enum { Idle, Hovered, Clicked }
 
-ButtonClickedProc :: proc(clicked_data: rawptr)
+ButtonClickedProc :: proc(handle: ^Handle, clicked_data: rawptr)
 
 ButtonColors :: struct {
     text: Color,
@@ -308,15 +308,15 @@ button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.min_w = self.w
     self.min_h = self.h
 
-    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
-        if button != sdl.BUTTON_LEFT || !widget_is_hovered(self, x, y) do return false
+    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+        if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(self, event.x, event.y) do return false
         data := &self.data.(Button)
 
-        if down {
+        if event.down {
             data.state = .Clicked
         } else if data.state == .Clicked {
             data.state = .Idle
-            data.clicked(data.clicked_data)
+            data.clicked(handle, data.clicked_data)
         }
         return true
     })
@@ -817,12 +817,12 @@ radio_button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         data.label_offset = (d - label_h) / 2
     }
 
-    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(RadioButton)
         button_size := 2 * data.attr.style.base_radius
         button_x := self.x
         button_y := self.y + data.button_offset
-        if down && button == sdl.BUTTON_LEFT && mouse_on_region(x, y, button_x, button_y, button_size, button_size) {
+        if event.down && event.button == sdl.BUTTON_LEFT && mouse_on_region(event.x, event.y, button_x, button_y, button_size, button_size) {
             data.checked = !data.checked
             return true
         }
@@ -924,13 +924,13 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     zoombox_init(&data.zoombox, self)
 
     // TODO: factor this code v
-    handle->key_handler(self, proc(self: ^Widget, key: Keycode, type: KeyEventType, mods: bit_set[KeyMod]) -> bool {// {{{
-        if type != .Down do return false
+    handle->key_handler(self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {// {{{
+        if !event.down do return false
         data := &self.data.(DrawBox)
 
         vcount, hcount: i32
 
-        switch key {
+        switch event.key {
         case sdl.K_H: hcount = -1
         case sdl.K_L: hcount = 1
         case sdl.K_K: vcount = -1
@@ -938,22 +938,24 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         }
         return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
     })// }}}
-    handle->scroll_handler(self, proc(self: ^Widget, x, y: i32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {// {{{
         data := &self.data.(DrawBox)
-        if .Control in mods {
-            return zoombox_zoom_handler(&data.zoombox, x, y, mods)
+        if .Control in event.mods {
+            return zoombox_zoom_handler(&data.zoombox, event.x, event.y, event.mods)
         } else {
-            return scrollbox_scrolled_handler(&data.scrollbox, -y, 0, 100, 100)
+            return scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100)
         }
         return true
     })// }}}
-    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {// {{{
         data := &self.data.(DrawBox)
-        return scrollbox_clicked_handler(&data.scrollbox, button, down, click_count, x, y, mods)
+        // CLEANME
+        return scrollbox_clicked_handler(&data.scrollbox, event.button, event.down, event.click_count, event.x, event.y, event.mods)
     })// }}}
-    handle->mouse_move_handler(self, proc(self: ^Widget, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {// {{{
+    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {// {{{
         data := &self.data.(DrawBox)
-        return scrollbox_dragged_handler(&data.scrollbox, x, y, xd, yd, mods)
+        // CLEANME
+        return scrollbox_dragged_handler(&data.scrollbox, event.x, event.y, event.xd, event.yd, event.mods)
     })// }}}
 }
 
