@@ -386,6 +386,17 @@ BoxLayout :: enum {
     Horizontal,
 }
 
+Alignment :: bit_set[AlignmentFlag]
+AlignmentFlag :: enum {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    VCenter,
+    HCenter,
+    Center,
+}
+
 // TODO: current alignment stratigies are bad!
 // IDEA: create left, right, top, and center functions and store a list of aligned widgets in the box
 // TODO: might need a grid box as well
@@ -406,15 +417,25 @@ BoxAttributes :: struct {
     dims: BoxDimensions,
 }
 
+AlignedWidget :: struct {
+    alignment: Alignment,
+    widget: Widget,
+}
+
 // TODO: scrollbars
 Box :: struct {
     layout: BoxLayout,
     attr: BoxAttributes,
-    widgets: [dynamic]Widget,
+    widgets: [dynamic]AlignedWidget,
     // TODO: add an optional ScrollBox that will contain the implementation of the scrollbars (The draw box must have it too)
     // TODO: The standard boxes should be scrollable, but only the the draw box should be zoomable
     // TODO: The the update function of the scrollbox will need to know the content size
     // TODO: separate the logic of the scrollbar into the scrollbox that will also handle mouse wheel (if the box is hovered)
+}
+
+BoxInput :: union {
+    Widget,
+    AlignedWidget,
 }
 
 // TODO: the box should also have scrollbars
@@ -425,12 +446,15 @@ box :: proc(
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
     z_index: u64,
-    widgets: ..Widget,
+    widgets: ..BoxInput,
 ) -> Widget {
-    widget_list := make([dynamic]Widget)
+    widget_list := make([dynamic]AlignedWidget)
 
     for widget in widgets {
-        append(&widget_list, widget)
+        switch v in widget {
+        case AlignedWidget: append(&widget_list, v)
+        case Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
+        }
     }
     return Widget{
         z_index = z_index,
@@ -447,11 +471,11 @@ box :: proc(
     }
 }
 
-vbox :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+vbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
     return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
-hbox :: proc(widgets: ..Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
+hbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> Widget {
     return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
@@ -484,14 +508,15 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     widget_y := self.y + data.attr.style.padding.top
     widget_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
 
-    for &widget in data.widgets {
+    for &aw in data.widgets {
+        // TODO: alignment
         if .AlignCenter in data.attr.props {
             widget_x = self.x + data.attr.style.padding.left \
-                     + (self.w - widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
+                     + (self.w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
         }
-        widget_align(&widget, widget_x, widget_y, self.w, widget_h)
-        widget_y += widget.h + data.attr.style.items_spacing
-        widget_h -= widget.h + data.attr.style.items_spacing
+        widget_align(&aw.widget, widget_x, widget_y, self.w, widget_h)
+        widget_y += aw.widget.h + data.attr.style.items_spacing
+        widget_h -= aw.widget.h + data.attr.style.items_spacing
     }
 }
 
@@ -502,14 +527,15 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     widget_y := self.y + data.attr.style.padding.top
     widget_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
 
-    for &widget in data.widgets {
+    for &aw in data.widgets {
+        // TODO: alignment
         if .AlignCenter in data.attr.props {
             widget_y = self.y + data.attr.style.padding.top \
-                     + (self.h - widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
+                     + (self.h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
         }
-        widget_align(&widget, widget_x, widget_y, widget_w, self.h)
-        widget_x += widget.w + data.attr.style.items_spacing
-        widget_w -= widget.w + data.attr.style.items_spacing
+        widget_align(&aw.widget, widget_x, widget_y, widget_w, self.h)
+        widget_x += aw.widget.w + data.attr.style.items_spacing
+        widget_w -= aw.widget.w + data.attr.style.items_spacing
     }
 }
 
@@ -519,17 +545,17 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.w = parent.w
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
-    max_w := data.widgets[0].w
-    max_h := data.widgets[0].h
+    max_w := data.widgets[0].widget.w
+    max_h := data.widgets[0].widget.h
     ttl_w := padding_w
     ttl_h := padding_h
 
-    for &widget in data.widgets {
-        widget->init(handle, self)
-        max_w = max(max_w, widget.w)
-        ttl_w += widget.w + data.attr.style.items_spacing
-        max_h = max(max_h, widget.h)
-        ttl_h += widget.h + data.attr.style.items_spacing
+    for &aw in data.widgets {
+        aw.widget->init(handle, self)
+        max_w = max(max_w, aw.widget.w)
+        ttl_w += aw.widget.w + data.attr.style.items_spacing
+        max_h = max(max_h, aw.widget.h)
+        ttl_h += aw.widget.h + data.attr.style.items_spacing
     }
 
     // TODO: this should be done in the update
@@ -545,9 +571,9 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
 
-    for &widget in data.widgets {
-        if widget.update != nil {
-            widget->update(handle, self)
+    for &aw in data.widgets {
+        if aw.widget.update != nil {
+            aw.widget->update(handle, self)
         }
     }
 }
@@ -558,9 +584,9 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
     if data.attr.style.background_color.a > 0 {
         handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
-    for &widget in data.widgets {
-        if widget.draw != nil {
-            widget_draw(&widget, handle)
+    for &aw in data.widgets {
+        if aw.widget.draw != nil {
+            widget_draw(&aw.widget, handle)
         }
     }
     bt := data.attr.style.border_thickness
