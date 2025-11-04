@@ -67,13 +67,15 @@ widget_align :: proc(widget: ^Widget, x, y, w, h: f32) {
     #partial switch _ in widget.data {
     case Box: box_align(widget, x, y, w, h)
     case:
-        widget.x = x
-        widget.y = y
-        if widget.resizable_w {
-            widget.w = max(widget.min_w, w)
-        }
-        if widget.resizable_h {
-            widget.h = max(widget.min_h, h)
+        if !widget.disabled {
+            widget.x = x
+            widget.y = y
+            if widget.resizable_w {
+                widget.w = max(widget.min_w, w)
+            }
+            if widget.resizable_h {
+                widget.h = max(widget.min_h, h)
+            }
         }
     }
 }
@@ -92,7 +94,7 @@ widget_update :: proc(handle: ^Handle, widget: ^Widget) {
 widget_draw :: proc(widget: ^Widget, handle: ^Handle) {
     if !handle.processing_ordered_draws && widget.z_index > 0 {
         add_ordered_draw(handle, widget)
-    } else {
+    } else if !widget.disabled {
         widget->draw(handle)
     }
 }
@@ -509,6 +511,7 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     widget_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
 
     for &aw in data.widgets {
+        if aw.widget.disabled do continue
         // TODO: alignment
         if .AlignCenter in data.attr.props {
             widget_x = self.x + data.attr.style.padding.left \
@@ -528,6 +531,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     widget_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
 
     for &aw in data.widgets {
+        if aw.widget.disabled do continue
         // TODO: alignment
         if .AlignCenter in data.attr.props {
             widget_y = self.y + data.attr.style.padding.top \

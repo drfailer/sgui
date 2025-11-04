@@ -87,6 +87,40 @@ update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {
     }
 }
 
+side_pannel_widget :: proc() -> (widget: Widget) {
+    widget = hbox(
+        vbox(
+            text("Side Pannel",
+                attr = TextAttributes{
+                    style = TextStyle{
+                        font = FONT,
+                        font_size = FONT_SIZE,
+                        color = Color{0, 0, 0, 255},
+                    },
+                }),
+            button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
+            attr = BoxAttributes{
+                props = BoxProperties{.FitH, .FitW, .AlignCenter},
+                style = BoxStyle{
+                    items_spacing = 10,
+                },
+            }
+        ),
+        attr = BoxAttributes{
+            props = BoxProperties{.FitW, .AlignCenter},
+            style = BoxStyle{
+                background_color = Color{255, 0, 0, 255},
+                padding = Padding{ 10, 10, 10, 10 },
+                border_thickness = 2,
+                active_borders = ActiveBorders{.Right},
+                border_color = Color{200, 200, 0, 255},
+            },
+        }
+    )
+    // widget.disabled = true
+    return widget
+}
+
 main :: proc() {
     handle := create()
 
@@ -116,35 +150,7 @@ main :: proc() {
                 }
             ),
             hbox(
-                hbox(
-                    vbox(
-                        text("Side Pannel",
-                            attr = TextAttributes{
-                                style = TextStyle{
-                                    font = FONT,
-                                    font_size = FONT_SIZE,
-                                    color = Color{0, 0, 0, 255},
-                                },
-                            }),
-                        button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
-                        attr = BoxAttributes{
-                            props = BoxProperties{.FitH, .FitW, .AlignCenter},
-                            style = BoxStyle{
-                                items_spacing = 10,
-                            },
-                        }
-                    ),
-                    attr = BoxAttributes{
-                        props = BoxProperties{.FitW, .AlignCenter},
-                        style = BoxStyle{
-                            background_color = Color{255, 0, 0, 255},
-                            padding = Padding{ 10, 10, 10, 10 },
-                            border_thickness = 2,
-                            active_borders = ActiveBorders{.Right},
-                            border_color = Color{200, 200, 0, 255},
-                        },
-                    }
-                ),
+                side_pannel_widget(),
                 draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
             )
         )
