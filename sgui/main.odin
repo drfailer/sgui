@@ -127,17 +127,20 @@ main :: proc() {
     handle->add_layer(
         vbox(
             vbox(
-                hbox(
-                    text("Top pannel"),
-                    text("Top pannel"),
-                    attr = BoxAttributes{
-                        props = BoxProperties{.FitH, .FitW},
-                        style = BoxStyle{
-                            background_color = Color{0, 100, 0, 255},
-                            items_spacing = 10,
-                            padding = Padding{ 10, 10, 10, 10 },
-                        },
-                    }
+                align_widgets(
+                    hbox(
+                        text("Top pannel"),
+                        text("Top pannel"),
+                        attr = BoxAttributes{
+                            props = BoxProperties{.FitH, .FitW},
+                            style = BoxStyle{
+                                background_color = Color{0, 100, 0, 255},
+                                items_spacing = 10,
+                                padding = Padding{ 10, 10, 10, 10 },
+                            },
+                        }
+                    ),
+                    alignment = Alignment{.Top, .HCenter},
                 ),
                 attr = BoxAttributes{
                     props = BoxProperties{.FitH, .AlignCenter},

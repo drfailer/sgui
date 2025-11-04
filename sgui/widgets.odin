@@ -396,7 +396,6 @@ AlignmentFlag :: enum {
     Bottom,
     VCenter,
     HCenter,
-    Center,
 }
 
 // TODO: current alignment stratigies are bad!
@@ -437,7 +436,7 @@ Box :: struct {
 
 BoxInput :: union {
     Widget,
-    AlignedWidget,
+    [dynamic]AlignedWidget,
 }
 
 // TODO: the box should also have scrollbars
@@ -454,7 +453,11 @@ box :: proc(
 
     for widget in widgets {
         switch v in widget {
-        case AlignedWidget: append(&widget_list, v)
+        case [dynamic]AlignedWidget:
+            for aw in v {
+                append(&widget_list, aw)
+            }
+            delete(v)
         case Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
         }
     }
@@ -481,7 +484,149 @@ hbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> 
     return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }
 
+box_ensure_alignment_conditions :: proc(widget: ^Widget, remaining_w, remaining_h: f32) -> bool {
+    if widget.w > remaining_w {
+        if widget.resizable_w {
+            widget.w = remaining_w
+        } else {
+            log.warn("disabling widget due to lack of width.")
+            widget.disabled = true
+            return false
+        }
+    }
+
+    if widget.h > remaining_h {
+        if widget.resizable_h {
+            widget.h = remaining_h
+        } else {
+            log.warn("disabling widget due to lack of height.")
+            widget.disabled = true
+            return false
+        }
+    }
+    return true
+}
+
 // TODO: alignment should be done in the udpate function since we need to realign when the window is resized
+
+vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+    data := &self.data.(Box)
+
+    left_x := self.x + data.attr.style.padding.left
+    right_x := self.x + self.w - data.attr.style.padding.right
+
+    top_y := self.y + data.attr.style.padding.top
+    bottom_y := self.y + data.attr.style.padding.bottom
+
+    remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
+    remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
+
+    for &aw in data.widgets {
+        if aw.widget.disabled do continue
+        if !box_ensure_alignment_conditions(&aw.widget, remaining_w, remaining_h) do continue
+
+        wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
+
+        if .FitH in data.attr.props {
+            wy = top_y
+            top_y += aw.widget.h
+            remaining_h -= aw.widget.h
+        } else {
+            if .VCenter in aw.alignment {
+                wy = top_y + data.attr.style.padding.top \
+                   + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
+                top_y += aw.widget.h
+                remaining_h -= aw.widget.h
+            } else if .Bottom in aw.alignment {
+                wy = bottom_y - aw.widget.h
+                bottom_y -= aw.widget.h
+                remaining_h -= aw.widget.h
+            } else {
+                wy = top_y
+                top_y += aw.widget.h
+                remaining_h -= aw.widget.h
+            }
+        }
+
+        // since widgets are added in a column, there is no need to decrease the width
+        if .FitW in data.attr.props {
+            wx = left_x
+        } else {
+            if .HCenter in aw.alignment {
+                wx = left_x + data.attr.style.padding.left \
+                   + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
+            } else if .Right in aw.alignment {
+                wx = right_x - aw.widget.w
+            } else {
+                wx = left_x
+            }
+        }
+
+        widget_align(&aw.widget, wx, wy, ww, wh)
+    }
+
+    // TODO: update self
+}
+
+hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
+    data := &self.data.(Box)
+
+    left_x := self.x + data.attr.style.padding.left
+    right_x := self.x + self.w - data.attr.style.padding.right
+
+    top_y := self.y + data.attr.style.padding.top
+    bottom_y := self.y + data.attr.style.padding.bottom
+
+    remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
+    remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
+
+    for &aw in data.widgets {
+        if aw.widget.disabled do continue
+        if !box_ensure_alignment_conditions(&aw.widget, remaining_w, remaining_h) do continue
+
+        wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
+
+
+        // since widgets are added in a row, there is no need to decrease the height
+        if .FitH in data.attr.props {
+            wy = top_y
+        } else {
+            if .VCenter in aw.alignment {
+                wy = top_y + data.attr.style.padding.top \
+                   + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
+            } else if .Bottom in aw.alignment {
+                wy = bottom_y - aw.widget.h
+            } else {
+                wy = top_y
+            }
+        }
+
+        if .FitW in data.attr.props {
+            wx = left_x
+            left_x += aw.widget.w
+            remaining_w -= aw.widget.w + data.attr.style.items_spacing
+        } else {
+            if .HCenter in aw.alignment {
+                wx = left_x + data.attr.style.padding.left \
+                   + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
+                left_x += aw.widget.w
+                remaining_w -= aw.widget.w
+            } else if .Right in aw.alignment {
+                wx = right_x - aw.widget.w
+                right_x -= aw.widget.w
+                remaining_w -= aw.widget.w
+            } else {
+                wx = left_x
+                left_x += aw.widget.w
+                remaining_w -= aw.widget.w + data.attr.style.items_spacing
+            }
+        }
+
+        widget_align(&aw.widget, wx, wy, ww, wh)
+    }
+
+    // TODO: update self
+}
 
 box_align :: proc(self: ^Widget, x, y, w, h: f32) {
     data := &self.data.(Box)
@@ -500,46 +645,6 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
         vbox_align(self, x, y, w, h)
     } else {
         hbox_align(self, x, y, w, h)
-    }
-}
-
-vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
-    data := &self.data.(Box)
-
-    widget_x := self.x + data.attr.style.padding.left
-    widget_y := self.y + data.attr.style.padding.top
-    widget_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
-
-    for &aw in data.widgets {
-        if aw.widget.disabled do continue
-        // TODO: alignment
-        if .AlignCenter in data.attr.props {
-            widget_x = self.x + data.attr.style.padding.left \
-                     + (self.w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
-        }
-        widget_align(&aw.widget, widget_x, widget_y, self.w, widget_h)
-        widget_y += aw.widget.h + data.attr.style.items_spacing
-        widget_h -= aw.widget.h + data.attr.style.items_spacing
-    }
-}
-
-hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
-    data := &self.data.(Box)
-
-    widget_x := self.x + data.attr.style.padding.left
-    widget_y := self.y + data.attr.style.padding.top
-    widget_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
-
-    for &aw in data.widgets {
-        if aw.widget.disabled do continue
-        // TODO: alignment
-        if .AlignCenter in data.attr.props {
-            widget_y = self.y + data.attr.style.padding.top \
-                     + (self.h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
-        }
-        widget_align(&aw.widget, widget_x, widget_y, widget_w, self.h)
-        widget_x += aw.widget.w + data.attr.style.items_spacing
-        widget_w -= aw.widget.w + data.attr.style.items_spacing
     }
 }
 
@@ -607,6 +712,16 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
     if .Right in data.attr.style.active_borders {
         handle->draw_rect(self.x + self.w - bt, self.y, bt, self.h, bc)
     }
+}
+
+// align functions //
+
+// TODO: this function should create a widget group!
+align_widgets :: proc(widgets: ..Widget, alignment: Alignment = {.Top, .Left}) -> (result: [dynamic]AlignedWidget) {
+    for widget in widgets {
+        append(&result, AlignedWidget{widget = widget, alignment = alignment})
+    }
+    return result
 }
 
 // draw box ////////////////////////////////////////////////////////////////////
