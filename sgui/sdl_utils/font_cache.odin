@@ -3,6 +3,8 @@ package sdl_utils
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import "core:strings"
+import "core:log"
+import "core:fmt"
 
 Font :: ^sdl_ttf.Font
 FontPath :: string
@@ -27,6 +29,9 @@ font_cache_destroy :: proc(cache: ^FontCache) {
 }
 
 font_cache_get_font :: proc(cache: ^FontCache, path: FontPath, size: FontSize) -> (font: Font) {
+    if len(path) == 0 {
+        log.error("font_cache_get_font called with empty path.")
+    }
     if path in cache.fonts {
         if size in cache.fonts[path] {
             font = cache.fonts[path][size]
@@ -42,6 +47,9 @@ font_cache_get_font :: proc(cache: ^FontCache, path: FontPath, size: FontSize) -
         font = sdl_ttf.OpenFont(cpath, size)
         cache.fonts[path] = make(map[FontSize]Font)
         map_insert(&cache.fonts[path], size, font)
+    }
+    if font == nil {
+        log.error("font_cache_get_font returned nil font.")
     }
     return font
 }

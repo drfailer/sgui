@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:time"
 import "core:math"
 import "core:strings"
+import "core:log"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
@@ -99,6 +100,7 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                     },
                 }),
             button("hellope", proc(_: rawptr) { fmt.println("clicked!!!") }),
+            radio_button("radio button"),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH, .FitW},
                 style = BoxStyle{
@@ -174,6 +176,7 @@ main_layer :: proc() -> ^Widget {
 }
 
 main :: proc() {
+    context.logger = log.create_console_logger()
     handle := create()
     handle->add_layer(handle->make_widget(main_layer))
     init(handle)

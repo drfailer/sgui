@@ -46,6 +46,7 @@ WidgetData :: union {
     Text,
     Box,
     DrawBox,
+    RadioButton,
 }
 
 WidgetValue :: union { string, bool, int, f64 }
@@ -100,16 +101,10 @@ widget_draw :: proc(widget: ^Widget, handle: ^Handle) {
 }
 
 widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
-    return (widget.x <= mx && mx <= widget.x + widget.w) && (widget.y <= my && my <= widget.y + widget.h)
+    return mouse_on_region(mx, my, widget.x, widget.y, widget.w, widget.h)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// TODO: takes a list of input widgest and get their values
-// TODO: special submit button
-Form :: struct {
-    widgets: [dynamic]Widget,
-}
 
 OnelineInput :: struct {
     label: string,
@@ -122,7 +117,10 @@ Slider :: struct {
     // config...
 }
 
-RadioButton :: struct {
+DropDownSelector :: struct {
+}
+
+SwitchButton :: struct {
 }
 
 Menu :: struct { // top menu
@@ -241,6 +239,8 @@ text_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // button //////////////////////////////////////////////////////////////////////
 
+// TODO: icon button
+
 ButtonState :: enum { Idle, Hovered, Clicked }
 
 ButtonClickedProc :: proc(clicked_data: rawptr)
@@ -281,8 +281,8 @@ button :: proc(
 ) -> (button: ^Widget) {
     button = new(Widget)
     button^ = Widget{
-        resizable_w = true,
-        resizable_h = true,
+        // resizable_w = true,
+        // resizable_h = true,
         init = button_init,
         update = button_update,
         draw = button_draw,
@@ -744,6 +744,120 @@ align_widgets :: proc(widgets: ..^Widget, alignment: Alignment = {.Top, .Left}) 
 
 center :: proc(widgets: ..^Widget) -> [dynamic]AlignedWidget {
     return align_widgets(..widgets, alignment = Alignment{.HCenter, .VCenter})
+}
+
+// radio button ////////////////////////////////////////////////////////////////
+
+RadioButtonStyle :: struct {
+    base_radius: f32,
+    border_thickness: f32,
+    dot_radius: f32,
+    border_color: Color,
+    background_color: Color,
+    dot_color: Color,
+    label_padding: f32,
+    label_color: Color,
+    font: string,
+    font_size: su.FontSize,
+}
+
+RadioButtonAttributes :: struct {
+    style: RadioButtonStyle,
+}
+
+RadioButton :: struct {
+    attr: RadioButtonAttributes,
+    checked: bool,
+    label: string,
+    label_text: su.Text,
+    button_offset: f32,
+    label_offset: f32,
+}
+
+radio_button :: proc(
+    label: string,
+    attr := OPTS.radio_button_attr,
+) -> (radio_button: ^Widget) {
+    radio_button = new(Widget)
+    radio_button^ = Widget{
+        init = radio_button_init,
+        update = radio_button_update,
+        draw = radio_button_draw,
+        value = radio_button_value,
+        data = RadioButton {
+            checked = false,
+            label = label,
+            attr = attr,
+        }
+    }
+    return radio_button
+}
+
+radio_button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
+    data := &self.data.(RadioButton)
+
+    data.label_text = su.text_create(
+        handle.text_engine,
+        su.font_cache_get_font(&handle.font_cache, data.attr.style.font, data.attr.style.font_size),
+        data.label)
+    label_color := su.Color{
+        data.attr.style.label_color.r,
+        data.attr.style.label_color.g,
+        data.attr.style.label_color.b,
+        data.attr.style.label_color.a,
+    }
+    su.text_update_color(&data.label_text, label_color)
+    label_w, label_h := su.text_size(&data.label_text)
+
+    d := 2 * data.attr.style.base_radius
+    self.w = d + data.attr.style.label_padding + label_w
+    self.h = max(d, label_h)
+    if label_h > d {
+        data.button_offset = (label_h - d) / 2
+    } else {
+        data.label_offset = (d - label_h) / 2
+    }
+
+    handle->click_handler(self, proc(self: ^Widget, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
+        data := &self.data.(RadioButton)
+        button_size := 2 * data.attr.style.base_radius
+        button_x := self.x
+        button_y := self.y + data.button_offset
+        if down && button == sdl.BUTTON_LEFT && mouse_on_region(x, y, button_x, button_y, button_size, button_size) {
+            data.checked = !data.checked
+            return true
+        }
+        return false
+    })
+}
+
+radio_button_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {}
+
+radio_button_draw :: proc(self: ^Widget, handle: ^Handle) {
+    if self.disabled do return
+    data := &self.data.(RadioButton)
+
+    r := data.attr.style.base_radius
+    bgr := data.attr.style.base_radius - data.attr.style.border_thickness
+    dr := data.attr.style.dot_radius
+    by := self.y + data.button_offset + r
+    bx := self.x + r
+    if data.attr.style.border_thickness > 0 {
+        draw_circle(handle, bx, by, r, data.attr.style.border_color)
+    }
+    draw_circle(handle, bx, by, bgr, data.attr.style.background_color)
+    if data.checked {
+        draw_circle(handle, bx, by, dr, data.attr.style.dot_color)
+    }
+
+    text_xoffset := 2 * r + data.attr.style.label_padding
+    text_yoffset := data.label_offset
+    handle->draw_text(&data.label_text, self.x + text_xoffset, self.y + text_yoffset)
+}
+
+radio_button_value :: proc(self: ^Widget) -> WidgetValue {
+    data := &self.data.(RadioButton)
+    return data.checked
 }
 
 // draw box ////////////////////////////////////////////////////////////////////

@@ -15,6 +15,7 @@ Opts :: struct {
     clear_color: Color,
     text_attr: TextAttributes,
     button_attr: ButtonAttributes,
+    radio_button_attr: RadioButtonAttributes,
 }
 
 // TODO: add a #config for some variables
@@ -55,6 +56,20 @@ OPTS := Opts{
             },
         },
     },
+    radio_button_attr = RadioButtonAttributes{
+        style = RadioButtonStyle{
+            base_radius = 6,
+            border_thickness = 2,
+            dot_radius = 2,
+            border_color = Color{0, 0, 0, 255},
+            background_color = Color{255, 255, 255, 255},
+            dot_color = Color{0, 0, 0, 255},
+            label_padding = 10,
+            label_color = Color{0, 0, 0, 255},
+            font = FONT,
+            font_size = FONT_SIZE,
+        }
+    }
 }
 
 Handle :: struct {
@@ -451,11 +466,21 @@ draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
-mouse_on_region :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
+mouse_on_region_handle :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
     x := x + handle.rel_rect.x
     y := y + handle.rel_rect.y
     return x <= handle.mouse_x && handle.mouse_x <= (x + w) \
         && y <= handle.mouse_y && handle.mouse_y <= (y + h)
+}
+
+mouse_on_region_coordinates :: proc(mx, my, x, y, w, h: f32) -> bool {
+    return x <= mx && mx <= (x + w) \
+        && y <= my && my <= (y + h)
+}
+
+mouse_on_region :: proc{
+    mouse_on_region_handle,
+    mouse_on_region_coordinates,
 }
 
 add_layer :: proc(handle: ^Handle, widget: ^Widget) {
