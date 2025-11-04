@@ -22,6 +22,27 @@ distance_ceil :: proc(r, y: f32) -> f32 {
     return math.ceil(x) - x
 }
 
+draw_circle_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: int, color: Color, diff: f32) {
+    color := color
+    color.a = cast(u8)(cast(f32)color.a * (1 - diff))
+
+    // top left
+    handle->draw_rect(cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
+    handle->draw_rect(cx + cast(f32)y, cy - cast(f32)x, 1., 1., color)
+
+    // top right
+    handle->draw_rect(cx + cast(f32)x, cy + cast(f32)y, 1., 1., color)
+    handle->draw_rect(cx - cast(f32)y, cy - cast(f32)x, 1., 1., color)
+
+    // bottom left
+    handle->draw_rect(cx - cast(f32)x, cy - cast(f32)y, 1., 1., color)
+    handle->draw_rect(cx + cast(f32)y, cy + cast(f32)x, 1., 1., color)
+
+    // bottom right
+    handle->draw_rect(cx + cast(f32)x, cy - cast(f32)y, 1., 1., color)
+    handle->draw_rect(cx - cast(f32)y, cy + cast(f32)x, 1., 1., color)
+}
+
 draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
     x := 0
     y := cast(int)-radius
@@ -29,28 +50,72 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
 
     for x < -y {
         if p > 0 {
+            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            if 0 < diff && diff < 1  {
+                draw_circle_edge_pixel(handle, cx, cy, x, y, color, diff)
+            }
             y += 1
             p += 2 * (x + y) + 1
         } else {
             p += 2 * x + 1
         }
-        // top right
-        handle->draw_rect(cx + cast(f32)x, cy + cast(f32)y, 1., 1., color)
-        handle->draw_rect(cx - cast(f32)y, cy - cast(f32)x, 1., 1., color)
 
-        // top left
-        handle->draw_rect(cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
-        handle->draw_rect(cx + cast(f32)y, cy - cast(f32)x, 1., 1., color)
+        xl1 := cx - cast(f32)x
+        xr1 := cx + cast(f32)x
+        xl2 := cx + cast(f32)y
+        xr2 := cx - cast(f32)y
+        w1 := xr1 - xl1 + 1
+        w2 := xr2 - xl2 + 1
 
-        // bottom right
-        handle->draw_rect(cx + cast(f32)x, cy - cast(f32)y, 1., 1., color)
-        handle->draw_rect(cx - cast(f32)y, cy + cast(f32)x, 1., 1., color)
+        diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+        if 0 < diff && diff < 1  {
+            draw_circle_edge_pixel(handle, cx, cy, x, y, color, diff)
 
-        // bottom left
-        handle->draw_rect(cx - cast(f32)x, cy - cast(f32)y, 1., 1., color)
-        handle->draw_rect(cx + cast(f32)y, cy + cast(f32)x, 1., 1., color)
+            // draw inside
+
+            // top
+            handle->draw_rect(xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
+            handle->draw_rect(xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
+
+            // bottom
+            handle->draw_rect(xl1 + 1, cy - cast(f32)y, w1 - 2, 1., color)
+            handle->draw_rect(xl2 + 1, cy + cast(f32)x, w2 - 2, 1., color)
+        } else {
+            // top
+            handle->draw_rect(xl1, cy + cast(f32)y, w1, 1., color)
+            handle->draw_rect(xl2, cy - cast(f32)x, w2, 1., color)
+
+            // bottom
+            handle->draw_rect(xl1, cy - cast(f32)y, w1, 1., color)
+            handle->draw_rect(xl2, cy + cast(f32)x, w2, 1., color)
+        }
         x += 1
     }
+}
+
+draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: int, w, h: f32, color: Color, diff: f32) {
+    xl1 := cx - cast(f32)x - w
+    xr1 := cx + cast(f32)x - 1
+    xl2 := cx + cast(f32)y - w
+    xr2 := cx - cast(f32)y - 1
+    color := color
+    color.a = cast(u8)(cast(f32)color.a * (1 - diff))
+
+    // top left
+    handle->draw_rect(xl1, cy + cast(f32)y, 1., 1., color)
+    handle->draw_rect(xl2, cy - cast(f32)x, 1., 1., color)
+
+    // top right
+    handle->draw_rect(xr1, cy + cast(f32)y, 1., 1., color)
+    handle->draw_rect(xr2, cy - cast(f32)x, 1., 1., color)
+
+    // bottom left
+    handle->draw_rect(xl1, cy - cast(f32)y + h, 1., 1., color)
+    handle->draw_rect(xl2, cy + cast(f32)x + h, 1., 1., color)
+
+    // bottom right
+    handle->draw_rect(xr1, cy - cast(f32)y + h, 1., 1., color)
+    handle->draw_rect(xr2, cy + cast(f32)x + h, 1., 1., color)
 }
 
 draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
@@ -70,6 +135,10 @@ draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f
 
     for x < -y {
         if p > 0 {
+            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            if 0 < diff && diff < 1  {
+                draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, diff)
+            }
             y += 1
             p += 2 * (x + y) + 1
         } else {
@@ -77,34 +146,15 @@ draw_rounded_box_from_values :: proc (handle: ^Handle, bx, by, bw, bh, radius: f
         }
 
         xl1 := cx - cast(f32)x - w
-        xr1 := cx + cast(f32)x
+        xr1 := cx + cast(f32)x - 1
         xl2 := cx + cast(f32)y - w
-        xr2 := cx - cast(f32)y
-        w1 := xr1 - xl1
-        w2 := xr2 - xl2
+        xr2 := cx - cast(f32)y - 1
+        w1 := xr1 - xl1 + 1
+        w2 := xr2 - xl2 + 1
 
         diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
         if 0 < diff && diff < 1  {
-            {
-                color := color
-                color.a = cast(u8)(a * (1 - diff))
-
-                // top left
-                handle->draw_rect(xl1, cy + cast(f32)y, 1., 1., color)
-                handle->draw_rect(xl2, cy - cast(f32)x, 1., 1., color)
-
-                // top right
-                handle->draw_rect(xr1 - 1, cy + cast(f32)y, 1., 1., color)
-                handle->draw_rect(xr2 - 1, cy - cast(f32)x, 1., 1., color)
-
-                // bottom left
-                handle->draw_rect(xl1, cy - cast(f32)y + h, 1., 1., color)
-                handle->draw_rect(xl2, cy + cast(f32)x + h, 1., 1., color)
-
-                // bottom right
-                handle->draw_rect(xr1 - 1, cy - cast(f32)y + h, 1., 1., color)
-                handle->draw_rect(xr2 - 1, cy + cast(f32)x + h, 1., 1., color)
-            }
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, diff)
 
             // draw inside
 
