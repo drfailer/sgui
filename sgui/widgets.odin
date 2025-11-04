@@ -371,17 +371,6 @@ Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
 BorderSide :: enum { Top, Bottom, Left, Right }
 ActiveBorders :: bit_set[BorderSide]
 
-// TODO: we should enable having different kinds of dimentions unit (%, in, cm, px)
-BoxDimensionsKind :: enum {
-    Pixel,
-}
-
-BoxDimensions :: struct {
-    kind: BoxDimensionsKind,
-    w: f32,
-    h: f32,
-}
-
 BoxStyle :: struct {
     background_color: Color,
     border_thickness: f32,
@@ -410,12 +399,16 @@ BoxProperties :: bit_set[BoxProperty]
 BoxProperty :: enum {
     FitW,
     FitH,
+    FixedW,
+    FixedH,
+    MinW,
+    MinH,
 }
 
 BoxAttributes :: struct {
     style: BoxStyle,
     props: BoxProperties,
-    dims: BoxDimensions,
+    w, h: f32,
 }
 
 AlignedWidget :: struct {
@@ -474,6 +467,18 @@ box :: proc(
             attr = attr,
             widgets = widget_list,
         }
+    }
+
+    if .FixedW in attr.props {
+        box.w = attr.w
+    } else if .MinW in attr.props {
+        box.min_w = attr.w
+    }
+
+    if .FixedH in attr.props {
+        box.h = attr.h
+    } else if .MinH in attr.props {
+        box.min_h = attr.h
     }
     return box
 }
@@ -652,14 +657,25 @@ box_align :: proc(self: ^Widget, x, y, w, h: f32) {
 
 box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
-    self.h = parent.h
-    self.w = parent.w
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
     max_w := data.widgets[0].widget.w
     max_h := data.widgets[0].widget.h
     ttl_w := padding_w
     ttl_h := padding_h
+
+    if .FixedW not_in data.attr.props {
+        if .MinW in data.attr.props && parent.w < self.min_w {
+            log.error("minimum width of box does not fit in the parent container.")
+        }
+        self.w = parent.w
+    }
+    if .FixedH not_in data.attr.props {
+        if .MinH in data.attr.props && parent.h < self.min_h {
+            log.error("minimum height of box does not fit in the parent container.")
+        }
+        self.h = parent.h
+    }
 
     for aw in data.widgets {
         aw.widget->init(handle, self)
