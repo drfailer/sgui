@@ -62,24 +62,24 @@ scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, v
     return true
 }
 
-scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
-    if button == sdl.BUTTON_LEFT {
+scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> bool {
+    if event.button == sdl.BUTTON_LEFT {
         if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-            scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, button, down, click_count, x, y, mods)
+            scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
         }
         if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-            scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, button, down, click_count, x, y, mods)
+            scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
         }
     }
     return true
 }
 
-scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {
+scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> bool {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-        scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, x, y, xd, yd, mods)
+        scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
     }
     if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-        scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, x, y, xd, yd, mods)
+        scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
     }
     return true
 }
@@ -169,25 +169,25 @@ scrollbar_is_clicked :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> bool {
         && (scrollbar.y <= my && my <= scrollbar.y + scrollbar.h)
 }
 
-scrollbar_clicked_hander :: proc(bar: ^Scrollbar, button: u8, down: bool, click_count: u8, x, y: f32, mods: bit_set[KeyMod]) -> bool {
-    if !down && bar.selected {
+scrollbar_clicked_hander :: proc(bar: ^Scrollbar, event: MouseClickEvent) -> bool {
+    if !event.down && bar.selected {
         bar.selected = false
-    } else if scrollbar_is_clicked(bar, x, y) {
+    } else if scrollbar_is_clicked(bar, event.x, event.y) {
         bar.selected = true
     }
     return bar.selected
 }
 
-scrollbar_dragged_handler :: proc(bar: ^Scrollbar, x, y, xd, yd: f32, mods: bit_set[KeyMod]) -> bool {
+scrollbar_dragged_handler :: proc(bar: ^Scrollbar, event: MouseMotionEvent) -> bool {
     if !bar.selected do return false
 
     // TODO: invert
     scale_factor := bar.parent_size / bar.content_size
 
     if bar.direction == .Vertical {
-        bar.bar_position += yd / scale_factor
+        bar.bar_position += event.yd / scale_factor
     } else {
-        bar.bar_position += xd / scale_factor
+        bar.bar_position += event.xd / scale_factor
     }
 
     if bar.bar_position < 0 {

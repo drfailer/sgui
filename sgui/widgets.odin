@@ -949,13 +949,11 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     })// }}}
     handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {// {{{
         data := &self.data.(DrawBox)
-        // CLEANME
-        return scrollbox_clicked_handler(&data.scrollbox, event.button, event.down, event.click_count, event.x, event.y, event.mods)
+        return scrollbox_clicked_handler(&data.scrollbox, event)
     })// }}}
     handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {// {{{
         data := &self.data.(DrawBox)
-        // CLEANME
-        return scrollbox_dragged_handler(&data.scrollbox, event.x, event.y, event.xd, event.yd, event.mods)
+        return scrollbox_dragged_handler(&data.scrollbox, event)
     })// }}}
 }
 
