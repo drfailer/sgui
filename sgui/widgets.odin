@@ -364,8 +364,6 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // boxes ///////////////////////////////////////////////////////////////////////
 
-// TODO: WidgetGroup
-
 Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
 
 BorderSide :: enum { Top, Bottom, Left, Right }
@@ -429,7 +427,7 @@ Box :: struct {
 
 BoxInput :: union {
     ^Widget,
-    [dynamic]AlignedWidget,
+    AlignedWidget,
 }
 
 // TODO: the box should also have scrollbars
@@ -447,11 +445,7 @@ box :: proc(
 
     for widget in widgets {
         switch v in widget {
-        case [dynamic]AlignedWidget:
-            for aw in v {
-                append(&widget_list, aw)
-            }
-            delete(v)
+        case AlignedWidget: append(&widget_list, v)
         case ^Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
         }
     }
@@ -540,7 +534,7 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             remaining_h -= aw.widget.h + data.attr.style.items_spacing
         } else {
             if .VCenter in aw.alignment {
-                wy = top_y + data.attr.style.padding.top \
+                wy = self.y + data.attr.style.padding.top \
                    + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
                 top_y += aw.widget.h + data.attr.style.items_spacing
                 remaining_h -= aw.widget.h + data.attr.style.items_spacing
@@ -560,7 +554,7 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             wx = left_x
         } else {
             if .HCenter in aw.alignment {
-                wx = left_x + data.attr.style.padding.left \
+                wx = self.x + data.attr.style.padding.left \
                    + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
             } else if .Right in aw.alignment {
                 wx = right_x - aw.widget.w
@@ -599,7 +593,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             wy = top_y
         } else {
             if .VCenter in aw.alignment {
-                wy = top_y + data.attr.style.padding.top \
+                wy = self.y + data.attr.style.padding.top \
                    + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
             } else if .Bottom in aw.alignment {
                 wy = bottom_y - aw.widget.h
@@ -614,7 +608,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             remaining_w -= aw.widget.w + data.attr.style.items_spacing
         } else {
             if .HCenter in aw.alignment {
-                wx = left_x + data.attr.style.padding.left \
+                wx = self.x + data.attr.style.padding.left \
                    + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
                 left_x += aw.widget.w + data.attr.style.items_spacing
                 remaining_w -= aw.widget.w + data.attr.style.items_spacing
@@ -734,16 +728,12 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // align functions //
 
-// TODO: this function should create a widget group!
-align_widgets :: proc(widgets: ..^Widget, alignment: Alignment = {.Top, .Left}) -> (result: [dynamic]AlignedWidget) {
-    for widget in widgets {
-        append(&result, AlignedWidget{widget = widget, alignment = alignment})
-    }
-    return result
+align_widgets :: proc(widget: ^Widget, alignment: Alignment = {.Top, .Left}) -> (result: AlignedWidget) {
+    return AlignedWidget{widget = widget, alignment = alignment}
 }
 
-center :: proc(widgets: ..^Widget) -> [dynamic]AlignedWidget {
-    return align_widgets(..widgets, alignment = Alignment{.HCenter, .VCenter})
+center :: proc(widget: ^Widget) -> AlignedWidget {
+    return align_widgets(widget, alignment = Alignment{.HCenter, .VCenter})
 }
 
 // radio button ////////////////////////////////////////////////////////////////
