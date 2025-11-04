@@ -281,8 +281,8 @@ button :: proc(
 ) -> (button: ^Widget) {
     button = new(Widget)
     button^ = Widget{
-        // resizable_w = true,
-        // resizable_h = true,
+        resizable_w = true,
+        resizable_h = true,
         init = button_init,
         update = button_update,
         draw = button_draw,
@@ -526,7 +526,11 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
         if aw.widget.disabled do continue
         if !box_ensure_alignment_conditions(aw.widget, remaining_w, remaining_h) do continue
 
-        wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
+        wx, wy, ww, wh := left_x, top_y, remaining_w, aw.widget.h
+        if aw.widget.resizable_h && aw.widget.min_h == -1 {
+            wh = remaining_h
+            remaining_h = 0
+        }
 
         if .FitH in data.attr.props {
             wy = top_y
@@ -536,8 +540,6 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             if .VCenter in aw.alignment {
                 wy = self.y + data.attr.style.padding.top \
                    + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
-                top_y += aw.widget.h + data.attr.style.items_spacing
-                remaining_h -= aw.widget.h + data.attr.style.items_spacing
             } else if .Bottom in aw.alignment {
                 wy = bottom_y - aw.widget.h
                 bottom_y -= aw.widget.h + data.attr.style.items_spacing
@@ -585,8 +587,11 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
         if aw.widget.disabled do continue
         if !box_ensure_alignment_conditions(aw.widget, remaining_w, remaining_h) do continue
 
-        wx, wy, ww, wh := left_x, top_y, remaining_w, remaining_h
-
+        wx, wy, ww, wh := left_x, top_y, aw.widget.w, remaining_h
+        if aw.widget.resizable_w && aw.widget.min_w == -1 {
+            ww = remaining_w
+            remaining_w = 0
+        }
 
         // since widgets are added in a row, there is no need to decrease the height
         if .FitH in data.attr.props {
@@ -610,8 +615,6 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
             if .HCenter in aw.alignment {
                 wx = self.x + data.attr.style.padding.left \
                    + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
-                left_x += aw.widget.w + data.attr.style.items_spacing
-                remaining_w -= aw.widget.w + data.attr.style.items_spacing
             } else if .Right in aw.alignment {
                 wx = right_x - aw.widget.w
                 right_x -= aw.widget.w + data.attr.style.items_spacing
@@ -897,6 +900,8 @@ draw_box :: proc(
     draw_box^ = Widget{
         resizable_h = true,
         resizable_w = true,
+        min_w = -1,
+        min_h = -1,
         init = draw_box_init,
         update = draw_box_update,
         draw = draw_box_draw,
