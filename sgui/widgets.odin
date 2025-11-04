@@ -536,22 +536,22 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
 
         if .FitH in data.attr.props {
             wy = top_y
-            top_y += aw.widget.h
-            remaining_h -= aw.widget.h
+            top_y += aw.widget.h + data.attr.style.items_spacing
+            remaining_h -= aw.widget.h + data.attr.style.items_spacing
         } else {
             if .VCenter in aw.alignment {
                 wy = top_y + data.attr.style.padding.top \
                    + (remaining_h - aw.widget.h - data.attr.style.padding.top - data.attr.style.padding.bottom) / 2.
-                top_y += aw.widget.h
-                remaining_h -= aw.widget.h
+                top_y += aw.widget.h + data.attr.style.items_spacing
+                remaining_h -= aw.widget.h + data.attr.style.items_spacing
             } else if .Bottom in aw.alignment {
                 wy = bottom_y - aw.widget.h
-                bottom_y -= aw.widget.h
-                remaining_h -= aw.widget.h
+                bottom_y -= aw.widget.h + data.attr.style.items_spacing
+                remaining_h -= aw.widget.h + data.attr.style.items_spacing
             } else {
                 wy = top_y
-                top_y += aw.widget.h
-                remaining_h -= aw.widget.h
+                top_y += aw.widget.h + data.attr.style.items_spacing
+                remaining_h -= aw.widget.h + data.attr.style.items_spacing
             }
         }
 
@@ -610,21 +610,21 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
 
         if .FitW in data.attr.props {
             wx = left_x
-            left_x += aw.widget.w
+            left_x += aw.widget.w + data.attr.style.items_spacing
             remaining_w -= aw.widget.w + data.attr.style.items_spacing
         } else {
             if .HCenter in aw.alignment {
                 wx = left_x + data.attr.style.padding.left \
                    + (remaining_w - aw.widget.w - data.attr.style.padding.left - data.attr.style.padding.right) / 2.
-                left_x += aw.widget.w
-                remaining_w -= aw.widget.w
+                left_x += aw.widget.w + data.attr.style.items_spacing
+                remaining_w -= aw.widget.w + data.attr.style.items_spacing
             } else if .Right in aw.alignment {
                 wx = right_x - aw.widget.w
-                right_x -= aw.widget.w
-                remaining_w -= aw.widget.w
+                right_x -= aw.widget.w + data.attr.style.items_spacing
+                remaining_w -= aw.widget.w + data.attr.style.items_spacing
             } else {
                 wx = left_x
-                left_x += aw.widget.w
+                left_x += aw.widget.w + data.attr.style.items_spacing
                 remaining_w -= aw.widget.w + data.attr.style.items_spacing
             }
         }

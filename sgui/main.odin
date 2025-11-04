@@ -116,7 +116,6 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                 border_thickness = 2,
                 active_borders = ActiveBorders{.Right},
                 border_color = Color{200, 200, 0, 255},
-                items_spacing = 10,
             },
         }
     )
