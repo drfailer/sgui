@@ -1,6 +1,7 @@
 package sgui
 
 import "core:fmt"
+import "core:log"
 import "core:time"
 import "core:math"
 import "core:strings"
@@ -94,7 +95,8 @@ Handle :: struct {
     event_handlers: EventHandlers,
     widget_event_queue: queue.Queue(WidgetEvent),
 
-    // TODO: focused widget
+    focused_widget: ^Widget,
+    tagged_widgets: map[u64]^Widget,
 
     /* layers */
     layers: [dynamic]^Widget,
@@ -272,6 +274,7 @@ destroy :: proc(handle: ^Handle) {
     queue.destroy(&handle.widget_event_queue)
     priority_queue.destroy(&handle.ordered_draws)
     delete(handle.layers)
+    delete(handle.tagged_widgets)
     mem.dynamic_arena_destroy(&handle.widget_arena)
     free(handle)
 }
@@ -311,6 +314,7 @@ process_events :: proc(handle: ^Handle) {
                 handle.event_handlers.mods |= { .Shift }
             }
             for handler in handle.event_handlers.key {
+                if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
                     handler.exec(handler.widget, event.key.key, .Down, handle.event_handlers.mods)
                 }
@@ -324,12 +328,14 @@ process_events :: proc(handle: ^Handle) {
                 handle.event_handlers.mods ~= { .Shift }
             }
             for handler in handle.event_handlers.key {
+                if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
                     handler.exec(handler.widget, event.key.key, .Up, handle.event_handlers.mods)
                 }
             }
         case .MOUSE_WHEEL:
             for handler in handle.event_handlers.mouse_wheel {
+                if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
                     handler.exec(handler.widget, event.wheel.integer_x, event.wheel.integer_y,
                                  handle.event_handlers.mods)
@@ -337,6 +343,7 @@ process_events :: proc(handle: ^Handle) {
             }
         case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
             for handler in handle.event_handlers.mouse_click {
+                if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
                     handler.exec(handler.widget, event.button.button, event.button.down,
                                  event.button.clicks, event.button.x, event.button.y,
@@ -347,6 +354,7 @@ process_events :: proc(handle: ^Handle) {
             handle.mouse_x = event.motion.x
             handle.mouse_y = event.motion.y
             for handler in handle.event_handlers.mouse_motion {
+                if handle.focused_widget != nil && handler.widget != handle.focused_widget do continue
                 if !handler.widget.disabled {
                     handler.exec(handler.widget, event.motion.x, event.motion.y,
                                  event.motion.xrel, event.motion.yrel,
@@ -523,4 +531,27 @@ add_proc_ordered_draw :: proc(
 add_ordered_draw :: proc{
     add_widget_ordered_draw,
     add_proc_ordered_draw,
+}
+
+focus_widget :: proc(handle: ^Handle, widget: ^Widget) {
+    handle.focused_widget = widget
+}
+
+unfocus_widget :: proc(handle: ^Handle, widget: ^Widget = nil) {
+    handle.focused_widget = nil
+}
+
+tag_widget :: proc(handle: ^Handle, widget: ^Widget, tag: u64) {
+    if tag in handle.tagged_widgets {
+        log.warn("widget tag `{}` is replaced.", tag)
+    }
+    handle.tagged_widgets[tag] = widget
+}
+
+get_tagged_widget :: proc(handle: ^Handle, tag: u64) -> ^Widget{
+    if tag not_in handle.tagged_widgets {
+        log.error("widget `{}` does not exist.", tag)
+        return nil
+    }
+    return handle.tagged_widgets[tag]
 }
