@@ -121,61 +121,63 @@ side_pannel_widget :: proc() -> (widget: Widget) {
     return widget
 }
 
-main :: proc() {
-    handle := create()
-
-    handle->add_layer(
+main_layer :: proc(handle: ^Handle) -> Widget {
+    context.allocator = handle.widget_allocator
+    return vbox(
         vbox(
-            vbox(
-                align_widgets(
-                    hbox(
-                        text("Top pannel"),
-                        text("Top pannel"),
-                        attr = BoxAttributes{
-                            props = BoxProperties{.FitH, .FitW},
-                            style = BoxStyle{
-                                background_color = Color{0, 100, 0, 255},
-                                items_spacing = 10,
-                                padding = Padding{ 10, 10, 10, 10 },
-                            },
-                        }
-                    ),
-                    alignment = Alignment{.Top, .HCenter},
-                ),
-                attr = BoxAttributes{
-                    props = BoxProperties{.FitH},
-                    style = BoxStyle{
-                        background_color = Color{0, 0, 255, 255},
-                        border_thickness = 2,
-                        active_borders = ActiveBorders{.Bottom},
-                        border_color = Color{0, 200, 200, 255},
-                    },
-                }
-            ),
-            vbox(
-                align_widgets(
-                    vbox(
-                        center(text("footer")),
-                        attr = BoxAttributes{
-                            props = BoxProperties{.FitH},
-                            style = BoxStyle{
-                                background_color = Color{0, 100, 100, 255},
-                                items_spacing = 10,
-                                padding = Padding{ 4, 4, 4, 4 },
-                            },
-                        }
-                    ),
-                    alignment = Alignment{.Bottom, .HCenter},
-                ),
+            align_widgets(
                 hbox(
-                    side_pannel_widget(),
-                    // the draw box is at the end: since it is resizable, all the other parts needs to be align first
-                    draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
+                    text("Top pannel"),
+                    text("Top pannel"),
+                    attr = BoxAttributes{
+                        props = BoxProperties{.FitH, .FitW},
+                        style = BoxStyle{
+                            background_color = Color{0, 100, 0, 255},
+                            items_spacing = 10,
+                            padding = Padding{ 10, 10, 10, 10 },
+                        },
+                    }
                 ),
-            )
+                alignment = Alignment{.Top, .HCenter},
+            ),
+            attr = BoxAttributes{
+                props = BoxProperties{.FitH},
+                style = BoxStyle{
+                    background_color = Color{0, 0, 255, 255},
+                    border_thickness = 2,
+                    active_borders = ActiveBorders{.Bottom},
+                    border_color = Color{0, 200, 200, 255},
+                },
+            }
+        ),
+        vbox(
+            align_widgets(
+                vbox(
+                    center(text("footer")),
+                    attr = BoxAttributes{
+                        props = BoxProperties{.FitH},
+                        style = BoxStyle{
+                            background_color = Color{0, 100, 100, 255},
+                            items_spacing = 10,
+                            padding = Padding{ 4, 4, 4, 4 },
+                        },
+                    }
+                ),
+                alignment = Alignment{.Bottom, .HCenter},
+            ),
+            hbox(
+                side_pannel_widget(),
+                // the draw box is at the end: since it is resizable, all the other parts needs to be align first
+                draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
+            ),
         )
     )
-    init(&handle)
-    run(&handle)
-    terminate(&handle)
+}
+
+main :: proc() {
+    handle := create()
+    handle->add_layer(main_layer(handle))
+    init(handle)
+    run(handle)
+    destroy(handle)
 }

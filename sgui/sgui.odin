@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:time"
 import "core:math"
 import "core:strings"
+import "core:mem"
 import "core:container/queue"
 import "core:container/priority_queue"
 import sdl "vendor:sdl3"
@@ -62,6 +63,10 @@ Handle :: struct {
     /* fps variables */
     dt: f32,
     tick: time.Tick,
+
+    /* allocators */
+    widget_arena: mem.Dynamic_Arena,
+    widget_allocator: mem.Allocator,
 
     /* sdl */
     window: ^sdl.Window,
@@ -156,8 +161,11 @@ EventHandlers :: struct {
     widget_event: map[WidgetEventTag][dynamic]WidgetEventHandler
 }
 
-create :: proc() -> Handle { // TODO: allocator
-    return Handle{
+create :: proc() -> (handle: ^Handle) { // TODO: allocator
+    handle = new(Handle)
+
+    /* base */
+    handle^ = Handle{
         layers = make([dynamic]Widget),
         draw_rect = draw_rect,
         draw_text = draw_text,
@@ -169,9 +177,16 @@ create :: proc() -> Handle { // TODO: allocator
         mouse_move_handler = add_mouse_motion_event_handler,
         widget_event_handler = add_widget_event_handler,
     }
+
+    /* allocators */
+    mem.dynamic_arena_init(&handle.widget_arena)
+    handle.widget_allocator = mem.dynamic_arena_allocator(&handle.widget_arena)
+
+    return handle
 }
 
 init :: proc(handle: ^Handle) {
+    /* sdl */
     if !sdl.Init(sdl.InitFlags{.VIDEO, .EVENTS}) {
         fmt.printfln("error: {}", sdl.GetError())
         return
@@ -181,6 +196,8 @@ init :: proc(handle: ^Handle) {
         fmt.printfln("error: {}", sdl.GetError())
         return
     }
+
+    sdl.SetRenderDrawBlendMode(handle.renderer, sdl.BLENDMODE_BLEND)
 
     if !sdl_ttf.Init() {
         fmt.printfln("error: couldn't init sdl_ttf.")
@@ -192,11 +209,12 @@ init :: proc(handle: ^Handle) {
         fmt.printfln("error: couldn't create text engine.")
         return
     }
-
-    sdl.SetRenderDrawBlendMode(handle.renderer, sdl.BLENDMODE_BLEND)
-
     handle.font_cache = su.font_cache_create()
+
+    /* widget event queue */
     queue.init(&handle.widget_event_queue)
+
+    /* draw queue */
     priority_queue.init(
         &handle.ordered_draws,
         less = proc(a, b: OrderedDraw) -> bool {
@@ -210,13 +228,15 @@ init :: proc(handle: ^Handle) {
             q[j] = tmp
         }
     )
-    handle.run = true
+
+    /* layers */
     for &layer in handle.layers {
         widget_init(&layer, handle)
     }
+    handle.run = true
 }
 
-terminate :: proc(handle: ^Handle) {
+destroy :: proc(handle: ^Handle) {
     sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
     su.font_cache_destroy(&handle.font_cache)
     sdl_ttf.Quit()
@@ -235,6 +255,8 @@ terminate :: proc(handle: ^Handle) {
     queue.destroy(&handle.widget_event_queue)
     priority_queue.destroy(&handle.ordered_draws)
     delete(handle.layers)
+    mem.dynamic_arena_destroy(&handle.widget_arena)
+    free(handle)
 }
 
 process_widget_events :: proc(handle: ^Handle) {
