@@ -358,6 +358,8 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // boxes ///////////////////////////////////////////////////////////////////////
 
+// TODO: WidgetGroup
+
 Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
 
 BorderSide :: enum { Top, Bottom, Left, Right }
@@ -507,7 +509,7 @@ box_ensure_alignment_conditions :: proc(widget: ^Widget, remaining_w, remaining_
     return true
 }
 
-// TODO: alignment should be done in the udpate function since we need to realign when the window is resized
+// TODO: the alignment logic is not great
 
 vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     data := &self.data.(Box)
@@ -516,7 +518,7 @@ vbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     right_x := self.x + self.w - data.attr.style.padding.right
 
     top_y := self.y + data.attr.style.padding.top
-    bottom_y := self.y + data.attr.style.padding.bottom
+    bottom_y := self.y + self.h + data.attr.style.padding.bottom
 
     remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
     remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
@@ -575,7 +577,7 @@ hbox_align :: proc(self: ^Widget, parent_x, parent_y, parent_w, parent_h: f32) {
     right_x := self.x + self.w - data.attr.style.padding.right
 
     top_y := self.y + data.attr.style.padding.top
-    bottom_y := self.y + data.attr.style.padding.bottom
+    bottom_y := self.y + self.h + data.attr.style.padding.bottom
 
     remaining_w := self.w - data.attr.style.padding.left - data.attr.style.padding.right
     remaining_h := self.h - data.attr.style.padding.top - data.attr.style.padding.bottom
