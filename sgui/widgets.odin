@@ -343,11 +343,14 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
     su.text_update_color(&data.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
     if data.attr.style.corner_radius > 0 {
         if border_thickness > 0 {
-            draw_rounded_box(handle, self.x, self.y, self.w, self.h, data.attr.style.corner_radius, border_color)
+            draw_rounded_box_with_border(handle, self.x, self.y, self.w, self.h,
+                                         data.attr.style.corner_radius, border_thickness,
+                                         border_color, bg_color)
+        } else {
+            draw_rounded_box(handle, self.x + border_thickness, self.y + border_thickness,
+                             self.w - 2 * border_thickness, self.h - 2 * border_thickness,
+                             data.attr.style.corner_radius, bg_color)
         }
-        draw_rounded_box(handle, self.x + border_thickness, self.y + border_thickness,
-                         self.w - 2 * border_thickness, self.h - 2 * border_thickness,
-                         data.attr.style.corner_radius, bg_color)
     } else {
         if border_thickness > 0 {
             handle->draw_rect(self.x, self.y, self.w, self.h, border_color)
@@ -376,6 +379,7 @@ BoxStyle :: struct {
     border_color: Color,
     padding: Padding,
     items_spacing: f32,
+    // TODO: corner radius (only if all the borders are activated)
 }
 
 BoxLayout :: enum {

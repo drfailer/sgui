@@ -38,6 +38,7 @@ OPTS := Opts{
             label_font_size = FONT_SIZE,
             padding = {2, 2, 2, 2},
             border_thickness = 1,
+            corner_radius = 0,
             colors = [ButtonState]ButtonColors{
                 .Idle = ButtonColors{
                     text = Color{0, 0, 0, 255},
