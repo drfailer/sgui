@@ -207,6 +207,7 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
     /* base */
     handle^ = Handle{
         layers = make([dynamic]^Widget),
+        tagged_widgets = make(map[u64]^Widget),
         draw_rect = draw_rect,
         draw_text = draw_text,
         add_layer = add_layer,
