@@ -12,7 +12,6 @@ Text :: struct {
     text_engine: ^sdl_ttf.TextEngine,
     font: ^sdl_ttf.Font,
     text: ^sdl_ttf.Text,
-    value: cstring,
 }
 
 // ideas:
@@ -22,18 +21,17 @@ Text :: struct {
 text_create :: proc(text_engine: ^sdl_ttf.TextEngine, font: ^sdl_ttf.Font, text: string) -> Text {
     ctext := strings.clone_to_cstring(text)
     defer delete(ctext)
-    return Text{text_engine, font, sdl_ttf.CreateText(text_engine, font, ctext, len(text)), ctext}
+    return Text{text_engine, font, sdl_ttf.CreateText(text_engine, font, ctext, len(text))}
 }
 
 text_destroy :: proc(text: ^Text) {
     sdl_ttf.DestroyText(text.text)
-    delete(text.value)
 }
 
 text_update_text :: proc(text: ^Text, value: string) {
-    delete(text.value)
-    text.value = strings.clone_to_cstring(value)
-    sdl_ttf.SetTextString(text.text, text.value, len(value))
+    ctext := strings.clone_to_cstring(value)
+    defer delete(ctext)
+    sdl_ttf.SetTextString(text.text, ctext, len(value))
     sdl_ttf.UpdateText(text.text)
 }
 
