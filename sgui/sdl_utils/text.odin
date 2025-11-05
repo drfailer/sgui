@@ -21,6 +21,7 @@ Text :: struct {
 
 text_create :: proc(text_engine: ^sdl_ttf.TextEngine, font: ^sdl_ttf.Font, text: string) -> Text {
     ctext := strings.clone_to_cstring(text)
+    defer delete(ctext)
     return Text{text_engine, font, sdl_ttf.CreateText(text_engine, font, ctext, len(text)), ctext}
 }
 

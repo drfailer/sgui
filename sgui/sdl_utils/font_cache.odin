@@ -25,7 +25,9 @@ font_cache_destroy :: proc(cache: ^FontCache) {
         for _, font in fonts {
             sdl_ttf.CloseFont(font)
         }
+        delete(fonts)
     }
+    delete(cache.fonts)
 }
 
 font_cache_get_font :: proc(cache: ^FontCache, path: FontPath, size: FontSize) -> (font: Font) {
