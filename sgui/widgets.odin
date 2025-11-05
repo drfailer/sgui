@@ -423,10 +423,8 @@ Box :: struct {
     layout: BoxLayout,
     attr: BoxAttributes,
     widgets: [dynamic]AlignedWidget,
-    // TODO: add an optional ScrollBox that will contain the implementation of the scrollbars (The draw box must have it too)
-    // TODO: The standard boxes should be scrollable, but only the the draw box should be zoomable
-    // TODO: The the update function of the scrollbox will need to know the content size
-    // TODO: separate the logic of the scrollbar into the scrollbox that will also handle mouse wheel (if the box is hovered)
+    scrollbox: ScrollBox,
+    content_w, content_h: f32,
 }
 
 BoxInput :: union {
@@ -668,10 +666,12 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Box)
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
-    max_w := data.widgets[0].widget.w
-    max_h := data.widgets[0].widget.h
+    max_w := cast(f32)0
+    max_h := cast(f32)0
     ttl_w := padding_w
     ttl_h := padding_h
+
+    // TODO: this should be done in the update
 
     if .FixedW not_in data.attr.props {
         if .MinW in data.attr.props && parent.w < self.min_w {
@@ -692,16 +692,53 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         ttl_w += aw.widget.w + data.attr.style.items_spacing
         max_h = max(max_h, aw.widget.h)
         ttl_h += aw.widget.h + data.attr.style.items_spacing
+        if data.layout == .Vertical {
+            self.h -= aw.widget.h + data.attr.style.items_spacing
+        } else {
+            self.w -= aw.widget.w + data.attr.style.items_spacing
+        }
+        fmt.println(max_h, ttl_h, aw.widget, data.attr.style.items_spacing)
     }
 
-    // TODO: this should be done in the update
+    max_w += padding_w
+    max_h += padding_h
+    ttl_w -= data.attr.style.items_spacing
+    ttl_h -= data.attr.style.items_spacing
     if data.layout == .Vertical {
-        self.w = max_w + padding_w if .FitW in data.attr.props else parent.w
-        self.h = ttl_h - data.attr.style.items_spacing if .FitH in data.attr.props else parent.h
+        data.content_w = max_w if .FitW in data.attr.props else max(parent.w, max_w)
+        data.content_h = ttl_h if .FitH in data.attr.props else max(parent.h, ttl_h)
+        self.w = max_w if .FitW in data.attr.props else parent.w
+        self.h = ttl_h if .FitH in data.attr.props else parent.h
+        fmt.printfln("content_h = {}, parent.h = {}", data.content_h, parent.h)
     } else {
-        self.w = ttl_w - data.attr.style.items_spacing if .FitW in data.attr.props else parent.w
-        self.h = max_h + padding_h if .FitH in data.attr.props else parent.h
+        data.content_w = ttl_w if .FitW in data.attr.props else max(parent.w, ttl_w)
+        data.content_h = max_h if .FitH in data.attr.props else max(parent.h, max_h)
+        self.w = ttl_w if .FitW in data.attr.props else parent.w
+        self.h = max_h if .FitH in data.attr.props else parent.h
     }
+
+    // TODO
+    scrollbox_init(&data.scrollbox, handle, self)
+    data.scrollbox.vertical.enabled = data.content_h > parent.h
+    data.scrollbox.horizontal.enabled = data.content_w > parent.w
+
+    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+        if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
+        data := &self.data.(Box)
+
+        if .Control not_in event.mods {
+            return scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100)
+        }
+        return true
+    })
+    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+        data := &self.data.(Box)
+        return scrollbox_clicked_handler(&data.scrollbox, event)
+    })
+    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+        data := &self.data.(Box)
+        return scrollbox_dragged_handler(&data.scrollbox, event)
+    })
 }
 
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
@@ -712,6 +749,8 @@ box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
             aw.widget->update(handle, self)
         }
     }
+    // TODO
+    scrollbox_update(&data.scrollbox, data.content_w, data.content_h)
 }
 
 box_draw :: proc(self: ^Widget, handle: ^Handle) {
@@ -725,6 +764,8 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {
             widget_draw(aw.widget, handle)
         }
     }
+    // TODO
+    scrollbox_draw(&data.scrollbox, handle)
     bt := data.attr.style.border_thickness
     bc := data.attr.style.border_color
     if .Top in data.attr.style.active_borders {
@@ -932,8 +973,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     scrollbox_init(&data.scrollbox, handle, self)
     zoombox_init(&data.zoombox, self)
 
-    // TODO: factor this code v
-    handle->key_handler(self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {// {{{
+    handle->key_handler(self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {
         if !event.down do return false
         data := &self.data.(DrawBox)
 
@@ -946,24 +986,26 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         case sdl.K_J: vcount = 1
         }
         return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
-    })// }}}
-    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {// {{{
+    })
+    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+        if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
         data := &self.data.(DrawBox)
+
         if .Control in event.mods {
             return zoombox_zoom_handler(&data.zoombox, event.x, event.y, event.mods)
         } else {
             return scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100)
         }
         return true
-    })// }}}
-    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {// {{{
+    })
+    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         return scrollbox_clicked_handler(&data.scrollbox, event)
-    })// }}}
-    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {// {{{
+    })
+    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         return scrollbox_dragged_handler(&data.scrollbox, event)
-    })// }}}
+    })
 }
 
 draw_box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
