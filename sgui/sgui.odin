@@ -109,12 +109,10 @@ Handle :: struct {
 
     /* procs */
 
-    // TODO: make_widget() // allocate a widget using internal allocator
-
     /** layers **/
     add_layer: proc(handle: ^Handle, widget: ^Widget),
     switch_to_layer: proc(handle: ^Handle, layer_idx: int) -> bool,
-    make_widget: proc(handle: ^Handle, widget_proc: proc() -> ^Widget) -> ^Widget,
+    make_widget: proc(handle: ^Handle, widget_proc: proc(handle: ^Handle) -> ^Widget) -> ^Widget,
 
     /** events handlers **/
     key_handler: proc(handle: ^Handle, widget: ^Widget, exec: KeyEventHandlerProc),
@@ -540,9 +538,9 @@ switch_to_layer :: proc(handle: ^Handle, layer_idx: int) -> bool {
     return true
 }
 
-make_widget :: proc(handle: ^Handle, widget_proc: proc() -> ^Widget) -> ^Widget {
+make_widget :: proc(handle: ^Handle, widget_proc: proc(handle: ^Handle) -> ^Widget) -> ^Widget {
     context.allocator = handle.widget_allocator
-    return widget_proc()
+    return widget_proc(handle)
 }
 
 add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {

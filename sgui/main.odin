@@ -128,7 +128,7 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
     return widget
 }
 
-main_layer :: proc() -> ^Widget {
+main_layer :: proc(handle: ^Handle) -> ^Widget {
     return vbox(
         vbox(
             align_widgets(
