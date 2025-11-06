@@ -156,26 +156,32 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                 },
             }
         ),
-        vbox(
-            align_widgets(
-                vbox(
-                    center(text("footer")),
-                    attr = BoxAttributes{
-                        props = BoxProperties{.FitH},
-                        style = BoxStyle{
-                            background_color = Color{0, 100, 100, 255},
-                            items_spacing = 10,
-                            padding = Padding{ 4, 4, 4, 4 },
-                        },
-                    }
-                ),
-                alignment = Alignment{.Bottom, .HCenter},
+        align_widgets(
+            vbox(
+                center(text("footer")),
+                attr = BoxAttributes{
+                    props = BoxProperties{.FitH},
+                    style = BoxStyle{
+                        background_color = Color{0, 100, 100, 255},
+                        items_spacing = 10,
+                        padding = Padding{ 4, 4, 4, 4 },
+                    },
+                }
             ),
+            alignment = Alignment{.Bottom, .HCenter},
+        ),
+        vbox(
             hbox(
                 side_pannel_widget(),
                 // the draw box is at the end: since it is resizable, all the other parts needs to be align first
                 draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
             ),
+            attr = BoxAttributes{
+                props = BoxProperties{},
+                style = BoxStyle{
+                    background_color = Color{10, 10, 10, 255},
+                },
+            }
         )
     )
 }
