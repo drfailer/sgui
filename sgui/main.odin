@@ -17,8 +17,8 @@ FONT_SIZE :: 18
 
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
-// WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
-WINDOW_FLAGS :: sdl.WindowFlags{}
+WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
+// WINDOW_FLAGS :: sdl.WindowFlags{}
 FPS :: 60
 
 SCROLLBAR_THICKNESS :: 10
@@ -103,8 +103,12 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                         font_size = FONT_SIZE,
                         color = Color{0, 0, 0, 255},
                     },
-                }),
+                }
+            ),
             button("hellope", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH, .FitW},
@@ -117,7 +121,7 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
             props = BoxProperties{.FitW},
             style = BoxStyle{
                 background_color = Color{255, 0, 0, 255},
-                padding = Padding{ 10, 10, 10, 10 },
+                padding = Padding{ 10, 10, 10, 20 },
                 border_thickness = 2,
                 active_borders = ActiveBorders{.Right},
                 border_color = Color{200, 200, 0, 255},
@@ -154,29 +158,36 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                     active_borders = ActiveBorders{.Bottom},
                     border_color = Color{0, 200, 200, 255},
                 },
-            }
+            },
+            z_index = 1, // fixes the scroll ???
         ),
         vbox(
-            align_widgets(
-                vbox(
-                    center(text("footer")),
-                    attr = BoxAttributes{
-                        props = BoxProperties{.FitH},
-                        style = BoxStyle{
-                            background_color = Color{0, 100, 100, 255},
-                            items_spacing = 10,
-                            padding = Padding{ 4, 4, 4, 4 },
-                        },
-                    }
-                ),
-                alignment = Alignment{.Bottom, .HCenter},
-            ),
             hbox(
                 side_pannel_widget(),
                 // the draw box is at the end: since it is resizable, all the other parts needs to be align first
                 draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
             ),
-        )
+            attr = BoxAttributes{
+                props = BoxProperties{},
+                style = BoxStyle{
+                    background_color = Color{10, 10, 10, 255},
+                },
+            }
+        ),
+        align_widgets(
+            vbox(
+                center(text("footer")),
+                attr = BoxAttributes{
+                    props = BoxProperties{.FitH},
+                    style = BoxStyle{
+                        background_color = Color{0, 100, 100, 255},
+                        items_spacing = 10,
+                        padding = Padding{ 4, 4, 4, 4 },
+                    },
+                }
+            ),
+            alignment = Alignment{.Bottom, .HCenter},
+        ),
     )
 }
 

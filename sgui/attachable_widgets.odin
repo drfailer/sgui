@@ -52,36 +52,38 @@ scrollbox_scroll_data :: proc(data: ^ScrollBoxData, count: i32, step: f32) {
     data.target_position = clamp(data.target_position, 0, data.scrollbar.content_size - data.scrollbar.parent_size)
 }
 
-scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> bool {
+scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> (scrolled: bool) {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
         scrollbox_scroll_data(&scrollbox.vertical, vcount, vstep)
+        scrolled = true
     }
     if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
         scrollbox_scroll_data(&scrollbox.horizontal, hcount, hstep)
+        scrolled = true
     }
-    return true
+    return scrolled
 }
 
-scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> bool {
+scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> (clicked: bool) {
     if event.button == sdl.BUTTON_LEFT {
         if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-            scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
+            clicked = scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
         }
         if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-            scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
+            clicked |= scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
         }
     }
-    return true
+    return clicked
 }
 
-scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> bool {
+scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> (scrolled: bool) {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-        scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
+        scrolled = scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
     }
     if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-        scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
+        scrolled |= scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
     }
-    return true
+    return scrolled
 }
 
 scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^Handle, parent: ^Widget) {
@@ -116,17 +118,13 @@ scrollbox_update :: proc(scrollbox: ^ScrollBox, content_w, content_h: f32) {
     scrollbox.horizontal.enabled = content_w > scrollbox.parent.w
 
     if scrollbox.vertical.enabled {
-        scrollbar_update(&scrollbox.vertical.scrollbar,
-                         scrollbox.parent.x + scrollbox.parent.w - SCROLLBAR_THICKNESS,
-                         scrollbox.parent.y, scrollbox.vertical.position,
+        scrollbar_update(&scrollbox.vertical.scrollbar, scrollbox.vertical.position,
                          content_h, scrollbox.parent.h, scrollbox.parent)
     }
 
     if scrollbox.horizontal.enabled {
         size := scrollbox.parent.w if !scrollbox.vertical.enabled else scrollbox.parent.w - SCROLLBAR_THICKNESS
-        scrollbar_update(&scrollbox.horizontal.scrollbar,
-                         scrollbox.parent.x, scrollbox.parent.y + scrollbox.parent.h - SCROLLBAR_THICKNESS,
-                         scrollbox.horizontal.position,
+        scrollbar_update(&scrollbox.horizontal.scrollbar, scrollbox.horizontal.position,
                          content_w, size, scrollbox.parent)
     }
 }
@@ -201,7 +199,7 @@ scrollbar_dragged_handler :: proc(bar: ^Scrollbar, event: MouseMotionEvent) -> b
 
 scrollbar_init :: proc(self: ^Scrollbar, handle: ^Handle, parent: ^Widget) {}
 
-scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
+scrollbar_update :: proc(bar: ^Scrollbar, position: f32, content_size, parent_size: f32, parent: ^Widget) {
     if bar.direction == .Vertical {
         bar.x = parent.x + parent.w - SCROLLBAR_THICKNESS
         bar.y = parent.y
@@ -216,8 +214,6 @@ scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size
         bar.parent_size = parent.h
     }
 
-    bar.x = x
-    bar.y = y
     bar.bar_size = parent_size
     bar.bar_position = position
     bar.content_size = content_size

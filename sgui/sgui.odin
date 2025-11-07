@@ -91,6 +91,8 @@ Handle :: struct {
     font_cache: su.FontCache,
     text_engine: ^sdl_ttf.TextEngine,
     mouse_x, mouse_y: f32,
+    window_w, window_h: f32,
+    resize: bool,
 
     /* event handlers */
     event_handlers: EventHandlers,
@@ -253,6 +255,11 @@ init :: proc(handle: ^Handle) {
     }
     handle.font_cache = su.font_cache_create()
 
+    w, h: i32
+    assert(sdl.GetWindowSize(handle.window, &w, &h));
+    handle.window_w = cast(f32)w
+    handle.window_h = cast(f32)h
+
     /* widget event queue */
     queue.init(&handle.widget_event_queue)
 
@@ -328,6 +335,14 @@ process_events :: proc(handle: ^Handle) {
         #partial switch event.type {
         case .QUIT:
             handle.run = false
+        case .WINDOW_RESIZED:
+            w, h: i32
+            assert(sdl.GetWindowSize(handle.window, &w, &h));
+            handle.window_w = cast(f32)w
+            handle.window_h = cast(f32)h
+            for layer in handle.layers {
+                widget_resize(layer, handle)
+            }
         case .KEY_DOWN:
             if event.key.key == sdl.K_LCTRL || event.key.key == sdl.K_RCTRL {
                 handle.event_handlers.mods |= { .Control }
@@ -402,9 +417,13 @@ process_events :: proc(handle: ^Handle) {
 }
 
 update :: proc(handle: ^Handle) {
-    w, h: i32
-    assert(sdl.GetWindowSize(handle.window, &w, &h));
-    handle.rel_rect = Rect{0, 0, cast(f32)w, cast(f32)h}
+    handle.rel_rect = Rect{0, 0, handle.window_w, handle.window_h}
+    if handle.resize {
+        handle.resize = false
+        for layer in handle.layers {
+            widget_resize(layer, handle)
+        }
+    }
     widget_update(handle, handle.layers[handle.current_layer])
 }
 
