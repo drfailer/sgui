@@ -52,36 +52,38 @@ scrollbox_scroll_data :: proc(data: ^ScrollBoxData, count: i32, step: f32) {
     data.target_position = clamp(data.target_position, 0, data.scrollbar.content_size - data.scrollbar.parent_size)
 }
 
-scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> bool {
+scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> (scrolled: bool) {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
         scrollbox_scroll_data(&scrollbox.vertical, vcount, vstep)
+        scrolled = true
     }
     if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
         scrollbox_scroll_data(&scrollbox.horizontal, hcount, hstep)
+        scrolled = true
     }
-    return true
+    return scrolled
 }
 
-scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> bool {
+scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> (clicked: bool) {
     if event.button == sdl.BUTTON_LEFT {
         if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-            scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
+            clicked = scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
         }
         if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-            scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
+            clicked |= scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
         }
     }
-    return true
+    return clicked
 }
 
-scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> bool {
+scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> (scrolled: bool) {
     if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
-        scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
+        scrolled = scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
     }
     if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
-        scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
+        scrolled |= scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
     }
-    return true
+    return scrolled
 }
 
 scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^Handle, parent: ^Widget) {
