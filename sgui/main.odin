@@ -158,7 +158,8 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                     active_borders = ActiveBorders{.Bottom},
                     border_color = Color{0, 200, 200, 255},
                 },
-            }
+            },
+            z_index = 1, // fixes the scroll ???
         ),
         vbox(
             hbox(

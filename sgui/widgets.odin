@@ -433,7 +433,6 @@ AlignedWidget :: struct {
     widget: ^Widget,
 }
 
-// TODO: scrollbars
 Box :: struct {
     layout: BoxLayout,
     attr: BoxAttributes,
@@ -447,7 +446,6 @@ BoxInput :: union {
     AlignedWidget,
 }
 
-// TODO: the box should also have scrollbars
 box :: proc(// {{{
     layout: BoxLayout,
     attr: BoxAttributes,
