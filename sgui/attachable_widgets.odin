@@ -116,17 +116,13 @@ scrollbox_update :: proc(scrollbox: ^ScrollBox, content_w, content_h: f32) {
     scrollbox.horizontal.enabled = content_w > scrollbox.parent.w
 
     if scrollbox.vertical.enabled {
-        scrollbar_update(&scrollbox.vertical.scrollbar,
-                         scrollbox.parent.x + scrollbox.parent.w - SCROLLBAR_THICKNESS,
-                         scrollbox.parent.y, scrollbox.vertical.position,
+        scrollbar_update(&scrollbox.vertical.scrollbar, scrollbox.vertical.position,
                          content_h, scrollbox.parent.h, scrollbox.parent)
     }
 
     if scrollbox.horizontal.enabled {
         size := scrollbox.parent.w if !scrollbox.vertical.enabled else scrollbox.parent.w - SCROLLBAR_THICKNESS
-        scrollbar_update(&scrollbox.horizontal.scrollbar,
-                         scrollbox.parent.x, scrollbox.parent.y + scrollbox.parent.h - SCROLLBAR_THICKNESS,
-                         scrollbox.horizontal.position,
+        scrollbar_update(&scrollbox.horizontal.scrollbar, scrollbox.horizontal.position,
                          content_w, size, scrollbox.parent)
     }
 }
@@ -201,7 +197,7 @@ scrollbar_dragged_handler :: proc(bar: ^Scrollbar, event: MouseMotionEvent) -> b
 
 scrollbar_init :: proc(self: ^Scrollbar, handle: ^Handle, parent: ^Widget) {}
 
-scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size, parent_size: f32, parent: ^Widget) {
+scrollbar_update :: proc(bar: ^Scrollbar, position: f32, content_size, parent_size: f32, parent: ^Widget) {
     if bar.direction == .Vertical {
         bar.x = parent.x + parent.w - SCROLLBAR_THICKNESS
         bar.y = parent.y
@@ -216,8 +212,6 @@ scrollbar_update :: proc(bar: ^Scrollbar, x, y: f32, position: f32, content_size
         bar.parent_size = parent.h
     }
 
-    bar.x = x
-    bar.y = y
     bar.bar_size = parent_size
     bar.bar_position = position
     bar.content_size = content_size

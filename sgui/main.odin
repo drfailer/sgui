@@ -103,8 +103,12 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                         font_size = FONT_SIZE,
                         color = Color{0, 0, 0, 255},
                     },
-                }),
+                }
+            ),
             button("hellope", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH, .FitW},
@@ -117,7 +121,7 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
             props = BoxProperties{.FitW},
             style = BoxStyle{
                 background_color = Color{255, 0, 0, 255},
-                padding = Padding{ 10, 10, 10, 10 },
+                padding = Padding{ 10, 10, 10, 20 },
                 border_thickness = 2,
                 active_borders = ActiveBorders{.Right},
                 border_color = Color{200, 200, 0, 255},
