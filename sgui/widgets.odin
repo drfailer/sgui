@@ -816,12 +816,16 @@ box_resize :: proc(self: ^Widget, w, h: f32) {// {{{
         hbox_resize(self, w, h)
     }
 
-    fmt.println("parent size: ", w, h, "widget size: ", self.w, self.h, "content size: ", data.content_w, data.content_h)
-
-    // TODO: the scrollbars must be reset when the enable changes
-    // TODO: fix the w and h when the scrollbars are drawn
     data.scrollbox.vertical.enabled = data.content_h > self.h
+    if !data.scrollbox.vertical.enabled {
+        data.scrollbox.vertical.position = 0
+        data.scrollbox.vertical.target_position = 0
+    }
     data.scrollbox.horizontal.enabled = data.content_w > self.w
+    if !data.scrollbox.horizontal.enabled {
+        data.scrollbox.horizontal.position = 0
+        data.scrollbox.horizontal.target_position = 0
+    }
 }// }}}
 
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
