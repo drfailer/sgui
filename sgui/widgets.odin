@@ -107,6 +107,21 @@ widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
     return mouse_on_region(mx, my, widget.x, widget.y, widget.w, widget.h)
 }
 
+widget_enable :: proc(widget: ^Widget, handle: ^Handle) {
+    widget.disabled = false
+    handle.resize = true
+}
+
+widget_disable :: proc(widget: ^Widget, handle: ^Handle) {
+    widget.disabled = true
+    handle.resize = true
+}
+
+widget_toggle :: proc(widget: ^Widget, handle: ^Handle) {
+    widget.disabled = !widget.disabled
+    handle.resize = true
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 OnelineInput :: struct {
