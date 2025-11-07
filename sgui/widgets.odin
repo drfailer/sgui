@@ -53,38 +53,28 @@ WidgetData :: union {
 WidgetValue :: union { string, bool, int, f64 }
 
 widget_init :: proc(widget: ^Widget, handle: ^Handle) {
-    w, h: i32
-    assert(sdl.GetWindowSize(handle.window, &w, &h));
     root := Widget{
         x = 0,
         y = 0,
-        w = cast(f32)w,
-        h = cast(f32)h,
+        w = cast(f32)handle.window_w,
+        h = cast(f32)handle.window_h,
     }
     widget->init(handle, &root)
-    widget_resize(widget, root.w, root.h)
-    widget_align(widget, root.x, root.y)
+    widget_resize(widget, handle)
 }
 
-widget_resize :: proc(widget: ^Widget, w, h: f32) {
+widget_resize :: proc(widget: ^Widget, handle: ^Handle) {
     if widget.disabled do return
     if widget.resizable_w {
-        if widget.min_w > 0 {
-            widget.w = min(widget.min_w, w)
-        } else {
-            widget.w = w
-        }
+        widget.w = handle.window_w
     }
     if widget.resizable_h {
-        if widget.min_h > 0 {
-            widget.h = min(widget.min_h, h)
-        } else {
-            widget.h = h
-        }
+        widget.h = handle.window_h
     }
     #partial switch _ in widget.data {
-    case Box: box_resize(widget, w, h)
+    case Box: box_resize(widget, handle.window_w, handle.window_h)
     }
+    widget_align(widget, 0, 0)
 }
 
 widget_align :: proc(widget: ^Widget, x, y: f32) {
@@ -102,8 +92,6 @@ widget_update :: proc(handle: ^Handle, widget: ^Widget) {
         w = handle.rel_rect.w,
         h = handle.rel_rect.h,
     }
-    widget_resize(widget, root.w, root.h)
-    widget_align(widget, root.x, root.y)
     widget->update(handle, &root)
 }
 
@@ -249,7 +237,7 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 
 text_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Text)
-    su.text_draw(&data.text, self.x, self.y)
+    handle->draw_text(&data.text, self.x, self.y)
 }
 
 // button //////////////////////////////////////////////////////////////////////
@@ -377,7 +365,7 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
     label_w, label_h := su.text_size(&data.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
-    su.text_draw(&data.text, label_x, label_y)
+    handle->draw_text(&data.text, label_x, label_y)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
@@ -614,9 +602,9 @@ hbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
 box_align :: proc(self: ^Widget, x, y: f32) {// {{{
     data := &self.data.(Box)
     if data.layout == .Vertical {
-        vbox_align(self, x - data.scrollbox.horizontal.position, y - data.scrollbox.vertical.position)
+        vbox_align(self, x, y)
     } else {
-        hbox_align(self, x - data.scrollbox.horizontal.position, y - data.scrollbox.vertical.position)
+        hbox_align(self, x, y)
     }
 }// }}}
 
@@ -655,20 +643,12 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     })
 }// }}}
 
-box_find_w :: proc(self: ^Widget, parent_w: f32) -> f32 {
+box_find_content_w :: proc(self: ^Widget, parent_w: f32) -> f32 {
     data := &self.data.(Box)
     padding_w := data.attr.style.padding.left + data.attr.style.padding.right
     max_w := cast(f32)0
     ttl_w := padding_w
     has_widget_on_right := false
-
-    if .MinW in data.attr.props && parent_w < self.min_w {
-        log.error("minimum width of box does not fit in the parent container.")
-    }
-
-    if .FixedW in data.attr.props {
-        return self.w
-    }
 
     for aw in data.widgets {
         if .Right in aw.alignment {
@@ -683,31 +663,18 @@ box_find_w :: proc(self: ^Widget, parent_w: f32) -> f32 {
     }
     w := max_w + padding_w if data.layout == .Vertical else ttl_w - data.attr.style.items_spacing
 
-    if .FitW in data.attr.props {
-        if has_widget_on_right {
-            return max(w, parent_w)
-        } else {
-            return w
-        }
+    if has_widget_on_right {
+        return max(w, parent_w)
     }
-
-    return max(w, parent_w)
+    return w
 }
 
-box_find_h :: proc(self: ^Widget, parent_h: f32) -> f32 {
+box_find_content_h :: proc(self: ^Widget, parent_h: f32) -> f32 {
     data := &self.data.(Box)
     padding_h := data.attr.style.padding.top + data.attr.style.padding.bottom
     max_h := cast(f32)0
     ttl_h := padding_h
     has_widget_on_bottom := false
-
-    if .MinH in data.attr.props && parent_h < self.min_h {
-        log.error("minimum height of box does not fit in the parent container.")
-    }
-
-    if .FixedH in data.attr.props {
-        return self.h
-    }
 
     for aw in data.widgets {
         if .Bottom in aw.alignment {
@@ -722,15 +689,70 @@ box_find_h :: proc(self: ^Widget, parent_h: f32) -> f32 {
     }
     h := ttl_h - data.attr.style.items_spacing if data.layout == .Vertical else max_h + padding_h
 
-    if .FitH in data.attr.props {
-        if has_widget_on_bottom {
-            return max(h, parent_h)
+    if has_widget_on_bottom {
+        return max(h, parent_h)
+    }
+    return h
+}
+
+box_resize_widget :: proc(widget: ^Widget, w, h: f32) {
+    if widget.disabled do return
+    if widget.resizable_w {
+        if widget.min_w > 0 {
+            widget.w = min(widget.min_w, w)
         } else {
-            return h
+            widget.w = w
         }
     }
+    if widget.resizable_h {
+        if widget.min_h > 0 {
+            widget.h = min(widget.min_h, h)
+        } else {
+            widget.h = h
+        }
+    }
+    #partial switch _ in widget.data {
+    case Box: box_resize(widget, w, h)
+    }
+}
 
-    return max(h, parent_h)
+box_expand_widget :: proc(widget: ^Widget, w, h: f32) {
+    if widget.disabled do return
+    if widget.resizable_w {
+        widget.w = w
+    }
+    if widget.resizable_h {
+        widget.h = h
+    }
+    #partial switch _ in widget.data {
+    case Box: box_resize(widget, w, h)
+    }
+}
+
+box_update_size :: proc(self: ^Widget, w, h: f32) {
+    data := &self.data.(Box)
+    if .FixedW not_in data.attr.props {
+        if .FitW in data.attr.props {
+            self.w = min(data.content_w, w)
+        } else {
+            self.w = w
+            data.content_w = max(data.content_w, self.w)
+        }
+        if .MinW in data.attr.props && self.w < self.min_w {
+            self.w = self.min_w
+        }
+    }
+    if .FixedH not_in data.attr.props {
+        if .FitH in data.attr.props {
+            self.h = min(data.content_h, h)
+        } else {
+            self.h = h
+            data.content_h = max(data.content_h, self.h)
+        }
+        if .MinH in data.attr.props && self.h < self.min_h {
+            self.h = self.min_h
+        }
+    }
 }
 
 vbox_resize :: proc(self: ^Widget, w, h: f32) {
@@ -741,7 +763,7 @@ vbox_resize :: proc(self: ^Widget, w, h: f32) {
 
     for aw in data.widgets {
         if aw.widget.disabled do continue
-        widget_resize(aw.widget, w, h)
+        box_resize_widget(aw.widget, w, h)
         if aw.widget.h == h || aw.widget.h == 0 {
             append(&expandable_widgets, aw.widget)
         } else {
@@ -749,14 +771,13 @@ vbox_resize :: proc(self: ^Widget, w, h: f32) {
         }
     }
 
-    data.content_w = box_find_w(self, w)
-    data.content_h = box_find_h(self, h)
-    self.w = min(data.content_w, w)
-    self.h = min(data.content_h, h)
+    data.content_w = box_find_content_w(self, w)
+    data.content_h = box_find_content_h(self, h)
+    box_update_size(self, w, h)
 
     remaining_h := self.h - fixed_h
     for ew in expandable_widgets {
-        widget_resize(ew, w, remaining_h / cast(f32)len(expandable_widgets))
+        box_expand_widget(ew, self.w, remaining_h / cast(f32)len(expandable_widgets))
     }
 }
 
@@ -768,7 +789,7 @@ hbox_resize :: proc(self: ^Widget, w, h: f32) {
 
     for aw in data.widgets {
         if aw.widget.disabled do continue
-        widget_resize(aw.widget, w, h)
+        box_resize_widget(aw.widget, w, h)
         if aw.widget.w == w || aw.widget.w == 0 {
             append(&expandable_widgets, aw.widget)
         } else {
@@ -776,14 +797,13 @@ hbox_resize :: proc(self: ^Widget, w, h: f32) {
         }
     }
 
-    data.content_w = box_find_w(self, w)
-    data.content_h = box_find_h(self, h)
-    self.w = min(data.content_w, w)
-    self.h = min(data.content_h, h)
+    data.content_w = box_find_content_w(self, w)
+    data.content_h = box_find_content_h(self, h)
+    box_update_size(self, w, h)
 
     remaining_w := self.w - fixed_w
     for ew in expandable_widgets {
-        widget_resize(ew, remaining_w / cast(f32)len(expandable_widgets), h)
+        box_expand_widget(ew, remaining_w / cast(f32)len(expandable_widgets), self.h)
     }
 }
 
@@ -796,10 +816,12 @@ box_resize :: proc(self: ^Widget, w, h: f32) {// {{{
         hbox_resize(self, w, h)
     }
 
-    // fmt.println("box resize: parent = ", w, h, "self = ", self.w, self.h, "content size = ", data.content_w, data.content_h)
+    fmt.println("parent size: ", w, h, "widget size: ", self.w, self.h, "content size: ", data.content_w, data.content_h)
 
-    data.scrollbox.vertical.enabled = data.content_h > h
-    data.scrollbox.horizontal.enabled = data.content_w > w
+    // TODO: the scrollbars must be reset when the enable changes
+    // TODO: fix the w and h when the scrollbars are drawn
+    data.scrollbox.vertical.enabled = data.content_h > self.h
+    data.scrollbox.horizontal.enabled = data.content_w > self.w
 }// }}}
 
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
@@ -819,11 +841,17 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
     if data.attr.style.background_color.a > 0 {
         handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
+
+    old_rel_rect := handle.rel_rect
+    handle.rel_rect.x -= data.scrollbox.horizontal.position
+    handle.rel_rect.y -= data.scrollbox.vertical.position
     for aw in data.widgets {
         if aw.widget.draw != nil {
             widget_draw(aw.widget, handle)
         }
     }
+    handle.rel_rect = old_rel_rect
+
     scrollbox_draw(&data.scrollbox, handle)
     bt := data.attr.style.border_thickness
     bc := data.attr.style.border_color
