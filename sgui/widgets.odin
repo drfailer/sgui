@@ -229,10 +229,6 @@ text_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     w, h := su.text_size(&data.text)
     self.w = w
     self.h = h
-
-    if self.w > parent.w || self.h > parent.h {
-        log.warn("text widget container too small")
-    }
 }
 
 text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
