@@ -27,19 +27,50 @@ WidgetUpdateProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
 WidgetDrawProc :: proc(self: ^Widget, handle: ^Handle)
 WidgetValueProc :: proc(self: ^Widget) -> WidgetValue
 
+AlignmentPolicy :: bit_set[AlignmentFlag]
+AlignmentFlag :: enum {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    VCenter,
+    HCenter,
+}
+
+SizePolicy :: bit_set[SizeFlag]
+SizeFlag :: enum {
+    Fill,   // take the full space in the layout direction
+    Expand, // take the full space in the oposite layout direction
+    Fixed,  // fix size
+    // TODO: ratio / relative to a widget??
+}
+
 Widget :: struct {
+    /* position and dimentions */
     x, y, w, h: f32,
     min_w, min_h: f32,
     z_index: u64,
-    resizable_w, resizable_h: bool,
+
+    /* flags */
     disabled: bool,
     invisible: bool,
     focused: bool,
+    resizable_w, resizable_h: bool,
+
+    /* policies */
+    size_policy: SizePolicy,
+    alignment_policy: AlignmentPolicy,
+
+    /* procs */
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
     value: WidgetValueProc,
+    // TODO: set value
+
+    /* data specific to the underlying widget */
     data: WidgetData,
+    // TODO: custom widget (just hold a rawptr)
 }
 
 WidgetData :: union {
@@ -402,16 +433,6 @@ BoxLayout :: enum {
     Horizontal,
 }
 
-Alignment :: bit_set[AlignmentFlag]
-AlignmentFlag :: enum {
-    Left,
-    Right,
-    Top,
-    Bottom,
-    VCenter,
-    HCenter,
-}
-
 BoxProperties :: bit_set[BoxProperty]
 BoxProperty :: enum {
     FitW,
@@ -428,22 +449,12 @@ BoxAttributes :: struct {
     w, h: f32,
 }
 
-AlignedWidget :: struct {
-    alignment: Alignment,
-    widget: ^Widget,
-}
-
 Box :: struct {
     layout: BoxLayout,
-    widgets: [dynamic]AlignedWidget,
+    widgets: [dynamic]^Widget,
     scrollbox: ScrollBox,
     content_w, content_h: f32,
     attr: BoxAttributes,
-}
-
-BoxInput :: union {
-    ^Widget,
-    AlignedWidget,
 }
 
 box :: proc(// {{{
@@ -453,16 +464,16 @@ box :: proc(// {{{
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
     z_index: u64,
-    widgets: ..BoxInput,
+    widgets: ..^Widget,
 ) -> (box: ^Widget) {
     box = new(Widget)
-    widget_list := make([dynamic]AlignedWidget)
+    widget_list := make([dynamic]^Widget)
 
     for widget in widgets {
-        switch v in widget {
-        case AlignedWidget: append(&widget_list, v)
-        case ^Widget: append(&widget_list, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
+        if widget.alignment_policy == {} {
+            widget.alignment_policy = AlignmentPolicy{.Top, .Left}
         }
+        append(&widget_list, widget)
     }
     box^ = Widget{
         z_index = z_index,
@@ -495,11 +506,11 @@ box :: proc(// {{{
     return box
 }// }}}
 
-vbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
+vbox :: proc(widgets: ..^Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
     return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }// }}}
 
-hbox :: proc(widgets: ..BoxInput, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
+hbox :: proc(widgets: ..^Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
     return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
 }// }}}
 
@@ -510,22 +521,22 @@ vbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
     top_y := y + data.attr.style.padding.top
     bottom_y := y + data.content_h - data.attr.style.padding.bottom
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
+    for widget in data.widgets {
+        if widget.disabled do continue
         wx, wy: f32
 
         if .FitH in data.attr.props {
             wy = top_y
-            top_y += aw.widget.h + data.attr.style.items_spacing
+            top_y += widget.h + data.attr.style.items_spacing
         } else {
-            if .VCenter in aw.alignment {
-                wy = y + data.attr.style.padding.top + (data.content_h - aw.widget.h) / 2.
-            } else if .Bottom in aw.alignment {
-                wy = bottom_y - aw.widget.h
-                bottom_y -= aw.widget.h + data.attr.style.items_spacing
+            if .VCenter in widget.alignment_policy {
+                wy = y + data.attr.style.padding.top + (data.content_h - widget.h) / 2.
+            } else if .Bottom in widget.alignment_policy {
+                wy = bottom_y - widget.h
+                bottom_y -= widget.h + data.attr.style.items_spacing
             } else {
                 wy = top_y
-                top_y += aw.widget.h + data.attr.style.items_spacing
+                top_y += widget.h + data.attr.style.items_spacing
             }
         }
 
@@ -533,15 +544,15 @@ vbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
         if .FitW in data.attr.props {
             wx = left_x
         } else {
-            if .HCenter in aw.alignment {
-                wx = x + data.attr.style.padding.left + (data.content_w - aw.widget.w) / 2.
-            } else if .Right in aw.alignment {
-                wx = right_x - aw.widget.w
+            if .HCenter in widget.alignment_policy {
+                wx = x + data.attr.style.padding.left + (data.content_w - widget.w) / 2.
+            } else if .Right in widget.alignment_policy {
+                wx = right_x - widget.w
             } else {
                 wx = left_x
             }
         }
-        widget_align(aw.widget, wx, wy)
+        widget_align(widget, wx, wy)
     }
 }// }}}
 
@@ -552,18 +563,18 @@ hbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
     top_y := y + data.attr.style.padding.top
     bottom_y := y + data.content_h - data.attr.style.padding.bottom
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
+    for widget in data.widgets {
+        if widget.disabled do continue
         wx, wy: f32
 
         // since widgets are added in a row, there is no need to decrease the height
         if .FitH in data.attr.props {
             wy = top_y
         } else {
-            if .VCenter in aw.alignment {
-                wy = y + data.attr.style.padding.top + (data.content_h - aw.widget.h) / 2.
-            } else if .Bottom in aw.alignment {
-                wy = bottom_y - aw.widget.h
+            if .VCenter in widget.alignment_policy {
+                wy = y + data.attr.style.padding.top + (data.content_h - widget.h) / 2.
+            } else if .Bottom in widget.alignment_policy {
+                wy = bottom_y - widget.h
             } else {
                 wy = top_y
             }
@@ -571,19 +582,19 @@ hbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
 
         if .FitW in data.attr.props {
             wx = left_x
-            left_x += aw.widget.w + data.attr.style.items_spacing
+            left_x += widget.w + data.attr.style.items_spacing
         } else {
-            if .HCenter in aw.alignment {
-                wx = x + data.attr.style.padding.left + (data.content_w - aw.widget.w) / 2.
-            } else if .Right in aw.alignment {
-                wx = right_x - aw.widget.w
-                right_x -= aw.widget.w + data.attr.style.items_spacing
+            if .HCenter in widget.alignment_policy {
+                wx = x + data.attr.style.padding.left + (data.content_w - widget.w) / 2.
+            } else if .Right in widget.alignment_policy {
+                wx = right_x - widget.w
+                right_x -= widget.w + data.attr.style.items_spacing
             } else {
                 wx = left_x
-                left_x += aw.widget.w + data.attr.style.items_spacing
+                left_x += widget.w + data.attr.style.items_spacing
             }
         }
-        widget_align(aw.widget, wx, wy)
+        widget_align(widget, wx, wy)
     }
 }// }}}
 
@@ -596,19 +607,19 @@ box_align :: proc(self: ^Widget, x, y: f32) {// {{{
     }
 }// }}}
 
-box_add_widget :: proc(box_widget: ^Widget, input: BoxInput) {// {{{
+box_add_widget :: proc(box_widget: ^Widget, widget: ^Widget) {// {{{
     data := &box_widget.data.(Box)
-    switch v in input {
-    case AlignedWidget: append(&data.widgets, v)
-    case ^Widget: append(&data.widgets, AlignedWidget{widget = v, alignment = Alignment{.Top, .Left}})
+    if widget.alignment_policy == {} {
+        widget.alignment_policy = AlignmentPolicy{.Top, .Left}
     }
+    append(&data.widgets, widget)
 }// }}}
 
 box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     data := &self.data.(Box)
 
-    for aw in data.widgets {
-        aw.widget->init(handle, self)
+    for widget in data.widgets {
+        widget->init(handle, self)
     }
     scrollbox_init(&data.scrollbox, handle, self)
 
@@ -642,12 +653,12 @@ box_find_content_w :: proc(self: ^Widget, parent_w: f32) -> (w: f32, ttl_w: f32,
     ttl_w = padding_w
     has_widget_on_right := false
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
-        if .Right in aw.alignment {
+    for widget in data.widgets {
+        if widget.disabled do continue
+        if .Right in widget.alignment_policy {
             has_widget_on_right = true
         }
-        ww := aw.widget.w
+        ww := widget.w
         if ww == parent_w {
             continue
         }
@@ -669,12 +680,12 @@ box_find_content_h :: proc(self: ^Widget, parent_h: f32) -> (h: f32, ttl_h: f32,
     ttl_h = padding_h
     has_widget_on_bottom := false
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
-        if .Bottom in aw.alignment {
+    for widget in data.widgets {
+        if widget.disabled do continue
+        if .Bottom in widget.alignment_policy {
             has_widget_on_bottom = true
         }
-        wh := aw.widget.h
+        wh := widget.h
         if wh == parent_h {
             continue
         }
@@ -755,11 +766,11 @@ vbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     defer delete(expandable_widgets)
     ttl_w, max_w, ttl_h, max_h: f32
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
-        box_resize_widget(aw.widget, w, h)
-        if aw.widget.h == h || aw.widget.h == 0 {
-            append(&expandable_widgets, aw.widget)
+    for widget in data.widgets {
+        if widget.disabled do continue
+        box_resize_widget(widget, w, h)
+        if widget.h == h || widget.h == 0 {
+            append(&expandable_widgets, widget)
         }
     }
 
@@ -779,11 +790,11 @@ hbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     defer delete(expandable_widgets)
     ttl_w, max_w, ttl_h, max_h: f32
 
-    for aw in data.widgets {
-        if aw.widget.disabled do continue
-        box_resize_widget(aw.widget, w, h)
-        if aw.widget.w == w || aw.widget.w == 0 {
-            append(&expandable_widgets, aw.widget)
+    for widget in data.widgets {
+        if widget.disabled do continue
+        box_resize_widget(widget, w, h)
+        if widget.w == w || widget.w == 0 {
+            append(&expandable_widgets, widget)
         }
     }
 
@@ -821,9 +832,9 @@ box_resize :: proc(self: ^Widget, w, h: f32) {// {{{
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     data := &self.data.(Box)
 
-    for aw in data.widgets {
-        if aw.widget.update != nil && !aw.widget.disabled {
-            aw.widget->update(handle, self)
+    for widget in data.widgets {
+        if widget.update != nil && !widget.disabled {
+            widget->update(handle, self)
         }
     }
     scrollbox_update(&data.scrollbox, data.content_w, data.content_h)
@@ -836,8 +847,8 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
         handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
 
-    for aw in data.widgets {
-        widget_draw(aw.widget, handle)
+    for widget in data.widgets {
+        widget_draw(widget, handle)
     }
     scrollbox_draw(&data.scrollbox, handle)
 
@@ -859,12 +870,13 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
 
 // align functions //
 
-align_widgets :: proc(widget: ^Widget, alignment: Alignment = {.Top, .Left}) -> (result: AlignedWidget) {
-    return AlignedWidget{widget = widget, alignment = alignment}
+align_widgets :: proc(widget: ^Widget, alignment_policy: = AlignmentPolicy{.Top, .Left}) -> (result: ^Widget) {
+    widget.alignment_policy = alignment_policy
+    return widget
 }
 
-center :: proc(widget: ^Widget) -> AlignedWidget {
-    return align_widgets(widget, alignment = Alignment{.HCenter, .VCenter})
+center :: proc(widget: ^Widget) -> ^Widget {
+    return align_widgets(widget, alignment_policy = AlignmentPolicy{.HCenter, .VCenter})
 }
 
 // radio button ////////////////////////////////////////////////////////////////

@@ -148,7 +148,7 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                         },
                     }
                 ),
-                alignment = Alignment{.Top, .HCenter},
+                alignment_policy = {.Top, .HCenter},
             ),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH},
@@ -191,7 +191,7 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                     },
                 }
             ),
-            alignment = Alignment{.Bottom, .HCenter},
+            alignment_policy = {.Bottom, .HCenter},
         ),
     )
 }
