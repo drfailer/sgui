@@ -435,10 +435,10 @@ AlignedWidget :: struct {
 
 Box :: struct {
     layout: BoxLayout,
-    attr: BoxAttributes,
     widgets: [dynamic]AlignedWidget,
     scrollbox: ScrollBox,
     content_w, content_h: f32,
+    attr: BoxAttributes,
 }
 
 BoxInput :: union {
@@ -475,9 +475,9 @@ box :: proc(// {{{
         draw = draw,
         data = Box{
             layout = layout,
-            attr = attr,
             widgets = widget_list,
             scrollbox = scrollbox(),
+            attr = attr,
         }
     }
 
@@ -887,12 +887,12 @@ RadioButtonAttributes :: struct {
 }
 
 RadioButton :: struct {
-    attr: RadioButtonAttributes,
     checked: bool,
     label: string,
     label_text: su.Text,
     button_offset: f32,
     label_offset: f32,
+    attr: RadioButtonAttributes,
 }
 
 radio_button :: proc(
@@ -996,16 +996,21 @@ ContentSize :: struct {
     height: f32,
 }
 
+DrawBoxAttributes :: struct {
+    props: DrawBoxProperties,
+    zoom_min, zoom_max, zoom_step: f32,
+}
+
 // TODO: the draw box should give a draw rect proc
 DrawBox :: struct {
     content_size: ContentSize,
     zoombox: ZoomBox,
     scrollbox: ScrollBox,
-    props: DrawBoxProperties,
     user_init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     user_update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     user_data: rawptr,
+    attr: DrawBoxAttributes,
 }
 
 draw_box :: proc(
@@ -1013,7 +1018,7 @@ draw_box :: proc(
     update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
     init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
     data: rawptr = nil,
-    props := DrawBoxProperties{},
+    attr:= DrawBoxAttributes{},
 ) -> (draw_box: ^Widget) {
     draw_box = new(Widget)
     draw_box^ = Widget{
@@ -1023,13 +1028,13 @@ draw_box :: proc(
         update = draw_box_update,
         draw = draw_box_draw,
         data = DrawBox{
-            props = props,
-            zoombox = zoombox(1., 10., 0.2),
+            zoombox = zoombox(attr.zoom_min, attr.zoom_max, attr.zoom_step),
             scrollbox = scrollbox(),
             user_draw = draw,
             user_init = init,
             user_update = update,
             user_data = data,
+            attr = attr,
         }
     }
     return draw_box
@@ -1063,19 +1068,21 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
         data := &self.data.(DrawBox)
 
-        if .Control in event.mods {
+        if .Control in event.mods && .Zoomable in data.attr.props {
             return zoombox_zoom_handler(&data.zoombox, event.x, event.y, event.mods)
-        } else {
+        } else if .WithScrollbar in data.attr.props {
             return scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100)
         }
         return true
     })
     handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
+        if .WithScrollbar not_in data.attr.props do return false
         return scrollbox_clicked_handler(&data.scrollbox, event)
     })
     handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
+        if .WithScrollbar not_in data.attr.props do return false
         return scrollbox_dragged_handler(&data.scrollbox, event)
     })
 }
@@ -1085,7 +1092,9 @@ draw_box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     if data.user_update != nil {
         data.content_size = data.user_update(handle, self, data.user_data)
     }
-    scrollbox_update(&data.scrollbox, data.content_size.width, data.content_size.height)
+    if .WithScrollbar in data.attr.props {
+        scrollbox_update(&data.scrollbox, data.content_size.width, data.content_size.height)
+    }
 }
 
 draw_box_draw :: proc(self: ^Widget, handle: ^Handle) {
@@ -1094,7 +1103,7 @@ draw_box_draw :: proc(self: ^Widget, handle: ^Handle) {
     handle.rel_rect = Rect{self.x, self.y, self.w, self.h}
     data.user_draw(handle, self, data.user_data)
     handle.rel_rect = old_rel_rect
-    if .WithScrollbar in data.props {
+    if .WithScrollbar in data.attr.props {
         scrollbox_draw(&data.scrollbox, handle)
     }
 }

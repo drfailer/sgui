@@ -165,7 +165,12 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
             hbox(
                 side_pannel_widget(),
                 // the draw box is at the end: since it is resizable, all the other parts needs to be align first
-                draw_box(draw_data, update_data, props = DrawBoxProperties{.Zoomable, .WithScrollbar}),
+                draw_box(draw_data, update_data, attr = DrawBoxAttributes{
+                    props = DrawBoxProperties{.Zoomable, .WithScrollbar},
+                    zoom_min = 1.,
+                    zoom_max = 10.,
+                    zoom_step = 0.2,
+                }),
             ),
             attr = BoxAttributes{
                 props = BoxProperties{},
