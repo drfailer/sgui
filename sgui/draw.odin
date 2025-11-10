@@ -65,20 +65,20 @@ draw_circle_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: int, color: C
     color.a = cast(u8)(cast(f32)color.a * diff)
 
     // top left
-    handle->draw_rect(cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
-    handle->draw_rect(cx + cast(f32)y, cy - cast(f32)x, 1., 1., color)
+    draw_rect(handle, cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
+    draw_rect(handle, cx + cast(f32)y, cy - cast(f32)x, 1., 1., color)
 
     // top right
-    handle->draw_rect(cx + cast(f32)x, cy + cast(f32)y, 1., 1., color)
-    handle->draw_rect(cx - cast(f32)y, cy - cast(f32)x, 1., 1., color)
+    draw_rect(handle, cx + cast(f32)x, cy + cast(f32)y, 1., 1., color)
+    draw_rect(handle, cx - cast(f32)y, cy - cast(f32)x, 1., 1., color)
 
     // bottom left
-    handle->draw_rect(cx - cast(f32)x, cy - cast(f32)y, 1., 1., color)
-    handle->draw_rect(cx + cast(f32)y, cy + cast(f32)x, 1., 1., color)
+    draw_rect(handle, cx - cast(f32)x, cy - cast(f32)y, 1., 1., color)
+    draw_rect(handle, cx + cast(f32)y, cy + cast(f32)x, 1., 1., color)
 
     // bottom right
-    handle->draw_rect(cx + cast(f32)x, cy - cast(f32)y, 1., 1., color)
-    handle->draw_rect(cx - cast(f32)y, cy + cast(f32)x, 1., 1., color)
+    draw_rect(handle, cx + cast(f32)x, cy - cast(f32)y, 1., 1., color)
+    draw_rect(handle, cx - cast(f32)y, cy + cast(f32)x, 1., 1., color)
 }
 
 draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
@@ -114,24 +114,24 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
             // draw inside
 
             // top
-            handle->draw_rect(xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
-            handle->draw_rect(xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
+            draw_rect(handle, xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
+            draw_rect(handle, xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
 
             // bottom
-            handle->draw_rect(xl1 + 1, cy - cast(f32)y, w1 - 2, 1., color)
-            handle->draw_rect(xl2 + 1, cy + cast(f32)x, w2 - 2, 1., color)
+            draw_rect(handle, xl1 + 1, cy - cast(f32)y, w1 - 2, 1., color)
+            draw_rect(handle, xl2 + 1, cy + cast(f32)x, w2 - 2, 1., color)
         } else {
             draw_circle_edge_pixel(handle, cx, cy, x, y - 1, color, -diff) // out
 
             // draw inside
 
             // top
-            handle->draw_rect(xl1, cy + cast(f32)y, w1, 1., color)
-            handle->draw_rect(xl2, cy - cast(f32)x, w2, 1., color)
+            draw_rect(handle, xl1, cy + cast(f32)y, w1, 1., color)
+            draw_rect(handle, xl2, cy - cast(f32)x, w2, 1., color)
 
             // bottom
-            handle->draw_rect(xl1, cy - cast(f32)y, w1, 1., color)
-            handle->draw_rect(xl2, cy + cast(f32)x, w2, 1., color)
+            draw_rect(handle, xl1, cy - cast(f32)y, w1, 1., color)
+            draw_rect(handle, xl2, cy + cast(f32)x, w2, 1., color)
         }
         x += 1
     }
@@ -146,20 +146,20 @@ draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: i
     color.a = cast(u8)(cast(f32)color.a * (1 - diff))
 
     // top left
-    handle->draw_rect(xl1, cy + cast(f32)y, 1., 1., color)
-    handle->draw_rect(xl2, cy - cast(f32)x, 1., 1., color)
+    draw_rect(handle, xl1, cy + cast(f32)y, 1., 1., color)
+    draw_rect(handle, xl2, cy - cast(f32)x, 1., 1., color)
 
     // top right
-    handle->draw_rect(xr1, cy + cast(f32)y, 1., 1., color)
-    handle->draw_rect(xr2, cy - cast(f32)x, 1., 1., color)
+    draw_rect(handle, xr1, cy + cast(f32)y, 1., 1., color)
+    draw_rect(handle, xr2, cy - cast(f32)x, 1., 1., color)
 
     // bottom left
-    handle->draw_rect(xl1, cy - cast(f32)y + h, 1., 1., color)
-    handle->draw_rect(xl2, cy + cast(f32)x + h, 1., 1., color)
+    draw_rect(handle, xl1, cy - cast(f32)y + h, 1., 1., color)
+    draw_rect(handle, xl2, cy + cast(f32)x + h, 1., 1., color)
 
     // bottom right
-    handle->draw_rect(xr1, cy - cast(f32)y + h, 1., 1., color)
-    handle->draw_rect(xr2, cy + cast(f32)x + h, 1., 1., color)
+    draw_rect(handle, xr1, cy - cast(f32)y + h, 1., 1., color)
+    draw_rect(handle, xr2, cy + cast(f32)x + h, 1., 1., color)
 }
 
 // TODO: update the draw rounded box
@@ -205,25 +205,25 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
             // draw inside
 
             // top
-            handle->draw_rect(xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
-            handle->draw_rect(xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
+            draw_rect(handle, xl1 + 1, cy + cast(f32)y, w1 - 2, 1., color)
+            draw_rect(handle, xl2 + 1, cy - cast(f32)x, w2 - 2, 1., color)
 
             // bottom
-            handle->draw_rect(xl1 + 1, cy - cast(f32)y + h, w1 - 2, 1., color)
-            handle->draw_rect(xl2 + 1, cy + cast(f32)x + h, w2 - 2, 1., color)
+            draw_rect(handle, xl1 + 1, cy - cast(f32)y + h, w1 - 2, 1., color)
+            draw_rect(handle, xl2 + 1, cy + cast(f32)x + h, w2 - 2, 1., color)
         } else {
             // top
-            handle->draw_rect(xl1, cy + cast(f32)y, w1, 1., color)
-            handle->draw_rect(xl2, cy - cast(f32)x, w2, 1., color)
+            draw_rect(handle, xl1, cy + cast(f32)y, w1, 1., color)
+            draw_rect(handle, xl2, cy - cast(f32)x, w2, 1., color)
 
             // bottom
-            handle->draw_rect(xl1, cy - cast(f32)y + h, w1, 1., color)
-            handle->draw_rect(xl2, cy + cast(f32)x + h, w2, 1., color)
+            draw_rect(handle, xl1, cy - cast(f32)y + h, w1, 1., color)
+            draw_rect(handle, xl2, cy + cast(f32)x + h, w2, 1., color)
         }
 
         x += 1
     }
-    handle->draw_rect(bx, by + radius, bw, h, color)
+    draw_rect(handle, bx, by + radius, bw, h, color)
 }
 
 draw_rounded_box_with_border :: proc (
@@ -252,7 +252,7 @@ rfpart :: proc(x: f32) -> f32 {
 draw_point_with_alpha :: proc(handle: ^Handle, x, y: f32, color: Color, intensity: f32) {
     color := color
     color.a = cast(u8)(cast(f32)color.a * intensity)
-    handle->draw_rect(x, y, 1, 1, color)
+    draw_rect(handle, x, y, 1, 1, color)
 }
 
 swap :: proc(a, b: ^f32) {

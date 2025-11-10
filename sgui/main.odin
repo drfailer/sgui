@@ -201,7 +201,7 @@ main :: proc() {
     context.logger = log.create_console_logger()
     defer log.destroy_console_logger(context.logger)
     handle := create()
-    handle->add_layer(handle->make_widget(main_layer))
+    add_layer(handle, make_widget(handle, main_layer))
     init(handle)
     run(handle)
     destroy(handle)

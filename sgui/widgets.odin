@@ -281,7 +281,7 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 
 text_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Text)
-    handle->draw_text(&data.text, self.x, self.y)
+    draw_text(handle, &data.text, self.x, self.y)
 }
 
 // button //////////////////////////////////////////////////////////////////////
@@ -360,7 +360,7 @@ button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.min_w = self.w
     self.min_h = self.h
 
-    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(self, event.x, event.y) do return false
         data := &self.data.(Button)
 
@@ -405,16 +405,16 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
         }
     } else {
         if border_thickness > 0 {
-            handle->draw_rect(self.x, self.y, self.w, self.h, border_color)
+            draw_rect(handle, self.x, self.y, self.w, self.h, border_color)
         }
-        handle->draw_rect(self.x + border_thickness, self.y + border_thickness,
+        draw_rect(handle, self.x + border_thickness, self.y + border_thickness,
                           self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                           bg_color)
     }
     label_w, label_h := su.text_size(&data.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
-    handle->draw_text(&data.text, label_x, label_y)
+    draw_text(handle, &data.text, label_x, label_y)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
@@ -634,7 +634,7 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     }
     scrollbox_init(&data.scrollbox, handle, self)
 
-    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
         data := &self.data.(Box)
 
@@ -645,11 +645,11 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
         }
         return true
     })
-    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(Box)
         return scrollbox_clicked_handler(&data.scrollbox, event)
     })
-    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(Box)
         if scrollbox_dragged_handler(&data.scrollbox, event) {
             box_align(self, self.x - data.scrollbox.horizontal.position, self.y - data.scrollbox.vertical.position)
@@ -869,7 +869,7 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
     data := &self.data.(Box)
 
     if data.attr.style.background_color.a > 0 {
-        handle->draw_rect(self.x, self.y, self.w, self.h, data.attr.style.background_color)
+        draw_rect(handle, self.x, self.y, self.w, self.h, data.attr.style.background_color)
     }
 
     for widget in data.widgets {
@@ -880,16 +880,16 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
     bt := data.attr.style.border_thickness
     bc := data.attr.style.border_color
     if .Top in data.attr.style.active_borders {
-        handle->draw_rect(self.x, self.y, self.w, bt, bc)
+        draw_rect(handle, self.x, self.y, self.w, bt, bc)
     }
     if .Bottom in data.attr.style.active_borders {
-        handle->draw_rect(self.x, self.y + self.h - bt, self.w, bt, bc)
+        draw_rect(handle, self.x, self.y + self.h - bt, self.w, bt, bc)
     }
     if .Left in data.attr.style.active_borders {
-        handle->draw_rect(self.x, self.y, bt, self.h, bc)
+        draw_rect(handle, self.x, self.y, bt, self.h, bc)
     }
     if .Right in data.attr.style.active_borders {
-        handle->draw_rect(self.x + self.w - bt, self.y, bt, self.h, bc)
+        draw_rect(handle, self.x + self.w - bt, self.y, bt, self.h, bc)
     }
 }// }}}
 
@@ -978,7 +978,7 @@ radio_button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         data.label_offset = (d - label_h) / 2
     }
 
-    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(RadioButton)
         button_size := 2 * data.attr.style.base_radius
         button_x := self.x
@@ -1011,7 +1011,7 @@ radio_button_draw :: proc(self: ^Widget, handle: ^Handle) {
 
     text_xoffset := 2 * r + data.attr.style.label_padding
     text_yoffset := data.label_offset
-    handle->draw_text(&data.label_text, self.x + text_xoffset, self.y + text_yoffset)
+    draw_text(handle, &data.label_text, self.x + text_xoffset, self.y + text_yoffset)
 }
 
 radio_button_get_value :: proc(self: ^Widget) -> bool {
@@ -1097,7 +1097,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     scrollbox_init(&data.scrollbox, handle, self)
     zoombox_init(&data.zoombox, self)
 
-    handle->key_handler(self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {
         if !event.down do return false
         data := &self.data.(DrawBox)
 
@@ -1111,7 +1111,7 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         }
         return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
     })
-    handle->scroll_handler(self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
         data := &self.data.(DrawBox)
 
@@ -1122,12 +1122,12 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         }
         return true
     })
-    handle->click_handler(self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         if .WithScrollbar not_in data.attr.props do return false
         return scrollbox_clicked_handler(&data.scrollbox, event)
     })
-    handle->mouse_move_handler(self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+    add_event_handler(handle, self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         if .WithScrollbar not_in data.attr.props do return false
         return scrollbox_dragged_handler(&data.scrollbox, event)

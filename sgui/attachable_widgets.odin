@@ -231,7 +231,7 @@ scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^Handle) {
         h = SCROLLBAR_THICKNESS
         w = bar.parent_size
     }
-    handle->draw_rect(x, y, w, h, Color{50, 50, 50, 255})
+    draw_rect(handle, x, y, w, h, Color{50, 50, 50, 255})
     if bar.direction == .Vertical {
         y = bar.y + bar.bar_position * scale_factor
         h = bar.bar_size * scale_factor

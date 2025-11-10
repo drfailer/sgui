@@ -12,6 +12,8 @@ import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 import su "sdl_utils"
 
+// handle //////////////////////////////////////////////////////////////////////
+
 Handle :: struct {
     run: bool,
 
@@ -42,29 +44,11 @@ Handle :: struct {
     /* layers */
     layers: [dynamic]^Widget,
     current_layer: int,
+    rel_rect: Rect,
 
     /* draw ordering (when widget.z_index > 0, it is added to the queue) */
     ordered_draws: priority_queue.Priority_Queue(OrderedDraw),
     processing_ordered_draws: bool,
-
-    /* procs */
-
-    /** layers **/
-    add_layer: proc(handle: ^Handle, widget: ^Widget),
-    switch_to_layer: proc(handle: ^Handle, layer_idx: int) -> bool,
-    make_widget: proc(handle: ^Handle, widget_proc: proc(handle: ^Handle) -> ^Widget) -> ^Widget,
-
-    /** events handlers **/
-    key_handler: proc(handle: ^Handle, widget: ^Widget, exec: KeyEventHandlerProc),
-    scroll_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseWheelEventHandlerProc),
-    click_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseClickEventHandlerProc),
-    mouse_move_handler: proc(handle: ^Handle, widget: ^Widget, exec: MouseMotionEventHandlerProc),
-    widget_event_handler: proc(handle: ^Handle, widget: ^Widget, emitter: ^Widget, tag: WidgetEventTag, exec: WidgetEventHandlerProc, exec_data: rawptr),
-
-    /** draw **/
-    draw_rect: proc(handle: ^Handle, x, y, w, h: f32, color: Color),
-    draw_text: proc(handle: ^Handle, text: ^su.Text, x, y: f32),
-    rel_rect: Rect,
 }
 
 OrderedDraw :: struct {
@@ -75,71 +59,9 @@ OrderedDraw :: struct {
 }
 
 Rect :: sdl.FRect
-
-Event :: sdl.Event
-EventType :: sdl.EventType
-Keycode :: sdl.Keycode
-
-KeyMods :: bit_set[KeyMod]
-KeyMod :: enum { Control, Alt, Shift }
-
-KeyEvent :: struct {
-    key: Keycode,
-    down: bool,
-    mods: KeyMods,
-}
-KeyEventHandlerProc :: proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool
-
-MouseClickEvent :: struct {
-    button: u8,
-    down: bool,
-    click_count: u8,
-    x, y: f32,
-    mods: KeyMods,
-}
-MouseClickEventHandlerProc :: proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool
-
-MouseMotionEvent :: struct {
-    x, y, xd, yd: f32,
-    mods: KeyMods,
-}
-MouseMotionEventHandlerProc :: proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool
-
-MouseWheelEvent :: struct {
-    x, y: i32,
-    mods: KeyMods,
-}
-MouseWheelEventHandlerProc :: proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool
-
-WidgetEventTag :: u64
-WidgetEvent :: struct {
-    tag: WidgetEventTag,
-    emitter: ^Widget,
-    data: rawptr,
-}
-WidgetEventHandlerProc :: proc(self: ^Widget, event: WidgetEvent, handle: ^Handle) -> bool
-WidgetEventHandler :: struct {
-    widget: ^Widget,
-    emitter: ^Widget,
-    exec: WidgetEventHandlerProc,
-    exec_data: rawptr
-}
-
 Color :: distinct [4]u8
 
-EventHandler :: struct($P: typeid) {
-    exec: P,
-    widget: ^Widget,
-}
-
-EventHandlers :: struct {
-    mods: bit_set[KeyMod],
-    key: [dynamic]EventHandler(KeyEventHandlerProc),
-    mouse_click: [dynamic]EventHandler(MouseClickEventHandlerProc), // TODO: use a more efficent data stucture?
-    mouse_motion: [dynamic]EventHandler(MouseMotionEventHandlerProc), // TODO: use a more efficent data stucture?
-    mouse_wheel: [dynamic]EventHandler(MouseWheelEventHandlerProc),
-    widget_event: map[WidgetEventTag][dynamic]WidgetEventHandler
-}
+// create & destroy ////////////////////////////////////////////////////////////
 
 create :: proc() -> (handle: ^Handle) { // TODO: allocator
     handle = new(Handle)
@@ -148,16 +70,6 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
     handle^ = Handle{
         layers = make([dynamic]^Widget),
         tagged_widgets = make(map[u64]^Widget),
-        draw_rect = draw_rect,
-        draw_text = draw_text,
-        add_layer = add_layer,
-        switch_to_layer = switch_to_layer,
-        make_widget = make_widget,
-        key_handler = add_key_event_handler,
-        scroll_handler = add_mouse_wheel_event_handler,
-        click_handler = add_mouse_click_event_handler,
-        mouse_move_handler = add_mouse_motion_event_handler,
-        widget_event_handler = add_widget_event_handler,
     }
 
     /* allocators */
@@ -166,6 +78,32 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
 
     return handle
 }
+
+destroy :: proc(handle: ^Handle) {
+    sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
+    su.font_cache_destroy(&handle.font_cache)
+    sdl_ttf.Quit()
+    sdl.DestroyRenderer(handle.renderer)
+    sdl.DestroyWindow(handle.window)
+    sdl.Quit()
+    // TODO: use an arena
+    delete(handle.event_handlers.key)
+    delete(handle.event_handlers.mouse_click)
+    delete(handle.event_handlers.mouse_motion)
+    delete(handle.event_handlers.mouse_wheel)
+    for _, arr in handle.event_handlers.widget_event {
+        delete(arr)
+    }
+    delete(handle.event_handlers.widget_event)
+    queue.destroy(&handle.widget_event_queue)
+    priority_queue.destroy(&handle.ordered_draws)
+    delete(handle.layers)
+    delete(handle.tagged_widgets)
+    mem.dynamic_arena_destroy(&handle.widget_arena)
+    free(handle)
+}
+
+// init ////////////////////////////////////////////////////////////////////////
 
 init :: proc(handle: ^Handle) {
     /* sdl */
@@ -223,29 +161,174 @@ init :: proc(handle: ^Handle) {
     handle.run = true
 }
 
-destroy :: proc(handle: ^Handle) {
-    sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
-    su.font_cache_destroy(&handle.font_cache)
-    sdl_ttf.Quit()
-    sdl.DestroyRenderer(handle.renderer)
-    sdl.DestroyWindow(handle.window)
-    sdl.Quit()
-    // TODO: use an arena
-    delete(handle.event_handlers.key)
-    delete(handle.event_handlers.mouse_click)
-    delete(handle.event_handlers.mouse_motion)
-    delete(handle.event_handlers.mouse_wheel)
-    for _, arr in handle.event_handlers.widget_event {
-        delete(arr)
+// update //////////////////////////////////////////////////////////////////////
+
+update :: proc(handle: ^Handle) {
+    handle.rel_rect = Rect{0, 0, handle.window_w, handle.window_h}
+    if handle.resize {
+        handle.resize = false
+        for layer in handle.layers {
+            widget_resize(layer, handle)
+        }
     }
-    delete(handle.event_handlers.widget_event)
-    queue.destroy(&handle.widget_event_queue)
-    priority_queue.destroy(&handle.ordered_draws)
-    delete(handle.layers)
-    delete(handle.tagged_widgets)
-    mem.dynamic_arena_destroy(&handle.widget_arena)
-    free(handle)
+    widget_update(handle, handle.layers[handle.current_layer])
 }
+
+// draw ////////////////////////////////////////////////////////////////////////
+
+draw :: proc(handle: ^Handle) {
+    clear_color := OPTS.clear_color
+    sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
+    sdl.RenderClear(handle.renderer)
+    widget_draw(handle.layers[handle.current_layer], handle)
+    handle.processing_ordered_draws = true
+    for priority_queue.len(handle.ordered_draws) > 0 {
+        od := priority_queue.pop(&handle.ordered_draws)
+        if od.draw_proc == nil {
+            od.widget->draw(handle)
+        } else {
+            od.draw_proc(handle, od.draw_data)
+        }
+    }
+    handle.processing_ordered_draws = false
+}
+
+// run /////////////////////////////////////////////////////////////////////////
+
+run :: proc(handle: ^Handle) {
+    for handle.run {
+        handle.dt = cast(f32)time.duration_seconds(time.tick_lap_time(&handle.tick))
+
+        process_events(handle)
+        update(handle)
+        draw(handle)
+
+        // present
+        sdl.RenderPresent(handle.renderer)
+
+        free_all(context.temp_allocator)
+
+        // sleep to match the FPS
+        time.sleep(1_000_000_000 / FPS - time.tick_since(handle.tick))
+    }
+}
+
+// events //////////////////////////////////////////////////////////////////////
+
+
+EventHandler :: struct($P: typeid) {
+    exec: P,
+    widget: ^Widget,
+}
+
+EventHandlers :: struct {
+    mods: bit_set[KeyMod],
+    key: [dynamic]EventHandler(KeyEventHandlerProc),
+    mouse_click: [dynamic]EventHandler(MouseClickEventHandlerProc), // TODO: use a more efficent data stucture?
+    mouse_motion: [dynamic]EventHandler(MouseMotionEventHandlerProc), // TODO: use a more efficent data stucture?
+    mouse_wheel: [dynamic]EventHandler(MouseWheelEventHandlerProc),
+    widget_event: map[WidgetEventTag][dynamic]WidgetEventHandler
+}
+
+Event :: sdl.Event
+EventType :: sdl.EventType
+Keycode :: sdl.Keycode
+
+KeyMods :: bit_set[KeyMod]
+KeyMod :: enum { Control, Alt, Shift }
+
+KeyEvent :: struct {
+    key: Keycode,
+    down: bool,
+    mods: KeyMods,
+}
+KeyEventHandlerProc :: proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool
+
+MouseClickEvent :: struct {
+    button: u8,
+    down: bool,
+    click_count: u8,
+    x, y: f32,
+    mods: KeyMods,
+}
+MouseClickEventHandlerProc :: proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool
+
+MouseMotionEvent :: struct {
+    x, y, xd, yd: f32,
+    mods: KeyMods,
+}
+MouseMotionEventHandlerProc :: proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool
+
+MouseWheelEvent :: struct {
+    x, y: i32,
+    mods: KeyMods,
+}
+MouseWheelEventHandlerProc :: proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool
+
+WidgetEventTag :: u64
+WidgetEvent :: struct {
+    tag: WidgetEventTag,
+    emitter: ^Widget,
+    data: rawptr,
+}
+WidgetEventHandlerProc :: proc(self: ^Widget, event: WidgetEvent, handle: ^Handle) -> bool
+WidgetEventHandler :: struct {
+    widget: ^Widget,
+    emitter: ^Widget,
+    exec: WidgetEventHandlerProc,
+    exec_data: rawptr
+}
+
+/* event api */
+
+add_key_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: KeyEventHandlerProc) {
+    append(&handle.event_handlers.key, EventHandler(KeyEventHandlerProc){exec, widget})
+}
+
+add_mouse_wheel_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseWheelEventHandlerProc) {
+    append(&handle.event_handlers.mouse_wheel, EventHandler(MouseWheelEventHandlerProc){exec, widget})
+}
+
+add_mouse_click_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseClickEventHandlerProc) {
+    append(&handle.event_handlers.mouse_click, EventHandler(MouseClickEventHandlerProc){exec, widget})
+}
+
+add_mouse_motion_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseMotionEventHandlerProc) {
+    append(&handle.event_handlers.mouse_motion, EventHandler(MouseMotionEventHandlerProc){exec, widget})
+}
+
+add_widget_event_handler :: proc(
+    handle: ^Handle,
+    widget: ^Widget,
+    emitter: ^Widget,
+    tag: WidgetEventTag,
+    exec: WidgetEventHandlerProc,
+    exec_data: rawptr = nil
+) {
+    if tag not_in handle.event_handlers.widget_event {
+        handle.event_handlers.widget_event[tag] = make([dynamic]WidgetEventHandler)
+    }
+    append(&handle.event_handlers.widget_event[tag], WidgetEventHandler{
+        widget = widget,
+        emitter = emitter,
+        exec = exec,
+        exec_data = exec_data,
+    })
+}
+
+add_event_handler :: proc {
+    add_key_event_handler,
+    add_mouse_wheel_event_handler,
+    add_mouse_click_event_handler,
+    add_mouse_motion_event_handler,
+    add_widget_event_handler,
+}
+
+emit :: proc(handle: ^Handle, tag: WidgetEventTag, emitter: ^Widget, data: rawptr = nil) {
+    queue.enqueue(&handle.widget_event_queue, WidgetEvent{tag, emitter, data})
+}
+
+/* event processing */
 
 process_widget_events :: proc(handle: ^Handle) {
     // We reset the queue to avoid event to constantly append new event into it.
@@ -354,105 +437,7 @@ process_events :: proc(handle: ^Handle) {
     }
 }
 
-update :: proc(handle: ^Handle) {
-    handle.rel_rect = Rect{0, 0, handle.window_w, handle.window_h}
-    if handle.resize {
-        handle.resize = false
-        for layer in handle.layers {
-            widget_resize(layer, handle)
-        }
-    }
-    widget_update(handle, handle.layers[handle.current_layer])
-}
-
-draw :: proc(handle: ^Handle) {
-    clear_color := OPTS.clear_color
-    sdl.SetRenderDrawColor(handle.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
-    sdl.RenderClear(handle.renderer)
-    widget_draw(handle.layers[handle.current_layer], handle)
-    handle.processing_ordered_draws = true
-    for priority_queue.len(handle.ordered_draws) > 0 {
-        od := priority_queue.pop(&handle.ordered_draws)
-        if od.draw_proc == nil {
-            od.widget->draw(handle)
-        } else {
-            od.draw_proc(handle, od.draw_data)
-        }
-    }
-    handle.processing_ordered_draws = false
-}
-
-run :: proc(handle: ^Handle) {
-    for handle.run {
-        handle.dt = cast(f32)time.duration_seconds(time.tick_lap_time(&handle.tick))
-
-        process_events(handle)
-        update(handle)
-        draw(handle)
-
-        // draw fps text
-        // TODO: optimize this v
-        // fps_text := su.text_create(handle.text_engine, handle.font, "? FPS")
-        // defer su.text_destroy(&fps_text)
-        // fps_text_string := fmt.aprintf("%.1f FPS", 1./handle.dt, allocator = context.temp_allocator)
-        // su.text_update_and_draw(&fps_text, fps_text_string, 0, 0, sdl.Color{0, 255, 0, 255})
-
-        // present
-        sdl.RenderPresent(handle.renderer)
-
-        free_all(context.temp_allocator)
-
-        // sleep to match the FPS
-        time.sleep(1_000_000_000 / FPS - time.tick_since(handle.tick))
-    }
-}
-
-add_key_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: KeyEventHandlerProc) {
-    append(&handle.event_handlers.key, EventHandler(KeyEventHandlerProc){exec, widget})
-}
-
-add_mouse_wheel_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseWheelEventHandlerProc) {
-    append(&handle.event_handlers.mouse_wheel, EventHandler(MouseWheelEventHandlerProc){exec, widget})
-}
-
-add_mouse_click_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseClickEventHandlerProc) {
-    append(&handle.event_handlers.mouse_click, EventHandler(MouseClickEventHandlerProc){exec, widget})
-}
-
-add_mouse_motion_event_handler :: proc(handle: ^Handle, widget: ^Widget, exec: MouseMotionEventHandlerProc) {
-    append(&handle.event_handlers.mouse_motion, EventHandler(MouseMotionEventHandlerProc){exec, widget})
-}
-
-add_widget_event_handler :: proc(
-    handle: ^Handle,
-    widget: ^Widget,
-    emitter: ^Widget,
-    tag: WidgetEventTag,
-    exec: WidgetEventHandlerProc,
-    exec_data: rawptr = nil
-) {
-    if tag not_in handle.event_handlers.widget_event {
-        handle.event_handlers.widget_event[tag] = make([dynamic]WidgetEventHandler)
-    }
-    append(&handle.event_handlers.widget_event[tag], WidgetEventHandler{
-        widget = widget,
-        emitter = emitter,
-        exec = exec,
-        exec_data = exec_data,
-    })
-}
-
-add_event_handler :: proc {
-    add_key_event_handler,
-    add_mouse_wheel_event_handler,
-    add_mouse_click_event_handler,
-    add_mouse_motion_event_handler,
-    add_widget_event_handler,
-}
-
-emit :: proc(handle: ^Handle, tag: WidgetEventTag, emitter: ^Widget, data: rawptr = nil) {
-    queue.enqueue(&handle.widget_event_queue, WidgetEvent{tag, emitter, data})
-}
+// draw utilities //////////////////////////////////////////////////////////////
 
 draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
     sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
@@ -465,40 +450,6 @@ draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
 
 draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
-}
-
-mouse_on_region_handle :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
-    x := x + handle.rel_rect.x
-    y := y + handle.rel_rect.y
-    return x <= handle.mouse_x && handle.mouse_x <= (x + w) \
-        && y <= handle.mouse_y && handle.mouse_y <= (y + h)
-}
-
-mouse_on_region_coordinates :: proc(mx, my, x, y, w, h: f32) -> bool {
-    return x <= mx && mx <= (x + w) \
-        && y <= my && my <= (y + h)
-}
-
-mouse_on_region :: proc{
-    mouse_on_region_handle,
-    mouse_on_region_coordinates,
-}
-
-add_layer :: proc(handle: ^Handle, widget: ^Widget) {
-    append(&handle.layers, widget)
-}
-
-switch_to_layer :: proc(handle: ^Handle, layer_idx: int) -> bool {
-    if layer_idx > len(handle.layers) {
-        return false
-    }
-    handle.current_layer = layer_idx
-    return true
-}
-
-make_widget :: proc(handle: ^Handle, widget_proc: proc(handle: ^Handle) -> ^Widget) -> ^Widget {
-    context.allocator = handle.widget_allocator
-    return widget_proc(handle)
 }
 
 add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {
@@ -526,6 +477,46 @@ add_ordered_draw :: proc{
     add_proc_ordered_draw,
 }
 
+// mouse utilities /////////////////////////////////////////////////////////////
+
+mouse_on_region_handle :: proc(handle: ^Handle, x, y, w, h: f32) -> bool {
+    x := x + handle.rel_rect.x
+    y := y + handle.rel_rect.y
+    return x <= handle.mouse_x && handle.mouse_x <= (x + w) \
+        && y <= handle.mouse_y && handle.mouse_y <= (y + h)
+}
+
+mouse_on_region_coordinates :: proc(mx, my, x, y, w, h: f32) -> bool {
+    return x <= mx && mx <= (x + w) \
+        && y <= my && my <= (y + h)
+}
+
+mouse_on_region :: proc{
+    mouse_on_region_handle,
+    mouse_on_region_coordinates,
+}
+
+// layers utilities ////////////////////////////////////////////////////////////
+
+add_layer :: proc(handle: ^Handle, widget: ^Widget) {
+    append(&handle.layers, widget)
+}
+
+switch_to_layer :: proc(handle: ^Handle, layer_idx: int) -> bool {
+    if layer_idx > len(handle.layers) {
+        return false
+    }
+    handle.current_layer = layer_idx
+    return true
+}
+
+// widgets utilities ///////////////////////////////////////////////////////////
+
+make_widget :: proc(handle: ^Handle, widget_proc: proc(handle: ^Handle) -> ^Widget) -> ^Widget {
+    context.allocator = handle.widget_allocator
+    return widget_proc(handle)
+}
+
 focus_widget :: proc(handle: ^Handle, widget: ^Widget) {
     handle.focused_widget = widget
 }
@@ -533,6 +524,8 @@ focus_widget :: proc(handle: ^Handle, widget: ^Widget) {
 unfocus_widget :: proc(handle: ^Handle, widget: ^Widget = nil) {
     handle.focused_widget = nil
 }
+
+// TODO: we need a more flexible widget cache that will allow referencing widgets with both tags and strings
 
 tag_widget :: proc(handle: ^Handle, widget: ^Widget, tag: u64) {
     if tag in handle.tagged_widgets {
