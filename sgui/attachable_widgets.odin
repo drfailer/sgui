@@ -191,18 +191,18 @@ scrollbar :: proc(attr: ScrollbarAttributes) -> Scrollbar {
     }
 }
 
-mouse_on_scrollbar_bar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> (result: bool) {
+mouse_on_scrollbar_bar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> bool {
     scale_factor := scrollbar.parent_size / scrollbar.content_size
-    pos := scrollbar.bar_position * scale_factor
-    size := scrollbar.bar_size * scale_factor
+
+    x, y, w, h := scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h
     if scrollbar.attr.direction == .Vertical {
-        result = (scrollbar.x <= mx && mx <= scrollbar.x + scrollbar.w) \
-              && (scrollbar.y + pos <= my && my <= scrollbar.y + size)
+        y = scrollbar.y + scrollbar.bar_position * scale_factor
+        h = scrollbar.bar_size * scale_factor
     } else {
-        result = (scrollbar.x + pos <= mx && mx <= scrollbar.x + size) \
-              && (scrollbar.y <= my && my <= scrollbar.y + scrollbar.h)
+        x = scrollbar.x + scrollbar.bar_position * scale_factor
+        w = scrollbar.bar_size * scale_factor
     }
-    return result
+    return (x <= mx && mx <= x + w) && (y <= my && my <= y + h)
 }
 
 scrollbar_clicked_hander :: proc(bar: ^Scrollbar, event: MouseClickEvent) -> bool {
