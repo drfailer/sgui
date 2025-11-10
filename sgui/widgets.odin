@@ -790,7 +790,7 @@ vbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     data.content_h, ttl_h, max_h = box_find_content_h(self, h)
     box_update_size(self, w, h)
 
-    remaining_h := self.h - ttl_h
+    remaining_h := self.h - ttl_h - data.attr.style.items_spacing * cast(f32)nb_expandable_widgets
     for widget in data.widgets {
         if widget.disabled do continue
         if .FillW not_in widget.size_policy && .FillH not_in widget.size_policy do continue
@@ -822,7 +822,7 @@ hbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     data.content_h, ttl_h, max_h = box_find_content_h(self, h)
     box_update_size(self, w, h)
 
-    remaining_w := self.w - ttl_w
+    remaining_w := self.w - ttl_w - data.attr.style.items_spacing * cast(f32)nb_expandable_widgets
     for widget in data.widgets {
         if widget.disabled do continue
         if .FillW not_in widget.size_policy && .FillH not_in widget.size_policy do continue
