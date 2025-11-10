@@ -39,9 +39,8 @@ AlignmentFlag :: enum {
 
 SizePolicy :: bit_set[SizeFlag]
 SizeFlag :: enum {
-    Fill,   // take the full space in the layout direction
-    Expand, // take the full space in the oposite layout direction
-    Fixed,  // fix size
+    FillW,
+    FillH,
     // TODO: ratio / relative to a widget??
 }
 
@@ -55,7 +54,6 @@ Widget :: struct {
     disabled: bool,
     invisible: bool,
     focused: bool,
-    resizable_w, resizable_h: bool,
 
     /* policies */
     size_policy: SizePolicy,
@@ -96,10 +94,10 @@ widget_init :: proc(widget: ^Widget, handle: ^Handle) {
 
 widget_resize :: proc(widget: ^Widget, handle: ^Handle) {
     if widget.disabled do return
-    if widget.resizable_w {
+    if .FillW in widget.size_policy {
         widget.w = handle.window_w
     }
-    if widget.resizable_h {
+    if .FillH in widget.size_policy {
         widget.h = handle.window_h
     }
     #partial switch _ in widget.data {
@@ -261,6 +259,8 @@ text_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     w, h := su.text_size(&data.text)
     self.w = w
     self.h = h
+    self.min_w = w
+    self.min_h = h
 }
 
 text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
@@ -273,8 +273,13 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
             su.text_update_wrap_width(&data.text, data.attr.style.wrap_width)
         }
         w, h := su.text_size(&data.text)
+        if w > self.w || h > self.h {
+            handle.resize = true
+        }
         self.w = w
         self.h = h
+        self.min_w = w
+        self.min_h = h
     }
 }
 
@@ -308,6 +313,7 @@ ButtonStyle :: struct {
 
 ButtonAttributes :: struct {
     style: ButtonStyle,
+    expand_w, expand_h: bool,
 }
 
 Button :: struct {
@@ -327,8 +333,6 @@ button :: proc(
 ) -> (button: ^Widget) {
     button = new(Widget)
     button^ = Widget{
-        resizable_w = true,
-        resizable_h = true,
         init = button_init,
         update = button_update,
         draw = button_draw,
@@ -338,6 +342,12 @@ button :: proc(
             clicked_data = clicked_data,
             attr = attr,
         }
+    }
+    if attr.expand_w {
+        button.size_policy |= {.FillW}
+    }
+    if attr.expand_h {
+        button.size_policy |= {.FillH}
     }
     return button
 }
@@ -439,14 +449,13 @@ BoxProperty :: enum {
     FitH,
     FixedW,
     FixedH,
-    MinW,
-    MinH,
 }
 
 BoxAttributes :: struct {
     style: BoxStyle,
     props: BoxProperties,
     w, h: f32,
+    min_w, min_h: f32,
 }
 
 Box :: struct {
@@ -477,8 +486,6 @@ box :: proc(// {{{
     }
     box^ = Widget{
         z_index = z_index,
-        resizable_h = .FixedH not_in attr.props,
-        resizable_w = .FixedW not_in attr.props,
         min_w = attr.w,
         min_h = attr.h,
         init = init,
@@ -492,16 +499,24 @@ box :: proc(// {{{
         }
     }
 
+    box.min_w = attr.min_w
+    box.min_h = attr.min_h
+
     if .FixedW in attr.props {
         box.w = attr.w
-    } else if .MinW in attr.props {
         box.min_w = attr.w
     }
 
     if .FixedH in attr.props {
         box.h = attr.h
-    } else if .MinH in attr.props {
         box.min_h = attr.h
+    }
+
+    if .FixedW not_in attr.props && .FitW not_in attr.props {
+        box.size_policy |= {.FillW}
+    }
+    if .FixedH not_in attr.props && .FitH not_in attr.props {
+        box.size_policy |= {.FillH}
     }
     return box
 }// }}}
@@ -654,14 +669,11 @@ box_find_content_w :: proc(self: ^Widget, parent_w: f32) -> (w: f32, ttl_w: f32,
     has_widget_on_right := false
 
     for widget in data.widgets {
-        if widget.disabled do continue
+        if widget.disabled || .FillW in widget.size_policy do continue
         if .Right in widget.alignment_policy {
             has_widget_on_right = true
         }
-        ww := widget.w
-        if ww == parent_w {
-            continue
-        }
+        ww := widget.min_w
         max_w = max(max_w, ww)
         ttl_w += ww + data.attr.style.items_spacing
     }
@@ -681,14 +693,11 @@ box_find_content_h :: proc(self: ^Widget, parent_h: f32) -> (h: f32, ttl_h: f32,
     has_widget_on_bottom := false
 
     for widget in data.widgets {
-        if widget.disabled do continue
+        if widget.disabled || .FillH in widget.size_policy do continue
         if .Bottom in widget.alignment_policy {
             has_widget_on_bottom = true
         }
-        wh := widget.h
-        if wh == parent_h {
-            continue
-        }
+        wh := widget.min_h
         max_h = max(max_h, wh)
         ttl_h += wh + data.attr.style.items_spacing
     }
@@ -702,19 +711,11 @@ box_find_content_h :: proc(self: ^Widget, parent_h: f32) -> (h: f32, ttl_h: f32,
 
 box_resize_widget :: proc(widget: ^Widget, w, h: f32) {// {{{
     if widget.disabled do return
-    if widget.resizable_w {
-        if widget.min_w > 0 {
-            widget.w = min(widget.min_w, w)
-        } else {
-            widget.w = w
-        }
+    if .FillW not_in widget.size_policy {
+        widget.w = min(widget.min_w, w)
     }
-    if widget.resizable_h {
-        if widget.min_h > 0 {
-            widget.h = min(widget.min_h, h)
-        } else {
-            widget.h = h
-        }
+    if .FillH not_in widget.size_policy {
+        widget.h = min(widget.min_h, h)
     }
     #partial switch _ in widget.data {
     case Box: box_resize(widget, w, h)
@@ -723,12 +724,8 @@ box_resize_widget :: proc(widget: ^Widget, w, h: f32) {// {{{
 
 box_expand_widget :: proc(widget: ^Widget, w, h: f32) {// {{{
     if widget.disabled do return
-    if widget.resizable_w {
-        widget.w = w
-    }
-    if widget.resizable_h {
-        widget.h = h
-    }
+    widget.w = w
+    widget.h = h
     #partial switch _ in widget.data {
     case Box: box_resize(widget, w, h)
     }
@@ -739,38 +736,35 @@ box_update_size :: proc(self: ^Widget, w, h: f32) {// {{{
     if .FixedW not_in data.attr.props {
         if .FitW in data.attr.props {
             self.w = data.content_w
+            self.min_w = data.content_w
         } else {
             self.w = w
             data.content_w = max(data.content_w, self.w)
         }
-        if .MinW in data.attr.props && self.w < self.min_w {
-            self.w = self.min_w
-        }
+        self.w = max(self.min_w, self.w)
     }
     if .FixedH not_in data.attr.props {
         if .FitH in data.attr.props {
             self.h = data.content_h
+            self.min_h = data.content_h
         } else {
             self.h = h
             data.content_h = max(data.content_h, self.h)
         }
-        if .MinH in data.attr.props && self.h < self.min_h {
-            self.h = self.min_h
-        }
+        self.h = max(self.min_h, self.h)
     }
 }// }}}
 
 vbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     data := &self.data.(Box)
-    expandable_widgets := make([dynamic]^Widget)
-    defer delete(expandable_widgets)
     ttl_w, max_w, ttl_h, max_h: f32
+    nb_expandable_widgets := 0
 
     for widget in data.widgets {
         if widget.disabled do continue
         box_resize_widget(widget, w, h)
-        if widget.h == h || widget.h == 0 {
-            append(&expandable_widgets, widget)
+        if .FillH in widget.size_policy {
+            nb_expandable_widgets += 1
         }
     }
 
@@ -779,22 +773,30 @@ vbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     box_update_size(self, w, h)
 
     remaining_h := self.h - ttl_h
-    for ew in expandable_widgets {
-        box_expand_widget(ew, self.w, remaining_h / cast(f32)len(expandable_widgets))
+    for widget in data.widgets {
+        if widget.disabled do continue
+        if .FillW not_in widget.size_policy && .FillH not_in widget.size_policy do continue
+        ww, wh := widget.w, widget.h
+        if .FillW in widget.size_policy {
+            ww = self.w
+        }
+        if .FillH in widget.size_policy {
+            wh = remaining_h / cast(f32)nb_expandable_widgets
+        }
+        box_expand_widget(widget, ww, wh)
     }
 }// }}}
 
 hbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     data := &self.data.(Box)
-    expandable_widgets := make([dynamic]^Widget)
-    defer delete(expandable_widgets)
     ttl_w, max_w, ttl_h, max_h: f32
+    nb_expandable_widgets := 0
 
     for widget in data.widgets {
         if widget.disabled do continue
         box_resize_widget(widget, w, h)
-        if widget.w == w || widget.w == 0 {
-            append(&expandable_widgets, widget)
+        if .FillW in widget.size_policy {
+            nb_expandable_widgets += 1
         }
     }
 
@@ -803,8 +805,17 @@ hbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
     box_update_size(self, w, h)
 
     remaining_w := self.w - ttl_w
-    for ew in expandable_widgets {
-        box_expand_widget(ew, remaining_w / cast(f32)len(expandable_widgets), self.h)
+    for widget in data.widgets {
+        if widget.disabled do continue
+        if .FillW not_in widget.size_policy && .FillH not_in widget.size_policy do continue
+        ww, wh := widget.w, widget.h
+        if .FillW in widget.size_policy {
+            ww = remaining_w / cast(f32)nb_expandable_widgets
+        }
+        if .FillH in widget.size_policy {
+            wh = self.h
+        }
+        box_expand_widget(widget, ww, wh)
     }
 }// }}}
 
@@ -946,6 +957,8 @@ radio_button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     d := 2 * data.attr.style.base_radius
     self.w = d + data.attr.style.label_padding + label_w
     self.h = max(d, label_h)
+    self.min_w = self.w
+    self.min_h = self.h
     if label_h > d {
         data.button_offset = (label_h - d) / 2
     } else {
@@ -1034,8 +1047,7 @@ draw_box :: proc(
 ) -> (draw_box: ^Widget) {
     draw_box = new(Widget)
     draw_box^ = Widget{
-        resizable_h = true,
-        resizable_w = true,
+        size_policy = {.FillW, .FillH},
         init = draw_box_init,
         update = draw_box_update,
         draw = draw_box_draw,
