@@ -74,6 +74,7 @@ WidgetData :: union {
     Box,
     DrawBox,
     RadioButton,
+    rawptr, // custom widget
 }
 
 widget_init :: proc(widget: ^Widget, handle: ^Handle) {
