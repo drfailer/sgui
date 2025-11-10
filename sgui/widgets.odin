@@ -25,7 +25,6 @@ Pixel :: distinct [4]u8
 WidgetInitProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
 WidgetUpdateProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
 WidgetDrawProc :: proc(self: ^Widget, handle: ^Handle)
-WidgetValueProc :: proc(self: ^Widget) -> WidgetValue
 
 AlignmentPolicy :: bit_set[AlignmentFlag]
 AlignmentFlag :: enum {
@@ -63,8 +62,6 @@ Widget :: struct {
     init: WidgetInitProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
-    value: WidgetValueProc,
-    // TODO: set value
 
     /* data specific to the underlying widget */
     data: WidgetData,
@@ -78,8 +75,6 @@ WidgetData :: union {
     DrawBox,
     RadioButton,
 }
-
-WidgetValue :: union { string, bool, int, f64 }
 
 widget_init :: proc(widget: ^Widget, handle: ^Handle) {
     root := Widget{
@@ -946,7 +941,6 @@ radio_button :: proc(
         init = radio_button_init,
         update = radio_button_update,
         draw = radio_button_draw,
-        value = radio_button_value,
         data = RadioButton {
             checked = default_checked,
             label = label,
@@ -1019,9 +1013,19 @@ radio_button_draw :: proc(self: ^Widget, handle: ^Handle) {
     handle->draw_text(&data.label_text, self.x + text_xoffset, self.y + text_yoffset)
 }
 
-radio_button_value :: proc(self: ^Widget) -> WidgetValue {
+radio_button_get_value :: proc(self: ^Widget) -> bool {
     data := &self.data.(RadioButton)
     return data.checked
+}
+
+radio_button_set_value :: proc(self: ^Widget, value: bool) {
+    data := &self.data.(RadioButton)
+    data.checked = value
+}
+
+radio_button_value :: proc{
+    radio_button_get_value,
+    radio_button_set_value,
 }
 
 // draw box ////////////////////////////////////////////////////////////////////
