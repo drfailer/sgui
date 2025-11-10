@@ -145,10 +145,15 @@ ScrollbarDirection :: enum {
     Horizontal,
 }
 
+ScrollbarStyle :: struct {
+    // TODO
+}
+
 // TODO: add a position (top, bottom, left, right)??
 Scrollbar :: struct {
     x, y, w, h: f32,
     selected: bool,
+    focused: bool,
     bar_size: f32,
     bar_position: f32,
     content_size: f32,
@@ -162,15 +167,24 @@ scrollbar :: proc(direction: ScrollbarDirection) -> Scrollbar {
     }
 }
 
-scrollbar_is_clicked :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> bool {
-    return (scrollbar.x <= mx && mx <= scrollbar.x + scrollbar.w) \
-        && (scrollbar.y <= my && my <= scrollbar.y + scrollbar.h)
+mouse_on_scrollbar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> (result: bool) {
+    scale_factor := scrollbar.parent_size / scrollbar.content_size
+    pos := scrollbar.bar_position * scale_factor
+    size := scrollbar.bar_size * scale_factor
+    if scrollbar.direction == .Vertical {
+        result = (scrollbar.x <= mx && mx <= scrollbar.x + scrollbar.w) \
+              && (scrollbar.y + pos <= my && my <= scrollbar.y + size)
+    } else {
+        result = (scrollbar.x + pos <= mx && mx <= scrollbar.x + size) \
+              && (scrollbar.y <= my && my <= scrollbar.y + scrollbar.h)
+    }
+    return result
 }
 
 scrollbar_clicked_hander :: proc(bar: ^Scrollbar, event: MouseClickEvent) -> bool {
     if !event.down && bar.selected {
         bar.selected = false
-    } else if scrollbar_is_clicked(bar, event.x, event.y) {
+    } else if mouse_on_scrollbar(bar, event.x, event.y) {
         bar.selected = true
     }
     return bar.selected
