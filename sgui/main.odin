@@ -9,20 +9,6 @@ import "core:log"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
-// TODO: move this elsewhere and add #config
-// TODO: most of this should also appear in the opts
-
-FONT :: "/usr/share/fonts/TTF/FiraGO-Regular.ttf"
-FONT_SIZE :: 18
-
-WINDOW_WIDTH :: 800
-WINDOW_HEIGHT :: 600
-WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
-// WINDOW_FLAGS :: sdl.WindowFlags{}
-FPS :: 60
-
-SCROLLBAR_THICKNESS :: 10
-
 // using: PixelFormat.RGBA32
 // Pixel :: [4]u8 // p.r, p.g, p.b, p.a
 //
