@@ -18,6 +18,16 @@ ScrollBoxProperty :: enum {
     ScrollbarInvisible,
     DisableHorizontalScroll,
     DisableVerticalScroll,
+    // TODO: visible on hover
+}
+
+ScrollboxStyle :: struct {
+    scrollbar_style: ScrollbarStyle,
+}
+
+ScrollboxAttributes :: struct {
+    props: ScrollBoxProperties,
+    style: ScrollboxStyle,
 }
 
 ScrollBoxData :: struct {
@@ -29,20 +39,26 @@ ScrollBoxData :: struct {
 
 ScrollBox :: struct {
     parent: ^Widget,
-    props: ScrollBoxProperties,
     vertical: ScrollBoxData,
     horizontal: ScrollBoxData,
+    attr: ScrollboxAttributes,
 }
 
-scrollbox :: proc(props := ScrollBoxProperties{}) -> ScrollBox {
+scrollbox :: proc(attr := OPTS.scrollbox_attr) -> ScrollBox {
     return ScrollBox{
-        props = props,
         vertical = ScrollBoxData{
-            scrollbar = scrollbar(.Vertical),
+            scrollbar = scrollbar(ScrollbarAttributes{
+                direction = .Vertical,
+                style = attr.style.scrollbar_style,
+            }),
         },
         horizontal = ScrollBoxData{
-            scrollbar = scrollbar(.Horizontal),
+            scrollbar = scrollbar(ScrollbarAttributes{
+                direction = .Horizontal,
+                style = attr.style.scrollbar_style,
+            }),
         },
+        attr = attr,
     }
 }
 
@@ -53,11 +69,11 @@ scrollbox_scroll_data :: proc(data: ^ScrollBoxData, count: i32, step: f32) {
 }
 
 scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, vstep, hstep: f32) -> (scrolled: bool) {
-    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+    if .DisableVerticalScroll not_in scrollbox.attr.props && scrollbox.vertical.enabled {
         scrollbox_scroll_data(&scrollbox.vertical, vcount, vstep)
         scrolled = true
     }
-    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+    if .DisableHorizontalScroll not_in scrollbox.attr.props && scrollbox.horizontal.enabled {
         scrollbox_scroll_data(&scrollbox.horizontal, hcount, hstep)
         scrolled = true
     }
@@ -66,10 +82,10 @@ scrollbox_scrolled_handler :: proc(scrollbox: ^ScrollBox, vcount, hcount: i32, v
 
 scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent) -> (clicked: bool) {
     if event.button == sdl.BUTTON_LEFT {
-        if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+        if .DisableVerticalScroll not_in scrollbox.attr.props && scrollbox.vertical.enabled {
             clicked = scrollbar_clicked_hander(&scrollbox.vertical.scrollbar, event)
         }
-        if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+        if .DisableHorizontalScroll not_in scrollbox.attr.props && scrollbox.horizontal.enabled {
             clicked |= scrollbar_clicked_hander(&scrollbox.horizontal.scrollbar, event)
         }
     }
@@ -77,10 +93,10 @@ scrollbox_clicked_handler :: proc(scrollbox: ^ScrollBox, event: MouseClickEvent)
 }
 
 scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent) -> (scrolled: bool) {
-    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+    if .DisableVerticalScroll not_in scrollbox.attr.props && scrollbox.vertical.enabled {
         scrolled = scrollbar_dragged_handler(&scrollbox.vertical.scrollbar, event)
     }
-    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+    if .DisableHorizontalScroll not_in scrollbox.attr.props && scrollbox.horizontal.enabled {
         scrolled |= scrollbar_dragged_handler(&scrollbox.horizontal.scrollbar, event)
     }
     return scrolled
@@ -88,16 +104,16 @@ scrollbox_dragged_handler :: proc(scrollbox: ^ScrollBox, event: MouseMotionEvent
 
 scrollbox_init :: proc(scrollbox: ^ScrollBox, handle: ^Handle, parent: ^Widget) {
     scrollbox.parent = parent
-    if .DisableHorizontalScroll not_in scrollbox.props {
+    if .DisableHorizontalScroll not_in scrollbox.attr.props {
         scrollbar_init(&scrollbox.horizontal.scrollbar, handle, parent)
     }
-    if .DisableVerticalScroll not_in scrollbox.props {
+    if .DisableVerticalScroll not_in scrollbox.attr.props {
         scrollbar_init(&scrollbox.vertical.scrollbar, handle, parent)
     }
 }
 
 scrollbox_data_udpate :: proc(data: ^ScrollBoxData) {
-    if data.scrollbar.selected {
+    if data.scrollbar.state == .Selected {
         data.position = data.scrollbar.bar_position
         data.target_position = data.position
     } else {
@@ -130,10 +146,10 @@ scrollbox_update :: proc(scrollbox: ^ScrollBox, content_w, content_h: f32) {
 }
 
 scrollbox_draw :: proc(scrollbox: ^ScrollBox, handle: ^Handle) {
-    if .DisableVerticalScroll not_in scrollbox.props && scrollbox.vertical.enabled {
+    if .DisableVerticalScroll not_in scrollbox.attr.props && scrollbox.vertical.enabled {
         scrollbar_draw(&scrollbox.vertical.scrollbar, handle);
     }
-    if .DisableHorizontalScroll not_in scrollbox.props && scrollbox.horizontal.enabled {
+    if .DisableHorizontalScroll not_in scrollbox.attr.props && scrollbox.horizontal.enabled {
         scrollbar_draw(&scrollbox.horizontal.scrollbar, handle);
     }
 }
@@ -145,33 +161,41 @@ ScrollbarDirection :: enum {
     Horizontal,
 }
 
+ScrollbarState :: enum { Idle, Selected, Hovered }
+
 ScrollbarStyle :: struct {
-    // TODO
+    background_color: Color,
+    color: [ScrollbarState]Color,
+}
+
+ScrollbarAttributes :: struct {
+    style: ScrollbarStyle,
+    direction: ScrollbarDirection,
 }
 
 // TODO: add a position (top, bottom, left, right)??
 Scrollbar :: struct {
     x, y, w, h: f32,
-    selected: bool,
-    focused: bool,
+    state: ScrollbarState,
     bar_size: f32,
     bar_position: f32,
     content_size: f32,
     parent_size: f32,
-    direction: ScrollbarDirection,
+    // TODO: add precomputed scalled values
+    attr: ScrollbarAttributes,
 }
 
-scrollbar :: proc(direction: ScrollbarDirection) -> Scrollbar {
+scrollbar :: proc(attr: ScrollbarAttributes) -> Scrollbar {
     return Scrollbar{
-        direction = direction,
+        attr = attr,
     }
 }
 
-mouse_on_scrollbar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> (result: bool) {
+mouse_on_scrollbar_bar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> (result: bool) {
     scale_factor := scrollbar.parent_size / scrollbar.content_size
     pos := scrollbar.bar_position * scale_factor
     size := scrollbar.bar_size * scale_factor
-    if scrollbar.direction == .Vertical {
+    if scrollbar.attr.direction == .Vertical {
         result = (scrollbar.x <= mx && mx <= scrollbar.x + scrollbar.w) \
               && (scrollbar.y + pos <= my && my <= scrollbar.y + size)
     } else {
@@ -182,39 +206,43 @@ mouse_on_scrollbar :: proc(scrollbar: ^Scrollbar, mx, my: f32) -> (result: bool)
 }
 
 scrollbar_clicked_hander :: proc(bar: ^Scrollbar, event: MouseClickEvent) -> bool {
-    if !event.down && bar.selected {
-        bar.selected = false
-    } else if mouse_on_scrollbar(bar, event.x, event.y) {
-        bar.selected = true
+    if !event.down && bar.state == .Selected {
+        bar.state = .Hovered if mouse_on_scrollbar_bar(bar, event.x, event.y) else .Idle
+    } else if bar.state == .Hovered {
+        bar.state = .Selected
     }
-    return bar.selected
+    return bar.state == .Selected
 }
 
 scrollbar_dragged_handler :: proc(bar: ^Scrollbar, event: MouseMotionEvent) -> bool {
-    if !bar.selected do return false
+    if bar.state == .Idle {
+        if mouse_on_scrollbar_bar(bar, event.x, event.y) {
+            bar.state = .Hovered
+        }
+    } else if bar.state == .Selected {
+        scale_factor := bar.parent_size / bar.content_size
 
-    // TODO: invert
-    scale_factor := bar.parent_size / bar.content_size
+        if bar.attr.direction == .Vertical {
+            bar.bar_position += event.yd / scale_factor
+        } else {
+            bar.bar_position += event.xd / scale_factor
+        }
 
-    if bar.direction == .Vertical {
-        bar.bar_position += event.yd / scale_factor
+        if bar.bar_position < 0 {
+            bar.bar_position = 0
+        } else if bar.bar_position > bar.content_size - bar.bar_size {
+            bar.bar_position = bar.content_size - bar.bar_size
+        }
     } else {
-        bar.bar_position += event.xd / scale_factor
+        bar.state = .Hovered if mouse_on_scrollbar_bar(bar, event.x, event.y) else .Idle
     }
-
-    if bar.bar_position < 0 {
-        bar.bar_position = 0
-    } else if bar.bar_position > bar.content_size - bar.bar_size {
-        bar.bar_position = bar.content_size - bar.bar_size
-    }
-
     return true
 }
 
 scrollbar_init :: proc(self: ^Scrollbar, handle: ^Handle, parent: ^Widget) {}
 
 scrollbar_update :: proc(bar: ^Scrollbar, position: f32, content_size, parent_size: f32, parent: ^Widget) {
-    if bar.direction == .Vertical {
+    if bar.attr.direction == .Vertical {
         bar.x = parent.x + parent.w - SCROLLBAR_THICKNESS
         bar.y = parent.y
         bar.w = SCROLLBAR_THICKNESS
@@ -238,22 +266,22 @@ scrollbar_draw :: proc(bar: ^Scrollbar, handle: ^Handle) {
     scale_factor := bar.parent_size / bar.content_size
     x, y, w, h := bar.x, bar.y, bar.w, bar.h
 
-    if bar.direction == .Vertical {
+    if bar.attr.direction == .Vertical {
         w = SCROLLBAR_THICKNESS
         h = bar.parent_size
     } else {
         h = SCROLLBAR_THICKNESS
         w = bar.parent_size
     }
-    draw_rect(handle, x, y, w, h, Color{50, 50, 50, 255})
-    if bar.direction == .Vertical {
+    draw_rect(handle, x, y, w, h, bar.attr.style.background_color)
+    if bar.attr.direction == .Vertical {
         y = bar.y + bar.bar_position * scale_factor
         h = bar.bar_size * scale_factor
     } else {
         x = bar.x + bar.bar_position * scale_factor
         w = bar.bar_size * scale_factor
     }
-    draw_rounded_box(handle, x, y, w, h, 5, Color{100, 100, 100, 255})
+    draw_rounded_box(handle, x, y, w, h, 5, bar.attr.style.color[bar.state])
 }
 
 // zoom box ////////////////////////////////////////////////////////////////////

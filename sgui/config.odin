@@ -13,8 +13,8 @@ WINDOW_WIDTH :: #config(WINDOW_WIDTH, 800)
 WINDOW_HEIGHT :: #config(WINDOW_HEIGHT, 600)
 
 // TODO
-// WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
-WINDOW_FLAGS :: sdl.WindowFlags{}
+WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
+// WINDOW_FLAGS :: sdl.WindowFlags{}
 
 SCROLLBAR_THICKNESS :: #config(SCROLLBAR_THICKNESS, 10)
 
@@ -25,6 +25,7 @@ Opts :: struct {
     text_attr: TextAttributes,
     button_attr: ButtonAttributes,
     radio_button_attr: RadioButtonAttributes,
+    scrollbox_attr: ScrollboxAttributes,
 }
 
 OPTS := Opts{
@@ -76,5 +77,17 @@ OPTS := Opts{
             font = FONT,
             font_size = FONT_SIZE,
         }
-    }
+    },
+    scrollbox_attr = ScrollboxAttributes{
+        style = ScrollboxStyle{
+            scrollbar_style = ScrollbarStyle{
+                background_color = Color{50, 50, 50, 255},
+                color = [ScrollbarState]Color{
+                    .Idle = Color{100, 100, 100, 255},
+                    .Hovered = Color{120, 120, 110, 255},
+                    .Selected = Color{110, 110, 110, 255},
+                },
+            },
+        },
+    },
 }
