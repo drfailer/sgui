@@ -22,9 +22,47 @@ distance_ceil :: proc(r, y: f32) -> f32 {
     return math.ceil(x) - x
 }
 
+draw_ring :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
+    x := 0
+    y := cast(int)-radius
+    p := cast(int)-radius
+
+    for x < -y {
+        if p > 0 {
+            // instead of drawing the outer point when diff < 0, we can draw it
+            // here to have a more precise value at the cost of an extra sqrt
+            // diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            // if diff >= 0 {
+            //     draw_circle_edge_pixel(handle, cx, cy, x, y, color, 1 - diff)
+            // }
+            y += 1
+            p += 2 * (x + y) + 1
+        } else {
+            p += 2 * x + 1
+        }
+
+        xl1 := cx - cast(f32)x
+        xr1 := cx + cast(f32)x
+        xl2 := cx + cast(f32)y
+        xr2 := cx - cast(f32)y
+        w1 := xr1 - xl1 + 1
+        w2 := xr2 - xl2 + 1
+
+        diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+        if diff >= 0 {
+            draw_circle_edge_pixel(handle, cx, cy, x, y, color, 1 - diff) // out
+            draw_circle_edge_pixel(handle, cx, cy, x, y + 1, color, diff) // in
+        } else {
+            draw_circle_edge_pixel(handle, cx, cy, x, y, color, 1 + diff)  // in
+            draw_circle_edge_pixel(handle, cx, cy, x, y - 1, color, -diff) // out
+        }
+        x += 1
+    }
+}
+
 draw_circle_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: int, color: Color, diff: f32) {
     color := color
-    color.a = cast(u8)(cast(f32)color.a * (1 - diff))
+    color.a = cast(u8)(cast(f32)color.a * diff)
 
     // top left
     handle->draw_rect(cx - cast(f32)x, cy + cast(f32)y, 1., 1., color)
@@ -50,10 +88,12 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
 
     for x < -y {
         if p > 0 {
-            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
-            if 0 < diff && diff < 1  {
-                draw_circle_edge_pixel(handle, cx, cy, x, y, color, diff)
-            }
+            // instead of drawing the outer point when diff < 0, we can draw it
+            // here to have a more precise value at the cost of an extra sqrt
+            // diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            // if diff >= 0 {
+            //     draw_circle_edge_pixel(handle, cx, cy, x, y, color, 1 - diff)
+            // }
             y += 1
             p += 2 * (x + y) + 1
         } else {
@@ -68,8 +108,8 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
         w2 := xr2 - xl2 + 1
 
         diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
-        if 0 < diff && diff < 1  {
-            draw_circle_edge_pixel(handle, cx, cy, x, y, color, diff)
+        if diff >= 0  {
+            draw_circle_edge_pixel(handle, cx, cy, x, y, color, 1 - diff) // in
 
             // draw inside
 
@@ -81,6 +121,10 @@ draw_circle :: proc(handle: ^Handle, cx, cy, radius: f32, color: Color) {
             handle->draw_rect(xl1 + 1, cy - cast(f32)y, w1 - 2, 1., color)
             handle->draw_rect(xl2 + 1, cy + cast(f32)x, w2 - 2, 1., color)
         } else {
+            draw_circle_edge_pixel(handle, cx, cy, x, y - 1, color, -diff) // out
+
+            // draw inside
+
             // top
             handle->draw_rect(xl1, cy + cast(f32)y, w1, 1., color)
             handle->draw_rect(xl2, cy - cast(f32)x, w2, 1., color)
@@ -117,6 +161,8 @@ draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: i
     handle->draw_rect(xr1, cy - cast(f32)y + h, 1., 1., color)
     handle->draw_rect(xr2, cy + cast(f32)x + h, 1., 1., color)
 }
+
+// TODO: update the draw rounded box
 
 draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
     if bw < radius || bh < radius {
