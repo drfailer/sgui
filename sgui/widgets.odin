@@ -753,6 +753,24 @@ box_update_size :: proc(self: ^Widget, w, h: f32) {// {{{
         }
         self.h = max(self.min_h, self.h)
     }
+
+    bt := data.attr.style.border_thickness
+    if .Top in data.attr.style.active_borders {
+        self.h += bt
+        self.min_h += bt
+    }
+    if .Bottom in data.attr.style.active_borders {
+        self.h += bt
+        self.min_h += bt
+    }
+    if .Left in data.attr.style.active_borders {
+        self.w += bt
+        self.min_w += bt
+    }
+    if .Right in data.attr.style.active_borders {
+        self.w += bt
+        self.min_w += bt
+    }
 }// }}}
 
 vbox_resize :: proc(self: ^Widget, w, h: f32) {// {{{
