@@ -13,7 +13,7 @@ import "core:log"
 
 // scrollbars //////////////////////////////////////////////////////////////////
 
-MIN_SCROLLBAR_THUMB_SIZE :: 200
+MIN_SCROLLBAR_THUMB_SIZE :: 10
 
 ScrollbarDirection :: enum {
     Vertical,
