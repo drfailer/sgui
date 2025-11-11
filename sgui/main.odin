@@ -68,6 +68,8 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
             break
         }
     }
+
+    draw_triangle(handle, 100, 100, 100, 200, 200, 150, Color{255, 255, 255, 255})
 }
 
 update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {

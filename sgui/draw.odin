@@ -328,3 +328,41 @@ draw_line :: proc(handle: ^Handle, x0, y0, x1, y1: f32, color: Color) {
     }
 }
 
+draw_triangle :: proc(handle: ^Handle, x0, y0, x1, y1, x2, y2: f32, color: Color) {
+    x0, y0, x1, y1, x2, y2 := x0, y0, x1, y1, x2, y2
+
+    // sort the points
+    if y0 > y1 {
+        swap(&x0, &x1)
+        swap(&y0, &y1)
+    }
+    if y1 > y2 {
+        swap(&x1, &x2)
+        swap(&y1, &y2)
+    }
+    if y0 > y1 {
+        swap(&x0, &x1)
+        swap(&y0, &y1)
+    }
+
+    dx02, dy02 := x0 - x2, y0 - y2
+    dx01, dy01 := x0 - x1, y0 - y1
+    dx12, dy12 := x1 - x2, y1 - y2
+    a02 := dx02 / dy02
+    a01 := dx01 / dy01
+    a12 := dx12 / dy12
+
+    // first half
+    for iy := y0; iy <= y1; iy += 1. {
+        xl := a02 * (iy - y0) + x0
+        xr := a01 * (iy - y1) + x1
+        draw_rect(handle, xl, iy, xr - xl, 1, color)
+    }
+
+    // second half
+    for iy := y1; iy <= y2; iy += 1. {
+        xl := a02 * (iy - y0) + x0
+        xr := a12 * (iy - y2) + x2
+        draw_rect(handle, xl, iy, xr - xl, 1, color)
+    }
+}
