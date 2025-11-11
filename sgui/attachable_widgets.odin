@@ -286,7 +286,7 @@ scrollbar_mouse_on_track :: proc(self: ^Scrollbar, mx, my: f32) -> (result: bool
         result = (self.x + SCROLLBAR_THICKNESS <= mx && mx <= self.x + self.track_size) \
               && (self.y <= my && my <= self.y + SCROLLBAR_THICKNESS)
     }
-    return result && !scrollbar_mouse_on_thumb(self, mx, my)
+    return result
 }
 
 scrollbar_mouse_on_button1 :: proc(self: ^Scrollbar, mx, my: f32) -> (result: bool){
@@ -316,6 +316,14 @@ scrollbar_click :: proc(self: ^Scrollbar, event: MouseClickEvent) {
             self.button1_state = .Clicked
         } else if self.button2_state == .Hovered {
             self.button2_state = .Clicked
+        } else if scrollbar_mouse_on_track(self, event.x, event.y) {
+            if self.direction == .Vertical {
+                self.position = (cast(f32)event.y - self.y) / self.scale_factor * self.thumb_scroll_step - self.window_size / 2
+            } else {
+                self.position = (cast(f32)event.x - self.x) / self.scale_factor * self.thumb_scroll_step - self.window_size / 2
+            }
+            self.position = clamp(self.position, 0, self.content_size - self.window_size)
+            self.target_position = self.position
         }
     } else {
         self.thumb_state = .Idle
