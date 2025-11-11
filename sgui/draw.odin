@@ -143,7 +143,7 @@ draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: i
     xl2 := cx + cast(f32)y - w
     xr2 := cx - cast(f32)y - 1
     color := color
-    color.a = cast(u8)(cast(f32)color.a * (1 - diff))
+    color.a = cast(u8)(cast(f32)color.a * diff)
 
     // top left
     draw_rect(handle, xl1, cy + cast(f32)y, 1., 1., color)
@@ -181,10 +181,12 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
 
     for x < -y {
         if p > 0 {
-            diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
-            if 0 < diff && diff < 1  {
-                draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, diff)
-            }
+            // Like circle, rounded corners anti-alizing can be improved at the
+            // cost of an extra square root.
+            // diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            // if 0 < diff && diff < 1  {
+            //     draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, 1 - diff)
+            // }
             y += 1
             p += 2 * (x + y) + 1
         } else {
@@ -200,7 +202,7 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
 
         diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
         if 0 < diff && diff < 1  {
-            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, diff)
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, 1 - diff) // in
 
             // draw inside
 
@@ -212,6 +214,10 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
             draw_rect(handle, xl1 + 1, cy - cast(f32)y + h, w1 - 2, 1., color)
             draw_rect(handle, xl2 + 1, cy + cast(f32)x + h, w2 - 2, 1., color)
         } else {
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y - 1, w, h, color, -diff) // out
+
+            // draw inside
+
             // top
             draw_rect(handle, xl1, cy + cast(f32)y, w1, 1., color)
             draw_rect(handle, xl2, cy - cast(f32)x, w2, 1., color)
@@ -226,17 +232,64 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
     draw_rect(handle, bx, by + radius, bw, h, color)
 }
 
+// TODO: we should be able to configure the ring/rounded frame border thickness!
+
+draw_rounded_frame :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
+    if bw < radius || bh < radius {
+        return
+    }
+
+    cx := bx + bw - radius
+    cy := by + radius
+    x := 0
+    y := cast(int)-radius
+    p := cast(int)-radius
+    w := bw - 2 * radius
+    h := bh - 2 * radius
+
+    a := cast(f32)color.a
+
+    for x < -y {
+        if p > 0 {
+            // Like circle, rounded corners anti-alizing can be improved at the
+            // cost of an extra square root.
+            // diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+            // if 0 < diff && diff < 1  {
+            //     draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, 1 - diff)
+            // }
+            y += 1
+            p += 2 * (x + y) + 1
+        } else {
+            p += 2 * x + 1
+        }
+
+        xl1 := cx - cast(f32)x - w
+        xr1 := cx + cast(f32)x - 1
+        xl2 := cx + cast(f32)y - w
+        xr2 := cx - cast(f32)y - 1
+        w1 := xr1 - xl1 + 1
+        w2 := xr2 - xl2 + 1
+
+        diff := math.sqrt(cast(f32)(x * x + y * y)) - radius
+        if diff >= 0  {
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, 1 - diff) // out
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y + 1, w, h, color, diff) // in
+        } else {
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y, w, h, color, 1 + diff)  // in
+            draw_rounded_box_corner_edge_pixel(handle, cx, cy, x, y - 1, w, h, color, -diff) // out
+        }
+        x += 1
+    }
+    draw_rect(handle, bx + radius, by, bw - 2 * radius, 1, color)          // top
+    draw_rect(handle, bx + radius, by + bh, bw - 2 * radius, 1, color)     // bottom
+    draw_rect(handle, bx, by + radius, 1, bh - 2 * radius, color)          // left
+    draw_rect(handle, bx + bw - 1, by + radius, 1, bh - 2 * radius, color) // right
+}
+
 draw_rounded_box_with_border :: proc (
     handle: ^Handle, bx, by, bw, bh, radius, border_thickness: f32, border_color: Color, color: Color) {
-    // since the interior of the circle is not anti-alized yet, we use the draw
-    // stack technique even though it's not the most efficient
-    draw_rounded_box(handle, bx, by, bw, bh, radius, border_color)
-    draw_rounded_box(
-        handle,
-        bx + border_thickness, by + border_thickness,
-        bw - 2 * border_thickness, bh - 2 * border_thickness,
-        radius - 2 * border_thickness,
-        color)
+    draw_rounded_box(handle, bx, by, bw, bh, radius, color)
+    draw_rounded_frame(handle, bx, by, bw, bh, radius, border_color)
 }
 
 // source: https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm

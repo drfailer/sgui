@@ -70,6 +70,8 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
     }
 
     draw_triangle(handle, 100, 100, 100, 200, 200, 150, Color{255, 255, 255, 255})
+
+    draw_rounded_frame(handle, 400, 400, 100, 100, 20, Color{255, 255, 255, 255})
 }
 
 update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {
