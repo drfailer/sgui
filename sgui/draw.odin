@@ -409,6 +409,9 @@ draw_triangle :: proc(handle: ^Handle, x0, y0, x1, y1, x2, y2: f32, color: Color
     for iy := y0; iy <= y1; iy += 1. {
         xl := a02 * (iy - y0) + x0
         xr := a01 * (iy - y1) + x1
+        if xl >= xr {
+            swap(&xl, &xr)
+        }
         draw_rect(handle, xl, iy, xr - xl, 1, color)
     }
 
@@ -416,6 +419,9 @@ draw_triangle :: proc(handle: ^Handle, x0, y0, x1, y1, x2, y2: f32, color: Color
     for iy := y1; iy <= y2; iy += 1. {
         xl := a02 * (iy - y0) + x0
         xr := a12 * (iy - y2) + x2
+        if xl >= xr {
+            swap(&xl, &xr)
+        }
         draw_rect(handle, xl, iy, xr - xl, 1, color)
     }
 }
