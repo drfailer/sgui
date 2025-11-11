@@ -115,7 +115,7 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
         self.thumb_scroll_step = 1
     } else {
         self.thumb_size = MIN_SCROLLBAR_THUMB_SIZE
-        self.thumb_scroll_step = MIN_SCROLLBAR_THUMB_SIZE / thumb_size
+        self.thumb_scroll_step = (self.track_size - thumb_size) / (self.track_size - MIN_SCROLLBAR_THUMB_SIZE)
     }
 }
 
@@ -152,7 +152,7 @@ scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) {
         self.position = min(self.position + 100, self.target_position)
     }
     self.position = clamp(self.position, 0, self.content_size - self.window_size)
-    self.thumb_position = self.position * self.scale_factor / self.thumb_scroll_step
+    self.thumb_position = self.position / self.thumb_scroll_step * self.scale_factor
 }
 
 scrollbars_update :: proc(self: ^Scrollbars, handle: ^Handle) {
