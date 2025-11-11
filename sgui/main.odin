@@ -37,8 +37,8 @@ MS_TO_PIXEL :: 1
 draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
     box_data := &box.data.(DrawBox)
     data_rect := Rect{
-        x = -box_data.scrollbox.horizontal.position,
-        y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbox.vertical.position,
+        x = -box_data.scrollbars.horizontal.position,
+        y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbars.vertical.position,
         w = box.w,
         h = box_data.zoombox.lvl * DATA_BOX_HEIGHT,
     }
@@ -68,8 +68,6 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
             break
         }
     }
-
-    draw_triangle(handle, 100, 100, 100, 200, 200, 150, Color{255, 255, 255, 255})
 
     draw_rounded_frame(handle, 400, 400, 100, 100, 20, Color{255, 255, 255, 255})
 }
@@ -160,7 +158,7 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                     zoom_min = 1.,
                     zoom_max = 10.,
                     zoom_step = 0.2,
-                    scrollbox_attr = OPTS.scrollbox_attr,
+                    scrollbars_attr = OPTS.scrollbars_attr,
                 }),
             ),
             attr = BoxAttributes{

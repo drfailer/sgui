@@ -16,7 +16,7 @@ WINDOW_HEIGHT :: #config(WINDOW_HEIGHT, 600)
 WINDOW_FLAGS :: sdl.WindowFlags{.RESIZABLE}
 // WINDOW_FLAGS :: sdl.WindowFlags{}
 
-SCROLLBAR_THICKNESS :: #config(SCROLLBAR_THICKNESS, 10)
+SCROLLBAR_THICKNESS :: #config(SCROLLBAR_THICKNESS, 12)
 
 // defaults ////////////////////////////////////////////////////////////////////
 
@@ -26,7 +26,7 @@ Opts :: struct {
     button_attr: ButtonAttributes,
     radio_button_attr: RadioButtonAttributes,
     draw_box_attr: DrawBoxAttributes,
-    scrollbox_attr: ScrollboxAttributes,
+    scrollbars_attr: ScrollbarsAttributes,
 }
 
 OPTS := Opts{
@@ -82,29 +82,21 @@ OPTS := Opts{
     draw_box_attr = DrawBoxAttributes{
         props = DrawBoxProperties{.Zoomable, .WithScrollbar},
         zoom_min = 1, zoom_max = 100, zoom_step = 1,
-        scrollbox_attr = ScrollboxAttributes{
-        style = ScrollboxStyle{
-                scrollbar_style = ScrollbarStyle{
-                    background_color = Color{50, 50, 50, 255},
-                    color = [ScrollbarState]Color{
-                        .Idle = Color{100, 100, 100, 255},
-                        .Hovered = Color{120, 120, 110, 255},
-                        .Selected = Color{110, 110, 110, 255},
-                    },
-                },
-            },
-        },
     },
-    scrollbox_attr = ScrollboxAttributes{
-        style = ScrollboxStyle{
-            scrollbar_style = ScrollbarStyle{
-                background_color = Color{50, 50, 50, 255},
-                color = [ScrollbarState]Color{
-                    .Idle = Color{100, 100, 100, 255},
-                    .Hovered = Color{120, 120, 110, 255},
-                    .Selected = Color{110, 110, 110, 255},
-                },
+    scrollbars_attr = ScrollbarsAttributes{
+        style = ScrollbarStyle{
+            track_color = Color{50, 50, 50, 255},
+            track_padding = Padding{0, 0, 0, 0},
+            thumb_color = [ScrollbarThumbState]Color{
+                .Idle = Color{100, 100, 100, 255},
+                .Hovered = Color{120, 120, 110, 255},
+                .Selected = Color{110, 110, 110, 255},
             },
-        },
+            button_color = [ScrollbarButtonState]Color{
+                .Idle = Color{100, 100, 100, 255},
+                .Hovered = Color{120, 120, 110, 255},
+                .Clicked = Color{110, 110, 110, 255},
+            },
+        }
     },
 }
