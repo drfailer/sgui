@@ -151,6 +151,7 @@ scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) {
     } else if self.target_position > self.position {
         self.position = min(self.position + 100, self.target_position)
     }
+    self.position = clamp(self.position, 0, self.content_size - self.window_size)
     self.thumb_position = self.position * self.scale_factor / self.thumb_scroll_step
 }
 
