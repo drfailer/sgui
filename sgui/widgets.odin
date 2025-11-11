@@ -1037,8 +1037,6 @@ DrawBoxProperty :: enum {
     WithScrollbar,
 }
 
-// TODO: draw box attribute -> allow changing zoombox attr
-
 ContentSize :: struct {
     width: f32,
     height: f32,
@@ -1047,9 +1045,9 @@ ContentSize :: struct {
 DrawBoxAttributes :: struct {
     props: DrawBoxProperties,
     zoom_min, zoom_max, zoom_step: f32,
+    scrollbox_attr: ScrollboxAttributes,
 }
 
-// TODO: the draw box should give a draw rect proc
 DrawBox :: struct {
     content_size: ContentSize,
     zoombox: ZoomBox,
@@ -1066,7 +1064,7 @@ draw_box :: proc(
     update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
     init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
     data: rawptr = nil,
-    attr:= DrawBoxAttributes{},
+    attr := OPTS.draw_box_attr,
 ) -> (draw_box: ^Widget) {
     draw_box = new(Widget)
     draw_box^ = Widget{
@@ -1076,7 +1074,7 @@ draw_box :: proc(
         draw = draw_box_draw,
         data = DrawBox{
             zoombox = zoombox(attr.zoom_min, attr.zoom_max, attr.zoom_step),
-            scrollbox = scrollbox(),
+            scrollbox = scrollbox(attr.scrollbox_attr),
             user_draw = draw,
             user_init = init,
             user_update = update,

@@ -25,6 +25,7 @@ Opts :: struct {
     text_attr: TextAttributes,
     button_attr: ButtonAttributes,
     radio_button_attr: RadioButtonAttributes,
+    draw_box_attr: DrawBoxAttributes,
     scrollbox_attr: ScrollboxAttributes,
 }
 
@@ -77,6 +78,22 @@ OPTS := Opts{
             font = FONT,
             font_size = FONT_SIZE,
         }
+    },
+    draw_box_attr = DrawBoxAttributes{
+        props = DrawBoxProperties{.Zoomable, .WithScrollbar},
+        zoom_min = 1, zoom_max = 100, zoom_step = 1,
+        scrollbox_attr = ScrollboxAttributes{
+        style = ScrollboxStyle{
+                scrollbar_style = ScrollbarStyle{
+                    background_color = Color{50, 50, 50, 255},
+                    color = [ScrollbarState]Color{
+                        .Idle = Color{100, 100, 100, 255},
+                        .Hovered = Color{120, 120, 110, 255},
+                        .Selected = Color{110, 110, 110, 255},
+                    },
+                },
+            },
+        },
     },
     scrollbox_attr = ScrollboxAttributes{
         style = ScrollboxStyle{

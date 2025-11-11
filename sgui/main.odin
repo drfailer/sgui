@@ -160,6 +160,7 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
                     zoom_min = 1.,
                     zoom_max = 10.,
                     zoom_step = 0.2,
+                    scrollbox_attr = OPTS.scrollbox_attr,
                 }),
             ),
             attr = BoxAttributes{
