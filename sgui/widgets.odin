@@ -457,7 +457,7 @@ BoxAttributes :: struct {
 Box :: struct {
     layout: BoxLayout,
     widgets: [dynamic]^Widget,
-    scrollbox: ScrollBox,
+    scrollbars: Scrollbars,
     content_w, content_h: f32,
     attr: BoxAttributes,
 }
@@ -490,7 +490,7 @@ box :: proc(// {{{
         data = Box{
             layout = layout,
             widgets = widget_list,
-            scrollbox = scrollbox(),
+            scrollbars = scrollbars(),
             attr = attr,
         }
     }
@@ -611,6 +611,13 @@ hbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
 
 box_align :: proc(self: ^Widget, x, y: f32) {// {{{
     data := &self.data.(Box)
+    x, y := x, y
+    if data.scrollbars.vertical.enabled {
+        y -= data.scrollbars.vertical.position
+    }
+    if data.scrollbars.horizontal.enabled {
+        x -= data.scrollbars.horizontal.position
+    }
     if data.layout == .Vertical {
         vbox_align(self, x, y)
     } else {
@@ -632,28 +639,25 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     for widget in data.widgets {
         widget->init(handle, self)
     }
-    scrollbox_init(&data.scrollbox, handle, self)
-
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
         data := &self.data.(Box)
 
         if event.mods == {} {
-            if scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100) {
-                box_align(self, self.x - data.scrollbox.horizontal.position, self.y - data.scrollbox.vertical.position)
-            }
+            scrollbars_scroll(&data.scrollbars, -event.y, 0, 100, 100)
+            box_align(self, self.x, self.y)
         }
         return true
     })
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(Box)
-        return scrollbox_clicked_handler(&data.scrollbox, event)
+        scrollbars_click(&data.scrollbars, event)
+        return true
     })
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(Box)
-        if scrollbox_dragged_handler(&data.scrollbox, event) {
-            box_align(self, self.x - data.scrollbox.horizontal.position, self.y - data.scrollbox.vertical.position)
-        }
+        scrollbars_mouse_motion(&data.scrollbars, event)
+        box_align(self, self.x, self.y)
         return true
     })
 }// }}}
@@ -842,16 +846,18 @@ box_resize :: proc(self: ^Widget, w, h: f32) {// {{{
         hbox_resize(self, w, h)
     }
 
-    data.scrollbox.vertical.enabled = data.content_h > self.h
-    if !data.scrollbox.vertical.enabled {
-        data.scrollbox.vertical.position = 0
-        data.scrollbox.vertical.target_position = 0
+    data.scrollbars.vertical.enabled = data.content_h > self.h
+    if !data.scrollbars.vertical.enabled {
+        data.scrollbars.vertical.position = 0
+        data.scrollbars.vertical.target_position = 0
     }
-    data.scrollbox.horizontal.enabled = data.content_w > self.w
-    if !data.scrollbox.horizontal.enabled {
-        data.scrollbox.horizontal.position = 0
-        data.scrollbox.horizontal.target_position = 0
+    data.scrollbars.horizontal.enabled = data.content_w > self.w
+    if !data.scrollbars.horizontal.enabled {
+        data.scrollbars.horizontal.position = 0
+        data.scrollbars.horizontal.target_position = 0
     }
+    scrollbars_resize(&data.scrollbars, self.w, self.h, data.content_w, data.content_h)
+    scrollbars_align(&data.scrollbars, self.x, self.y)
 }// }}}
 
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
@@ -862,7 +868,7 @@ box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
             widget->update(handle, self)
         }
     }
-    scrollbox_update(&data.scrollbox, data.content_w, data.content_h)
+    scrollbars_update(&data.scrollbars, handle)
 }// }}}
 
 box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
@@ -875,7 +881,7 @@ box_draw :: proc(self: ^Widget, handle: ^Handle) {// {{{
     for widget in data.widgets {
         widget_draw(widget, handle)
     }
-    scrollbox_draw(&data.scrollbox, handle)
+    scrollbars_draw(&data.scrollbars, handle)
 
     bt := data.attr.style.border_thickness
     bc := data.attr.style.border_color
@@ -1045,13 +1051,13 @@ ContentSize :: struct {
 DrawBoxAttributes :: struct {
     props: DrawBoxProperties,
     zoom_min, zoom_max, zoom_step: f32,
-    scrollbox_attr: ScrollboxAttributes,
+    scrollbars_attr: ScrollbarsAttributes,
 }
 
 DrawBox :: struct {
     content_size: ContentSize,
     zoombox: ZoomBox,
-    scrollbox: ScrollBox,
+    scrollbars: Scrollbars,
     user_init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     user_update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
@@ -1074,7 +1080,7 @@ draw_box :: proc(
         draw = draw_box_draw,
         data = DrawBox{
             zoombox = zoombox(attr.zoom_min, attr.zoom_max, attr.zoom_step),
-            scrollbox = scrollbox(attr.scrollbox_attr),
+            scrollbars = scrollbars(attr.scrollbars_attr),
             user_draw = draw,
             user_init = init,
             user_update = update,
@@ -1092,7 +1098,6 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         data.user_init(handle, self, data.user_data)
     }
 
-    scrollbox_init(&data.scrollbox, handle, self)
     zoombox_init(&data.zoombox, self)
 
     add_event_handler(handle, self, proc(self: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {
@@ -1107,7 +1112,8 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         case sdl.K_K: vcount = -1
         case sdl.K_J: vcount = 1
         }
-        return scrollbox_scrolled_handler(&data.scrollbox, vcount, hcount, 100, 100)
+        scrollbars_scroll(&data.scrollbars, vcount, hcount, 100, 100)
+        return true
     })
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
@@ -1116,19 +1122,21 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         if .Control in event.mods && .Zoomable in data.attr.props {
             return zoombox_zoom_handler(&data.zoombox, event.x, event.y, event.mods)
         } else if .WithScrollbar in data.attr.props {
-            return scrollbox_scrolled_handler(&data.scrollbox, -event.y, 0, 100, 100)
+            scrollbars_scroll(&data.scrollbars, -event.y, 0, 100, 100)
         }
         return true
     })
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         if .WithScrollbar not_in data.attr.props do return false
-        return scrollbox_clicked_handler(&data.scrollbox, event)
+        scrollbars_click(&data.scrollbars, event)
+        return true
     })
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(DrawBox)
         if .WithScrollbar not_in data.attr.props do return false
-        return scrollbox_dragged_handler(&data.scrollbox, event)
+        scrollbars_mouse_motion(&data.scrollbars, event)
+        return true
     })
 }
 
@@ -1138,7 +1146,9 @@ draw_box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         data.content_size = data.user_update(handle, self, data.user_data)
     }
     if .WithScrollbar in data.attr.props {
-        scrollbox_update(&data.scrollbox, data.content_size.width, data.content_size.height)
+        scrollbars_resize(&data.scrollbars, self.w, self.h, data.content_size.width, data.content_size.height)
+        scrollbars_align(&data.scrollbars, self.x, self.y)
+        scrollbars_update(&data.scrollbars, handle)
     }
 }
 
@@ -1149,6 +1159,6 @@ draw_box_draw :: proc(self: ^Widget, handle: ^Handle) {
     data.user_draw(handle, self, data.user_data)
     handle.rel_rect = old_rel_rect
     if .WithScrollbar in data.attr.props {
-        scrollbox_draw(&data.scrollbox, handle)
+        scrollbars_draw(&data.scrollbars, handle)
     }
 }
