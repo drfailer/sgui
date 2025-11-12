@@ -611,6 +611,13 @@ hbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
 
 box_align :: proc(self: ^Widget, x, y: f32) {// {{{
     data := &self.data.(Box)
+    x, y := x, y
+    if data.scrollbars.vertical.enabled {
+        y -= data.scrollbars.vertical.position
+    }
+    if data.scrollbars.horizontal.enabled {
+        x -= data.scrollbars.horizontal.position
+    }
     if data.layout == .Vertical {
         vbox_align(self, x, y)
     } else {
@@ -638,7 +645,7 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
 
         if event.mods == {} {
             scrollbars_scroll(&data.scrollbars, -event.y, 0, 100, 100)
-            box_align(self, self.x - data.scrollbars.horizontal.position, self.y - data.scrollbars.vertical.position)
+            box_align(self, self.x, self.y)
         }
         return true
     })
@@ -650,7 +657,7 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
         data := &self.data.(Box)
         scrollbars_mouse_motion(&data.scrollbars, event)
-        box_align(self, self.x - data.scrollbars.horizontal.position, self.y - data.scrollbars.vertical.position)
+        box_align(self, self.x, self.y)
         return true
     })
 }// }}}
