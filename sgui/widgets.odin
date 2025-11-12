@@ -623,6 +623,7 @@ box_align :: proc(self: ^Widget, x, y: f32) {// {{{
     } else {
         hbox_align(self, x, y)
     }
+    scrollbars_align(&data.scrollbars, self.x, self.y)
 }// }}}
 
 box_add_widget :: proc(box_widget: ^Widget, widget: ^Widget) {// {{{
@@ -857,7 +858,6 @@ box_resize :: proc(self: ^Widget, w, h: f32) {// {{{
         data.scrollbars.horizontal.target_position = 0
     }
     scrollbars_resize(&data.scrollbars, self.w, self.h, data.content_w, data.content_h)
-    scrollbars_align(&data.scrollbars, self.x, self.y)
 }// }}}
 
 box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
