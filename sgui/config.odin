@@ -84,6 +84,7 @@ OPTS := Opts{
         zoom_min = 1, zoom_max = 100, zoom_step = 1,
     },
     scrollbars_attr = ScrollbarsAttributes{
+        props = ScrollbarsProperties{},
         style = ScrollbarStyle{
             track_color = Color{50, 50, 50, 255},
             track_padding = Padding{0, 0, 0, 0},

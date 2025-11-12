@@ -41,6 +41,7 @@ ScrollbarStyle :: struct {
 
 Scrollbar :: struct {
     enabled: bool,
+    hovered: bool,
     x, y: f32,
     direction: ScrollbarDirection,
     thumb_size: f32,
@@ -51,6 +52,7 @@ Scrollbar :: struct {
     thumb_position: f32,
     scale_factor: f32,
     thumb_scroll_step: f32,
+    content_pixel_ratio: f32,
     scroll_step: f32,
     // states
     thumb_state: ScrollbarThumbState,
@@ -97,6 +99,9 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
     padding: f32
 
     self.enabled = content_size > window_size
+
+    if !self.enabled do return
+
     self.window_size = window_size
     self.content_size = content_size
 
@@ -117,15 +122,21 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
         self.thumb_size = MIN_SCROLLBAR_THUMB_SIZE
         self.thumb_scroll_step = (self.track_size - thumb_size) / (self.track_size - MIN_SCROLLBAR_THUMB_SIZE)
     }
+    self.content_pixel_ratio = self.thumb_scroll_step / self.scale_factor
+    // make sure the current position fits in the new dimensions
+    scrollbar_update_position(self, self.position)
 }
 
 scrollbars_resize :: proc(self: ^Scrollbars, window_w, window_h, content_w, content_h: f32) {
+    window_w := window_w
     self.window_w = window_w
     self.window_h = window_h
 
-    // TODO: resize the vertical scrollbar when the horizontal is always shown
     if .V_Disabled not_in self.attr.props {
         scrollbar_resize(&self.vertical, window_h, content_h)
+        if self.vertical.enabled && .V_ShowOnHover not_in self.attr.props {
+            window_w -= SCROLLBAR_THICKNESS
+        }
     }
     if .H_Disabled not_in self.attr.props {
         scrollbar_resize(&self.horizontal, window_w, content_w)
@@ -140,19 +151,26 @@ scrollbars_align :: proc(self: ^Scrollbars, x, y: f32) {
     self.horizontal.y = y + self.window_h - SCROLLBAR_THICKNESS
 }
 
+scrollbar_update_position :: proc(self: ^Scrollbar, position: f32) {
+    self.position = clamp(position, 0, self.content_size - self.window_size)
+    self.thumb_position = self.position / self.content_pixel_ratio
+}
+
 scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) {
+    // scroll while buttons are clicked
     if self.button1_state == .Clicked {
         scrollbar_scroll(self, -1, 10)
     } else if self.button2_state == .Clicked {
         scrollbar_scroll(self, 1, 10)
     }
+
+    // update the position
+    // TODO: find a better smooth scrolling solution
     if self.target_position < self.position {
-        self.position = max(self.position - 100, self.target_position)
+        scrollbar_update_position(self, max(self.position - 100, self.target_position))
     } else if self.target_position > self.position {
-        self.position = min(self.position + 100, self.target_position)
+        scrollbar_update_position(self, min(self.position + 100, self.target_position))
     }
-    self.position = clamp(self.position, 0, self.content_size - self.window_size)
-    self.thumb_position = self.position / self.thumb_scroll_step * self.scale_factor
 }
 
 scrollbars_update :: proc(self: ^Scrollbars, handle: ^Handle) {
@@ -236,12 +254,15 @@ scrollbar_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
 }
 
 scrollbars_draw :: proc(self: ^Scrollbars, handle: ^Handle) {
-    // TODO: show on hover?
     if .V_Disabled not_in self.attr.props {
-        scrollbar_draw(&self.vertical, handle)
+        if .V_ShowOnHover not_in self.attr.props || self.vertical.hovered {
+            scrollbar_draw(&self.vertical, handle)
+        }
     }
     if .H_Disabled not_in self.attr.props {
-        scrollbar_draw(&self.horizontal, handle)
+        if .H_ShowOnHover not_in self.attr.props || self.horizontal.hovered {
+            scrollbar_draw(&self.horizontal, handle)
+        }
     }
 }
 
@@ -308,6 +329,23 @@ scrollbar_mouse_on_button2 :: proc(self: ^Scrollbar, mx, my: f32) -> (result: bo
     return result
 }
 
+scrollbar_hover :: proc(self: ^Scrollbar, mx, my: f32) {
+        self.thumb_state = .Idle
+        self.button1_state = .Idle
+        self.button2_state = .Idle
+        self.hovered = false
+        if scrollbar_mouse_on_thumb(self, mx, my) {
+            self.thumb_state = .Hovered
+            self.hovered = true
+        } else if scrollbar_mouse_on_button1(self, mx, my) {
+            self.button1_state = .Hovered
+            self.hovered = true
+        } else if scrollbar_mouse_on_button2(self, mx, my) {
+            self.button2_state = .Hovered
+            self.hovered = true
+        }
+}
+
 scrollbar_click :: proc(self: ^Scrollbar, event: MouseClickEvent) {
     if event.down {
         if self.thumb_state == .Hovered {
@@ -318,24 +356,14 @@ scrollbar_click :: proc(self: ^Scrollbar, event: MouseClickEvent) {
             self.button2_state = .Clicked
         } else if scrollbar_mouse_on_track(self, event.x, event.y) {
             if self.direction == .Vertical {
-                self.position = (cast(f32)event.y - self.y) / self.scale_factor * self.thumb_scroll_step - self.window_size / 2
+                scrollbar_update_position(self, (cast(f32)event.y - self.y) * self.content_pixel_ratio - self.window_size / 2)
             } else {
-                self.position = (cast(f32)event.x - self.x) / self.scale_factor * self.thumb_scroll_step - self.window_size / 2
+                scrollbar_update_position(self, (cast(f32)event.x - self.x) * self.content_pixel_ratio - self.window_size / 2)
             }
-            self.position = clamp(self.position, 0, self.content_size - self.window_size)
             self.target_position = self.position
         }
     } else {
-        self.thumb_state = .Idle
-        self.button1_state = .Idle
-        self.button2_state = .Idle
-        if scrollbar_mouse_on_thumb(self, event.x, event.y) {
-            self.thumb_state = .Hovered
-        } else if scrollbar_mouse_on_button1(self, event.x, event.y) {
-            self.button1_state = .Hovered
-        } else if scrollbar_mouse_on_button2(self, event.x, event.y) {
-            self.button2_state = .Hovered
-        }
+        scrollbar_hover(self, event.x, event.y)
     }
 }
 
@@ -352,23 +380,13 @@ scrollbars_click :: proc(self: ^Scrollbars, event: MouseClickEvent) {
 scrollbar_mouse_motion :: proc(self: ^Scrollbar, event: MouseMotionEvent) {
     if self.thumb_state == .Selected {
         if self.direction == .Vertical {
-            self.position += cast(f32)event.yd / self.scale_factor * self.thumb_scroll_step
+            scrollbar_update_position(self, self.position + cast(f32)event.yd * self.content_pixel_ratio)
         } else {
-            self.position += cast(f32)event.xd / self.scale_factor * self.thumb_scroll_step
+            scrollbar_update_position(self, self.position + cast(f32)event.xd * self.content_pixel_ratio)
         }
-        self.position = clamp(self.position, 0, self.content_size - self.window_size)
         self.target_position = self.position
     } else if self.button1_state != .Clicked && self.button2_state != .Clicked {
-        self.thumb_state = .Idle
-        self.button1_state = .Idle
-        self.button2_state = .Idle
-        if scrollbar_mouse_on_thumb(self, event.x, event.y) {
-            self.thumb_state = .Hovered
-        } else if scrollbar_mouse_on_button1(self, event.x, event.y) {
-            self.button1_state = .Hovered
-        } else if scrollbar_mouse_on_button2(self, event.x, event.y) {
-            self.button2_state = .Hovered
-        }
+        scrollbar_hover(self, event.x, event.y)
     }
 }
 
