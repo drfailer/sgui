@@ -134,7 +134,7 @@ scrollbars_resize :: proc(self: ^Scrollbars, window_w, window_h, content_w, cont
 
     if .V_Disabled not_in self.attr.props {
         scrollbar_resize(&self.vertical, window_h, content_h)
-        if self.vertical.enabled && .V_ShowOnHover not_in self.attr.props {
+        if self.vertical.enabled && .V_ShowOnHover not_in self.attr.props && window_w < content_w {
             window_w -= SCROLLBAR_THICKNESS
         }
     }
