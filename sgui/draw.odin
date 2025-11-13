@@ -166,6 +166,8 @@ draw_rounded_box_corner_edge_pixel :: proc(handle: ^Handle, cx, cy: f32, x, y: i
 
 draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
     if bw < radius || bh < radius {
+        if bw < 1 || bh < 1 do return
+        draw_rect(handle, bx, by, bw, bh, color)
         return
     }
 
@@ -236,6 +238,11 @@ draw_rounded_box :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: C
 
 draw_rounded_frame :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color: Color) {
     if bw < radius || bh < radius {
+        if bw < 1 || bh < 1 do return
+        draw_rect(handle, bx, by, bw, 1, color)
+        draw_rect(handle, bx, by + bh, bw, 1, color)
+        draw_rect(handle, bx, by, 1, bh, color)
+        draw_rect(handle, bx + bw, by, 1, bh, color)
         return
     }
 
