@@ -240,9 +240,9 @@ draw_rounded_frame :: proc (handle: ^Handle, bx, by, bw, bh, radius: f32, color:
     if bw < radius || bh < radius {
         if bw < 1 || bh < 1 do return
         draw_rect(handle, bx, by, bw, 1, color)
-        draw_rect(handle, bx, by + bh, bw, 1, color)
+        draw_rect(handle, bx, by + bh - 1, bw, 1, color)
         draw_rect(handle, bx, by, 1, bh, color)
-        draw_rect(handle, bx + bw, by, 1, bh, color)
+        draw_rect(handle, bx + bw - 1, by, 1, bh, color)
         return
     }
 
