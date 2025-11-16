@@ -28,8 +28,7 @@ Handle :: struct {
     /* sdl */
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
-    font_cache: su.FontCache,
-    text_engine: ^sdl_ttf.TextEngine,
+    text_engine: ^su.TextEngine,
     mouse_x, mouse_y: f32,
     window_w, window_h: f32,
     resize: bool,
@@ -80,8 +79,7 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
 }
 
 destroy :: proc(handle: ^Handle) {
-    sdl_ttf.DestroyRendererTextEngine(handle.text_engine)
-    su.font_cache_destroy(&handle.font_cache)
+    su.text_engine_destroy(handle.text_engine)
     sdl_ttf.Quit()
     sdl.DestroyRenderer(handle.renderer)
     sdl.DestroyWindow(handle.window)
@@ -124,12 +122,7 @@ init :: proc(handle: ^Handle) {
         return
     }
 
-    handle.text_engine = sdl_ttf.CreateRendererTextEngine(handle.renderer)
-    if handle.text_engine == nil {
-        fmt.printfln("error: couldn't create text engine.")
-        return
-    }
-    handle.font_cache = su.font_cache_create()
+    handle.text_engine = su.text_engine_create(handle.renderer)
 
     w, h: i32
     assert(sdl.GetWindowSize(handle.window, &w, &h));
@@ -437,6 +430,16 @@ process_events :: proc(handle: ^Handle) {
     }
 }
 
+// text utilities //////////////////////////////////////////////////////////////
+
+create_text :: proc(handle: ^Handle, content: string, font: string, font_size: f32) -> ^su.Text {
+    return su.text_engine_create_text(handle.text_engine, content, font, font_size)
+}
+
+draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
+    su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
+}
+
 // draw utilities //////////////////////////////////////////////////////////////
 
 draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
@@ -446,10 +449,6 @@ draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
     sw := max(0, w - abs(sx - abs(x)))
     sh := max(0, h - abs(sy - abs(y)))
     sdl.RenderFillRect(handle.renderer, &Rect{sx + handle.rel_rect.x, sy + handle.rel_rect.y, sw, sh})
-}
-
-draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
-    su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
 add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {

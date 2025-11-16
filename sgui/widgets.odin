@@ -194,7 +194,7 @@ TextAttributes :: struct {
 }
 
 Text :: struct {
-    text: su.Text,
+    text: ^su.Text,
     content: string,
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
@@ -242,17 +242,15 @@ text :: proc {
 
 text_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Text)
-    data.text = su.text_create(
-        handle.text_engine,
-        su.font_cache_get_font(&handle.font_cache, data.attr.style.font, data.attr.style.font_size),
-        data.content)
-    su.text_update_color(&data.text, sdl.Color{
+    data.text = create_text(handle, data.content, data.attr.style.font, data.attr.style.font_size)
+    su.text_set_color(data.text, sdl.Color{
         data.attr.style.color.r,
         data.attr.style.color.g,
         data.attr.style.color.b,
         data.attr.style.color.a
     })
-    w, h := su.text_size(&data.text)
+    su.text_update(data.text)
+    w, h := su.text_size(data.text)
     self.w = w
     self.h = h
     self.min_w = w
@@ -263,12 +261,13 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Text)
     if data.content_proc != nil {
         content, color := data.content_proc(data.content_proc_data)
-        su.text_update_text(&data.text, content)
-        su.text_update_color(&data.text, sdl.Color{color.r, color.g, color.b, color.a})
+        su.text_set_text(data.text, content)
+        su.text_set_color(data.text, sdl.Color{color.r, color.g, color.b, color.a})
         if data.attr.style.wrap_width > 0 {
-            su.text_update_wrap_width(&data.text, data.attr.style.wrap_width)
+            su.text_set_wrap_width(data.text, data.attr.style.wrap_width)
         }
-        w, h := su.text_size(&data.text)
+        su.text_update(data.text)
+        w, h := su.text_size(data.text)
         if w > self.w || h > self.h {
             handle.resize = true
         }
@@ -281,7 +280,7 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 
 text_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Text)
-    draw_text(handle, &data.text, self.x, self.y)
+    draw_text(handle, data.text, self.x, self.y)
 }
 
 // button //////////////////////////////////////////////////////////////////////
@@ -314,7 +313,7 @@ ButtonAttributes :: struct {
 
 Button :: struct {
     label: string,
-    text: su.Text,
+    text: ^su.Text,
     state: ButtonState,
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
@@ -350,11 +349,8 @@ button :: proc(
 
 button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Button)
-    data.text = su.text_create(
-        handle.text_engine,
-        su.font_cache_get_font(&handle.font_cache, data.attr.style.label_font_path, data.attr.style.label_font_size),
-        data.label)
-    self.w, self.h = su.text_size(&data.text)
+    data.text = create_text(handle, data.label, data.attr.style.label_font_path, data.attr.style.label_font_size)
+    self.w, self.h = su.text_size(data.text)
     self.w += data.attr.style.padding.left + data.attr.style.padding.right
     self.h += data.attr.style.padding.top + data.attr.style.padding.bottom
     self.min_w = self.w
@@ -392,7 +388,8 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
     border_color := data.attr.style.colors[data.state].border
     border_thickness := data.attr.style.border_thickness
 
-    su.text_update_color(&data.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
+    su.text_set_color(data.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
+    su.text_update(data.text)
     if data.attr.style.corner_radius > 0 {
         if border_thickness > 0 {
             draw_rounded_box_with_border(handle, self.x, self.y, self.w, self.h,
@@ -411,10 +408,10 @@ button_draw :: proc(self: ^Widget, handle: ^Handle) {
                           self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                           bg_color)
     }
-    label_w, label_h := su.text_size(&data.text)
+    label_w, label_h := su.text_size(data.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
-    draw_text(handle, &data.text, label_x, label_y)
+    draw_text(handle, data.text, label_x, label_y)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
@@ -932,7 +929,7 @@ RadioButtonAttributes :: struct {
 RadioButton :: struct {
     checked: bool,
     label: string,
-    label_text: su.Text,
+    label_text: ^su.Text,
     button_offset: f32,
     label_offset: f32,
     attr: RadioButtonAttributes,
@@ -960,18 +957,16 @@ radio_button :: proc(
 radio_button_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(RadioButton)
 
-    data.label_text = su.text_create(
-        handle.text_engine,
-        su.font_cache_get_font(&handle.font_cache, data.attr.style.font, data.attr.style.font_size),
-        data.label)
+    data.label_text = create_text(handle, data.label, data.attr.style.font, data.attr.style.font_size)
     label_color := su.Color{
         data.attr.style.label_color.r,
         data.attr.style.label_color.g,
         data.attr.style.label_color.b,
         data.attr.style.label_color.a,
     }
-    su.text_update_color(&data.label_text, label_color)
-    label_w, label_h := su.text_size(&data.label_text)
+    su.text_set_color(data.label_text, label_color)
+    su.text_update(data.label_text)
+    label_w, label_h := su.text_size(data.label_text)
 
     d := 2 * data.attr.style.base_radius
     self.w = d + data.attr.style.label_padding + label_w
@@ -1017,7 +1012,7 @@ radio_button_draw :: proc(self: ^Widget, handle: ^Handle) {
 
     text_xoffset := 2 * r + data.attr.style.label_padding
     text_yoffset := data.label_offset
-    draw_text(handle, &data.label_text, self.x + text_xoffset, self.y + text_yoffset)
+    draw_text(handle, data.label_text, self.x + text_xoffset, self.y + text_yoffset)
 }
 
 radio_button_get_value :: proc(self: ^Widget) -> bool {
