@@ -16,6 +16,8 @@ package sgui
 import "core:fmt"
 import su "sdl_utils"
 import sdl "vendor:sdl3"
+import sdl_img "vendor:sdl3/image"
+import "core:strings"
 import "core:log"
 
 Pixel :: distinct [4]u8
@@ -173,11 +175,6 @@ Menu :: struct { // top menu
 Line :: struct { // separator line
 }
 
-Image :: struct {
-    lable: string,
-    path: string,
-}
-
 // text ////////////////////////////////////////////////////////////////////////
 
 // TODO: text wrapping
@@ -281,6 +278,42 @@ text_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
 text_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Text)
     draw_text(handle, data.text, self.x, self.y)
+}
+
+// image ///////////////////////////////////////////////////////////////////////
+
+// TODO: rect
+Image :: struct {
+    file: string,
+    texture: ^sdl.Texture,
+    width, height: f32,
+}
+
+image :: proc(file: string) -> (widget: ^Widget) {
+    widget = new(Widget)
+    widget.data = Image{
+        file = file,
+    }
+    return widget
+}
+
+image_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
+    data := self.data.(Image)
+    cfile := strings.clone_to_cstring(data.file)
+    defer delete(cfile)
+    data.texture = sdl_img.LoadTexture(handle.renderer, cfile)
+    sdl.GetTextureSize(data.texture, &data.width, &data.height)
+}
+
+image_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
+}
+
+image_draw :: proc(self: ^Widget, handle: ^Handle) {
+    data := self.data.(Image)
+    // TODO
+	// if !sdl.RenderTexture(handle.renderer, data.texture, srcrect, dstrect: Maybe(^FRect)) {
+	//        log.warn("impossible to draw texture")
+	//    }
 }
 
 // button //////////////////////////////////////////////////////////////////////
