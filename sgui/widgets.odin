@@ -25,6 +25,7 @@ Pixel :: distinct [4]u8
 // widget //////////////////////////////////////////////////////////////////////
 
 WidgetInitProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
+WidgetDestroyProc :: proc(self: ^Widget, handle: ^Handle)
 WidgetUpdateProc :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget)
 WidgetDrawProc :: proc(self: ^Widget, handle: ^Handle)
 
@@ -62,6 +63,7 @@ Widget :: struct {
 
     /* procs */
     init: WidgetInitProc,
+    destroy: WidgetDestroyProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
 
@@ -76,10 +78,12 @@ WidgetData :: union {
     Box,
     DrawBox,
     RadioButton,
+    Image,
     rawptr, // custom widget
 }
 
 widget_init :: proc(widget: ^Widget, handle: ^Handle) {
+    if widget.init == nil do return
     root := Widget{
         x = 0,
         y = 0,
@@ -88,6 +92,11 @@ widget_init :: proc(widget: ^Widget, handle: ^Handle) {
     }
     widget->init(handle, &root)
     widget_resize(widget, handle)
+}
+
+widget_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+    if widget.destroy == nil do return
+    widget->destroy(handle)
 }
 
 widget_resize :: proc(widget: ^Widget, handle: ^Handle) {
@@ -113,6 +122,7 @@ widget_align :: proc(widget: ^Widget, x, y: f32) {
 }
 
 widget_update :: proc(handle: ^Handle, widget: ^Widget) {
+    if widget.update == nil do return
     root := Widget{
         x = handle.rel_rect.x,
         y = handle.rel_rect.y,
@@ -123,7 +133,7 @@ widget_update :: proc(handle: ^Handle, widget: ^Widget) {
 }
 
 widget_draw :: proc(widget: ^Widget, handle: ^Handle) {
-    if widget.draw == nil do return
+    // if widget.draw == nil do return // assume it is never the case
     if !handle.processing_ordered_draws && widget.z_index > 0 {
         add_ordered_draw(handle, widget)
     } else if !widget.disabled && !widget.invisible {
@@ -496,6 +506,7 @@ box :: proc(// {{{
     layout: BoxLayout,
     attr: BoxAttributes,
     init: WidgetInitProc,
+    destroy: WidgetDestroyProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
     z_index: u64,
@@ -515,6 +526,7 @@ box :: proc(// {{{
         min_w = attr.w,
         min_h = attr.h,
         init = init,
+        destroy = destroy,
         update = update,
         draw = draw,
         data = Box{
@@ -548,11 +560,11 @@ box :: proc(// {{{
 }// }}}
 
 vbox :: proc(widgets: ..^Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
-    return box(.Vertical, attr, box_init, box_update, box_draw, z_index, ..widgets)
+    return box(.Vertical, attr, box_init, box_destroy, box_update, box_draw, z_index, ..widgets)
 }// }}}
 
 hbox :: proc(widgets: ..^Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^Widget {// {{{
-    return box(.Horizontal, attr, box_init, box_update, box_draw, z_index, ..widgets)
+    return box(.Horizontal, attr, box_init, box_destroy, box_update, box_draw, z_index, ..widgets)
 }// }}}
 
 vbox_align :: proc(self: ^Widget, x, y: f32) {// {{{
@@ -668,7 +680,9 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     data := &self.data.(Box)
 
     for widget in data.widgets {
-        widget->init(handle, self)
+        if widget.init != nil {
+            widget->init(handle, self)
+        }
     }
     add_event_handler(handle, self, proc(self: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(self, handle.mouse_x, handle.mouse_y) do return false
@@ -691,6 +705,14 @@ box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
         box_align(self, self.x, self.y)
         return true
     })
+}// }}}
+
+box_destroy :: proc(self: ^Widget, handle: ^Handle) {// {{{
+    data := &self.data.(Box)
+
+    for widget in data.widgets {
+        widget_destroy(widget, handle)
+    }
 }// }}}
 
 box_find_content_w :: proc(self: ^Widget, parent_w: f32) -> (w: f32, ttl_w: f32, max_w: f32) {// {{{

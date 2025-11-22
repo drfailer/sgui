@@ -186,6 +186,12 @@ draw :: proc(handle: ^Handle) {
     handle.processing_ordered_draws = false
 }
 
+// terminate ///////////////////////////////////////////////////////////////////
+
+terminate :: proc(handle: ^Handle) {
+    widget_destroy(handle.layers[handle.current_layer], handle)
+}
+
 // run /////////////////////////////////////////////////////////////////////////
 
 run :: proc(handle: ^Handle) {
@@ -204,6 +210,7 @@ run :: proc(handle: ^Handle) {
         // sleep to match the FPS
         time.sleep(1_000_000_000 / FPS - time.tick_since(handle.tick))
     }
+    terminate(handle)
 }
 
 // events //////////////////////////////////////////////////////////////////////
