@@ -292,7 +292,12 @@ text_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // image ///////////////////////////////////////////////////////////////////////
 
-// TODO: rect
+// TODO: add a custom size for the texture
+// can the size be relative to the original image size (ratio?)???
+// also need some helper functions to handle textures in draw boxes (not so
+// sure that this specific widget will be very useful for anything else that
+// printing a logo)
+// TODO: add icon buttons (label_button/icon_button)
 Image :: struct {
     file: string,
     texture: ^sdl.Texture,
@@ -301,29 +306,42 @@ Image :: struct {
 
 image :: proc(file: string) -> (widget: ^Widget) {
     widget = new(Widget)
-    widget.data = Image{
-        file = file,
+    widget^ = Widget{
+        init = image_init,
+        destroy = image_destroy,
+        draw = image_draw,
+        data = Image{
+            file = file,
+        }
     }
     return widget
 }
 
 image_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
-    data := self.data.(Image)
+    data := &self.data.(Image)
     cfile := strings.clone_to_cstring(data.file)
     defer delete(cfile)
     data.texture = sdl_img.LoadTexture(handle.renderer, cfile)
     sdl.GetTextureSize(data.texture, &data.width, &data.height)
+    self.w = data.width
+    self.h = data.height
+    self.min_w = data.width
+    self.min_h = data.height
 }
 
-image_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
+image_destroy :: proc(self: ^Widget, handle: ^Handle) {
+    data := &self.data.(Image)
+    sdl.DestroyTexture(data.texture)
 }
 
 image_draw :: proc(self: ^Widget, handle: ^Handle) {
-    data := self.data.(Image)
-    // TODO
-	// if !sdl.RenderTexture(handle.renderer, data.texture, srcrect, dstrect: Maybe(^FRect)) {
-	//        log.warn("impossible to draw texture")
-	//    }
+    data := &self.data.(Image)
+    // TODO: make the dest rect and the src rect configurable
+    srcrect := sdl.FRect{ 0, 0, data.width, data.height }
+    dstrect := sdl.FRect{ self.x, self.y, self.w, self.h }
+	if !sdl.RenderTexture(handle.renderer, data.texture, &srcrect, &dstrect) {
+        log.warn("impossible to draw texture", sdl.GetError(), data.texture)
+    }
 }
 
 // button //////////////////////////////////////////////////////////////////////
@@ -1109,6 +1127,7 @@ DrawBox :: struct {
     zoombox: ZoomBox,
     scrollbars: Scrollbars,
     user_init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
+    user_destroy: proc(handle: ^Handle, user_data: rawptr),
     user_update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     user_data: rawptr,
@@ -1119,6 +1138,7 @@ draw_box :: proc(
     draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
     update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
     init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
+    destroy: proc(handle: ^Handle, user_data: rawptr) = nil,
     data: rawptr = nil,
     attr := OPTS.draw_box_attr,
 ) -> (draw_box: ^Widget) {
@@ -1126,6 +1146,7 @@ draw_box :: proc(
     draw_box^ = Widget{
         size_policy = {.FillW, .FillH},
         init = draw_box_init,
+        destroy = draw_box_destroy,
         update = draw_box_update,
         draw = draw_box_draw,
         data = DrawBox{
@@ -1133,6 +1154,7 @@ draw_box :: proc(
             scrollbars = scrollbars(attr.scrollbars_attr),
             user_draw = draw,
             user_init = init,
+            user_destroy = destroy,
             user_update = update,
             user_data = data,
             attr = attr,
@@ -1188,6 +1210,14 @@ draw_box_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
         scrollbars_mouse_motion(&data.scrollbars, event)
         return true
     })
+}
+
+draw_box_destroy :: proc(self: ^Widget, handle: ^Handle) {
+    data := &self.data.(DrawBox)
+
+    if data.user_destroy != nil {
+        data.user_destroy(handle, data.user_data)
+    }
 }
 
 draw_box_update :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
