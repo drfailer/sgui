@@ -1,4 +1,5 @@
 package sgui
+
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 

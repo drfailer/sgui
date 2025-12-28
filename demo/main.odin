@@ -1,4 +1,4 @@
-package sgui
+package demo
 
 import "core:fmt"
 import "core:time"
@@ -6,6 +6,7 @@ import "core:math"
 import "core:strings"
 import "core:mem"
 import "core:log"
+import "../sgui"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
@@ -34,9 +35,9 @@ DATA :: [?]MeasuredTime{
 DATA_BOX_HEIGHT :: 100
 MS_TO_PIXEL :: 1
 
-draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
-    box_data := &box.data.(DrawBox)
-    data_rect := Rect{
+draw_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) {
+    box_data := &box.data.(sgui.DrawBox)
+    data_rect := sgui.Rect{
         x = -box_data.scrollbars.horizontal.position,
         y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbars.vertical.position,
         w = box.w,
@@ -48,9 +49,9 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
         data_rect.y = 0
     }
 
-    draw_line(handle, 0, 0, 200, 100, Color{255, 255, 255, 255})
-    draw_line(handle, 0, 0, 200, 300, Color{255, 255, 255, 255})
-    draw_line(handle, 0, 0, 100, 300, Color{255, 255, 255, 255})
+    sgui.draw_line(handle, 0, 0, 200, 100, sgui.Color{255, 255, 255, 255})
+    sgui.draw_line(handle, 0, 0, 200, 300, sgui.Color{255, 255, 255, 255})
+    sgui.draw_line(handle, 0, 0, 100, 300, sgui.Color{255, 255, 255, 255})
 
     // compute the scale depending on the zoom level
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
@@ -58,10 +59,10 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
 
     for data, idx in DATA {
         data_rect.w = scaling_factor * cast(f32)(data.end - data.begin)
-        draw_rounded_box(handle, data_rect.x, data_rect.y,
-            data_rect.w, data_rect.h, box_data.zoombox.lvl * 20, Color{255, 255 * cast(u8)(idx % 2), 255, 255})
-        draw_rounded_box(handle, data_rect.x + 1, data_rect.y + 1,
-            data_rect.w - 2, data_rect.h - 2, box_data.zoombox.lvl * 20, Color{100, 100 * cast(u8)(idx % 2), 100, 255})
+        sgui.draw_rounded_box(handle, data_rect.x, data_rect.y,
+            data_rect.w, data_rect.h, box_data.zoombox.lvl * 20, sgui.Color{255, 255 * cast(u8)(idx % 2), 255, 255})
+        sgui.draw_rounded_box(handle, data_rect.x + 1, data_rect.y + 1,
+            data_rect.w - 2, data_rect.h - 2, box_data.zoombox.lvl * 20, sgui.Color{100, 100 * cast(u8)(idx % 2), 100, 255})
         data_rect.x += data_rect.w
 
         if data_rect.x > box.w {
@@ -69,19 +70,20 @@ draw_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) {
         }
     }
 
-    draw_rounded_frame(handle, 400, 400, 100, 100, 20, Color{255, 255, 255, 255})
+    sgui.draw_rounded_frame(handle, 400, 400, 100, 100, 20, sgui.Color{255, 255, 255, 255})
 }
 
-update_data :: proc(handle: ^Handle, box: ^Widget, _: rawptr) -> ContentSize {
+update_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) -> sgui.ContentSize {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    box_data := &box.data.(DrawBox)
-    return ContentSize{
+    box_data := &box.data.(sgui.DrawBox)
+    return sgui.ContentSize{
         box_data.zoombox.lvl * MS_TO_PIXEL * cast(f32)ttl_time,
         box_data.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 }
 
-side_pannel_widget :: proc() -> (widget: ^Widget) {
+side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
+    using sgui
     widget = hbox(
         vbox(
             text("Side Pannel",
@@ -93,10 +95,10 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
                     },
                 }
             ),
-            button("hellope", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
-            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
-            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
-            button("clickme", proc(handle: ^Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("hellope", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
+            button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
             attr = BoxAttributes{
                 props = BoxProperties{.FitH, .FitW},
@@ -120,7 +122,8 @@ side_pannel_widget :: proc() -> (widget: ^Widget) {
     return widget
 }
 
-main_layer :: proc(handle: ^Handle) -> ^Widget {
+main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
+    using sgui
     return vbox(
         vbox(
             align_widgets(
@@ -204,9 +207,9 @@ main :: proc() {
 	}
     context.logger = log.create_console_logger()
     defer log.destroy_console_logger(context.logger)
-    handle := create()
-    add_layer(handle, make_widget(handle, main_layer))
-    init(handle)
-    run(handle)
-    destroy(handle)
+    handle := sgui.create()
+    sgui.add_layer(handle, sgui.make_widget(handle, main_layer))
+    sgui.init(handle)
+    sgui.run(handle)
+    sgui.destroy(handle)
 }
