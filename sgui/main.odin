@@ -125,6 +125,7 @@ main_layer :: proc(handle: ^Handle) -> ^Widget {
         vbox(
             align_widgets(
                 hbox(
+                    image("img/menu-icon.png", w = 20, h = 20),
                     text("Top pannel"),
                     text("Top pannel"),
                     attr = BoxAttributes{

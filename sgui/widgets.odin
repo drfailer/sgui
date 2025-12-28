@@ -301,10 +301,16 @@ text_draw :: proc(self: ^Widget, handle: ^Handle) {
 Image :: struct {
     file: string,
     texture: ^sdl.Texture,
-    width, height: f32,
+    w, h: f32,
+    iw, ih: f32,
+    srcrect: Rect,
 }
 
-image :: proc(file: string) -> (widget: ^Widget) {
+image :: proc(
+    file: string,
+    w, h: f32,
+    srcrect := Rect{0, 0, 0, 0},
+) -> (widget: ^Widget) {
     widget = new(Widget)
     widget^ = Widget{
         init = image_init,
@@ -312,6 +318,9 @@ image :: proc(file: string) -> (widget: ^Widget) {
         draw = image_draw,
         data = Image{
             file = file,
+            w = w,
+            h = h,
+            srcrect = srcrect,
         }
     }
     return widget
@@ -322,11 +331,27 @@ image_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     cfile := strings.clone_to_cstring(data.file)
     defer delete(cfile)
     data.texture = sdl_img.LoadTexture(handle.renderer, cfile)
-    sdl.GetTextureSize(data.texture, &data.width, &data.height)
-    self.w = data.width
-    self.h = data.height
-    self.min_w = data.width
-    self.min_h = data.height
+    sdl.GetTextureSize(data.texture, &data.iw, &data.ih)
+    if data.w == 0 {
+        self.w = data.iw
+        self.min_w = data.iw
+    } else {
+        self.w = data.w
+        self.min_w = data.w
+    }
+    if data.h == 0 {
+        self.h = data.ih
+        self.min_h = data.ih
+    } else {
+        self.h = data.h
+        self.min_h = data.h
+    }
+    if data.srcrect.w == 0 {
+        data.srcrect.w = data.iw
+    }
+    if data.srcrect.h == 0 {
+        data.srcrect.h = data.ih
+    }
 }
 
 image_destroy :: proc(self: ^Widget, handle: ^Handle) {
@@ -336,10 +361,8 @@ image_destroy :: proc(self: ^Widget, handle: ^Handle) {
 
 image_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Image)
-    // TODO: make the dest rect and the src rect configurable
-    srcrect := sdl.FRect{ 0, 0, data.width, data.height }
-    dstrect := sdl.FRect{ self.x, self.y, self.w, self.h }
-	if !sdl.RenderTexture(handle.renderer, data.texture, &srcrect, &dstrect) {
+    dstrect := Rect{ self.x, self.y, self.w, self.h }
+	if !sdl.RenderTexture(handle.renderer, data.texture, &data.srcrect, &dstrect) {
         log.warn("impossible to draw texture", sdl.GetError(), data.texture)
     }
 }
