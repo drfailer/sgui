@@ -102,6 +102,13 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
 
     if !self.enabled do return
 
+    // Adapt the scrollbar position to the zoom lvl. If this is not done, the
+    // scrollbar moves when zooming and dezooming.
+    if self.content_size != content_size {
+        self.position *= content_size / self.content_size
+        self.target_position = self.position
+    }
+
     self.window_size = window_size
     self.content_size = content_size
 
