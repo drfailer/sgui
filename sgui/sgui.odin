@@ -447,16 +447,7 @@ draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
 }
 
-// draw utilities //////////////////////////////////////////////////////////////
-
-draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
-    sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
-    sx := clamp(x, 0, handle.rel_rect.w)
-    sy := clamp(y, 0, handle.rel_rect.h)
-    sw := max(0, w - abs(sx - abs(x)))
-    sh := max(0, h - abs(sy - abs(y)))
-    sdl.RenderFillRect(handle.renderer, &Rect{sx + handle.rel_rect.x, sy + handle.rel_rect.y, sw, sh})
-}
+// ordered draw ////////////////////////////////////////////////////////////////
 
 add_widget_ordered_draw :: proc(handle: ^Handle, widget: ^Widget) {
     priority_queue.push(&handle.ordered_draws, OrderedDraw{

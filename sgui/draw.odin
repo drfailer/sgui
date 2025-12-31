@@ -5,7 +5,14 @@ import sdl "vendor:sdl3"
 
 import "core:fmt"
 
-// TODO
+draw_rect :: proc(handle: ^Handle, x, y, w, h: f32, color: Color) {
+    sdl.SetRenderDrawColor(handle.renderer, color.r, color.g, color.b, color.a)
+    sx := clamp(x, 0, handle.rel_rect.w)
+    sy := clamp(y, 0, handle.rel_rect.h)
+    sw := max(0, w - abs(sx - abs(x)))
+    sh := max(0, h - abs(sy - abs(y)))
+    sdl.RenderFillRect(handle.renderer, &Rect{sx + handle.rel_rect.x, sy + handle.rel_rect.y, sw, sh})
+}
 
 @(private="file")
 multiply_color :: proc(color: Color, a: f32) -> Color {
