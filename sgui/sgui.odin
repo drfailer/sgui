@@ -206,6 +206,8 @@ terminate :: proc(handle: ^Handle) {
 // run /////////////////////////////////////////////////////////////////////////
 
 run :: proc(handle: ^Handle) {
+    init(handle)
+
     for handle.run {
         handle.dt = cast(f32)time.duration_seconds(time.tick_lap_time(&handle.tick))
 
@@ -225,7 +227,6 @@ run :: proc(handle: ^Handle) {
 }
 
 // events //////////////////////////////////////////////////////////////////////
-
 
 EventHandler :: struct($P: typeid) {
     exec: P,

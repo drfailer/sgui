@@ -207,9 +207,11 @@ main :: proc() {
 	}
     context.logger = log.create_console_logger()
     defer log.destroy_console_logger(context.logger)
+
     handle := sgui.create()
+    defer sgui.destroy(handle)
+
     sgui.add_layer(handle, sgui.make_widget(handle, main_layer))
-    sgui.init(handle)
+
     sgui.run(handle)
-    sgui.destroy(handle)
 }
