@@ -38,7 +38,7 @@ Handle :: struct {
     widget_event_queue: queue.Queue(WidgetEvent),
 
     focused_widget: ^Widget,
-    tagged_widgets: map[u64]^Widget,
+    widget_storage: WidgetStorage,
 
     /* layers */
     layers: [dynamic]^Widget,
@@ -48,6 +48,13 @@ Handle :: struct {
     /* draw ordering (when widget.z_index > 0, it is added to the queue) */
     ordered_draws: priority_queue.Priority_Queue(OrderedDraw),
     processing_ordered_draws: bool,
+}
+
+WidgetTag :: u64
+
+WidgetStorage :: struct {
+    tagged_widgets: map[WidgetTag]^Widget,
+    named_widgets: map[string]^Widget,
 }
 
 OrderedDraw :: struct {
@@ -68,7 +75,10 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
     /* base */
     handle^ = Handle{
         layers = make([dynamic]^Widget),
-        tagged_widgets = make(map[u64]^Widget),
+        widget_storage = WidgetStorage{
+            tagged_widgets = make(map[WidgetTag]^Widget),
+            named_widgets = make(map[string]^Widget),
+        }
     }
 
     /* allocators */
@@ -96,7 +106,8 @@ destroy :: proc(handle: ^Handle) {
     queue.destroy(&handle.widget_event_queue)
     priority_queue.destroy(&handle.ordered_draws)
     delete(handle.layers)
-    delete(handle.tagged_widgets)
+    delete(handle.widget_storage.tagged_widgets)
+    delete(handle.widget_storage.named_widgets)
     mem.dynamic_arena_destroy(&handle.widget_arena)
     free(handle)
 }
@@ -522,19 +533,42 @@ unfocus_widget :: proc(handle: ^Handle, widget: ^Widget = nil) {
     handle.focused_widget = nil
 }
 
-// TODO: we need a more flexible widget cache that will allow referencing widgets with both tags and strings
-
-tag_widget :: proc(handle: ^Handle, widget: ^Widget, tag: u64) {
-    if tag in handle.tagged_widgets {
-        log.warn("widget tag `{}` is replaced.", tag)
+store_named_widget :: proc(handle: ^Handle, widget: ^Widget, name: string) {
+    if name in handle.widget_storage.named_widgets {
+        log.warn("widget nmad `{}` is replaced.", name)
     }
-    handle.tagged_widgets[tag] = widget
+    handle.widget_storage.named_widgets[name] = widget
 }
 
-get_tagged_widget :: proc(handle: ^Handle, tag: u64) -> ^Widget{
-    if tag not_in handle.tagged_widgets {
-        log.error("widget `{}` does not exist.", tag)
+get_named_widget :: proc(handle: ^Handle, name: string) -> ^Widget{
+    if name not_in handle.widget_storage.named_widgets {
+        log.error("widget named `{}` does not exist.", name)
         return nil
     }
-    return handle.tagged_widgets[tag]
+    return handle.widget_storage.named_widgets[name]
+}
+
+store_tagged_widget :: proc(handle: ^Handle, widget: ^Widget, tag: WidgetTag) {
+    if tag in handle.widget_storage.tagged_widgets {
+        log.warn("widget tagged `{}` is replaced.", tag)
+    }
+    handle.widget_storage.tagged_widgets[tag] = widget
+}
+
+get_tagged_widget :: proc(handle: ^Handle, tag: WidgetTag) -> ^Widget{
+    if tag not_in handle.widget_storage.tagged_widgets {
+        log.error("widget tagged `{}` does not exist.", tag)
+        return nil
+    }
+    return handle.widget_storage.tagged_widgets[tag]
+}
+
+store_widget :: proc {
+    store_named_widget,
+    store_tagged_widget,
+}
+
+get_widget :: proc {
+    get_named_widget,
+    get_tagged_widget,
 }

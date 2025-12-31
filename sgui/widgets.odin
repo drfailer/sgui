@@ -371,6 +371,11 @@ image_draw :: proc(self: ^Widget, handle: ^Handle) {
 
 // TODO: icon button
 
+Icon :: struct {
+    path: string,
+    x, y, w, h: f32,
+}
+
 ButtonState :: enum { Idle, Hovered, Clicked }
 
 ButtonClickedProc :: proc(handle: ^Handle, clicked_data: rawptr)
