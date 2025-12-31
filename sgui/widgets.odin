@@ -300,10 +300,9 @@ text_draw :: proc(self: ^Widget, handle: ^Handle) {
 // TODO: add icon buttons (label_button/icon_button)
 Image :: struct {
     file: string,
-    texture: ^sdl.Texture,
-    w, h: f32,
-    iw, ih: f32,
+    image: ^su.Image,
     srcrect: Rect,
+    w, h: f32,
 }
 
 image :: proc(
@@ -318,9 +317,9 @@ image :: proc(
         draw = image_draw,
         data = Image{
             file = file,
+            srcrect = srcrect,
             w = w,
             h = h,
-            srcrect = srcrect,
         }
     }
     return widget
@@ -328,53 +327,26 @@ image :: proc(
 
 image_init :: proc(self: ^Widget, handle: ^Handle, parent: ^Widget) {
     data := &self.data.(Image)
-    cfile := strings.clone_to_cstring(data.file)
-    defer delete(cfile)
-    data.texture = sdl_img.LoadTexture(handle.renderer, cfile)
-    sdl.GetTextureSize(data.texture, &data.iw, &data.ih)
-    if data.w == 0 {
-        self.w = data.iw
-        self.min_w = data.iw
-    } else {
-        self.w = data.w
-        self.min_w = data.w
-    }
-    if data.h == 0 {
-        self.h = data.ih
-        self.min_h = data.ih
-    } else {
-        self.h = data.h
-        self.min_h = data.h
-    }
-    if data.srcrect.w == 0 {
-        data.srcrect.w = data.iw
-    }
-    if data.srcrect.h == 0 {
-        data.srcrect.h = data.ih
-    }
+    data.image = create_image(handle, data.file, data.srcrect)
+    w := data.image.w if data.w == 0 else data.w
+    self.w = w
+    self.min_w = w
+    h := data.image.h if data.h == 0 else data.h
+    self.h = h
+    self.min_h = h
 }
 
 image_destroy :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Image)
-    sdl.DestroyTexture(data.texture)
+    su.image_destroy(data.image)
 }
 
 image_draw :: proc(self: ^Widget, handle: ^Handle) {
     data := &self.data.(Image)
-    dstrect := Rect{ self.x, self.y, self.w, self.h }
-	if !sdl.RenderTexture(handle.renderer, data.texture, &data.srcrect, &dstrect) {
-        log.warn("impossible to draw texture", sdl.GetError(), data.texture)
-    }
+    draw_image(handle, data.image, self.x, self.y, self.w, self.h)
 }
 
 // button //////////////////////////////////////////////////////////////////////
-
-// TODO: icon button
-
-Icon :: struct {
-    path: string,
-    x, y, w, h: f32,
-}
 
 ButtonState :: enum { Idle, Hovered, Clicked }
 
@@ -407,6 +379,7 @@ Button :: struct {
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
     attr: ButtonAttributes,
+    //icons: [ButtonState]Image,
 }
 
 button :: proc(

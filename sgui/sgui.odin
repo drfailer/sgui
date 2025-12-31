@@ -29,6 +29,7 @@ Handle :: struct {
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
     text_engine: ^su.TextEngine,
+    texture_cache: ^su.TextureCache,
     mouse_x, mouse_y: f32,
     window_w, window_h: f32,
     resize: bool,
@@ -90,6 +91,7 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
 
 destroy :: proc(handle: ^Handle) {
     su.text_engine_destroy(handle.text_engine)
+    su.texture_cache_destroy(handle.texture_cache)
     sdl_ttf.Quit()
     sdl.DestroyRenderer(handle.renderer)
     sdl.DestroyWindow(handle.window)
@@ -134,6 +136,7 @@ init :: proc(handle: ^Handle) {
     }
 
     handle.text_engine = su.text_engine_create(handle.renderer)
+    handle.texture_cache = su.texture_cache_create(handle.renderer)
 
     w, h: i32
     assert(sdl.GetWindowSize(handle.window, &w, &h));
@@ -457,6 +460,16 @@ create_text :: proc(handle: ^Handle, content: string, font: string, font_size: f
 
 draw_text :: proc(handle: ^Handle, text: ^su.Text, x, y: f32) {
     su.text_draw(text, x + handle.rel_rect.x, y + handle.rel_rect.y)
+}
+
+// image utilities /////////////////////////////////////////////////////////////
+
+create_image :: proc(handle: ^Handle, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> ^su.Image {
+    return su.image_create(handle.texture_cache, path, srcrect)
+}
+
+draw_image :: proc(handle: ^Handle, image: ^su.Image, x, y, w, h: f32) {
+    su.image_draw(handle.renderer, image, handle.rel_rect.x + x, handle.rel_rect.y + y, w, h)
 }
 
 // ordered draw ////////////////////////////////////////////////////////////////
