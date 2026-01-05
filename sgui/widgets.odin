@@ -1256,29 +1256,38 @@ draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
 
     zoombox_init(&self.zoombox, self)
 
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
-        if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
-        self := cast(^DrawBox)widget
+    if .Zoomable in self.attr.props {
+        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+            if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
+            self := cast(^DrawBox)widget
+            if .Control in event.mods {
+                return zoombox_zoom_handler(&self.zoombox, event.x, event.y, event.mods)
+            }
+            return false
+        })
+    }
+    if .WithScrollbar in self.attr.props {
+        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
+            if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
+            self := cast(^DrawBox)widget
 
-        if .Control in event.mods && .Zoomable in self.attr.props {
-            return zoombox_zoom_handler(&self.zoombox, event.x, event.y, event.mods)
-        } else if .WithScrollbar in self.attr.props {
-            scrollbars_scroll(&self.scrollbars, -event.y, 0, 100, 100)
-        }
-        return true
-    })
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
-        self := cast(^DrawBox)widget
-        if .WithScrollbar not_in self.attr.props do return false
-        scrollbars_click(&self.scrollbars, event)
-        return true
-    })
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
-        self := cast(^DrawBox)widget
-        if .WithScrollbar not_in self.attr.props do return false
-        scrollbars_mouse_motion(&self.scrollbars, event)
-        return true
-    })
+            if .Control not_in event.mods {
+                scrollbars_scroll(&self.scrollbars, -event.y, 0, 100, 100)
+                return true
+            }
+            return false
+        })
+        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+            self := cast(^DrawBox)widget
+            scrollbars_click(&self.scrollbars, event)
+            return true
+        })
+        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+            self := cast(^DrawBox)widget
+            scrollbars_mouse_motion(&self.scrollbars, event)
+            return true
+        })
+    }
 }
 
 draw_box_destroy :: proc(widget: ^Widget, handle: ^Handle) {
