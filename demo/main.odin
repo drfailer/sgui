@@ -86,15 +86,7 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
     using sgui
     widget = hbox(
         vbox(
-            text("Side Pannel",
-                attr = TextAttributes{
-                    style = {
-                        font = FONT,
-                        font_size = FONT_SIZE,
-                        color = {0, 0, 0, 255},
-                    },
-                }
-            ),
+            text("Side Pannel"),
             button("hellope", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),

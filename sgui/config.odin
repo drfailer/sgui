@@ -36,7 +36,7 @@ OPTS := Opts{
         style = TextStyle{
             font = FONT,
             font_size = FONT_SIZE,
-            color = Color{255, 255, 255, 255},
+            color = Color{0, 0, 0, 255},
             wrap_width = 0,
         },
     },
