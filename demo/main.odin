@@ -88,10 +88,10 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
         vbox(
             text("Side Pannel",
                 attr = TextAttributes{
-                    style = TextStyle{
+                    style = {
                         font = FONT,
                         font_size = FONT_SIZE,
-                        color = Color{0, 0, 0, 255},
+                        color = {0, 0, 0, 255},
                     },
                 }
             ),
@@ -100,38 +100,37 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(handle: ^sgui.Handle, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
-            attr = BoxAttributes{
-                props = BoxProperties{.FitH, .FitW},
-                style = BoxStyle{
+            attr = {
+                props = {.FitH, .FitW},
+                style = {
                     items_spacing = 10,
                 },
             }
         ),
-        attr = BoxAttributes{
-            props = BoxProperties{.FitW},
-            style = BoxStyle{
-                background_color = Color{255, 0, 0, 255},
-                padding = Padding{ 10, 10, 10, 20 },
+        attr = {
+            props = {.FitW},
+            style = {
+                background_color = {255, 0, 0, 255},
+                padding = {10, 10, 10, 20},
                 border_thickness = 2,
-                active_borders = ActiveBorders{.Right},
-                border_color = Color{200, 200, 0, 255},
+                active_borders = {.Right},
+                border_color = {200, 200, 0, 255},
             },
         }
     )
-    // widget.disabled = true
     return widget
 }
 
 main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
     using sgui
-    menu_btn := icon_button(sgui.IconData{file = "img/menu-icon.png"},
-        clicked = proc(handle: ^sgui.Handle, _: rawptr) {
-            sgui.widget_toggle(sgui.get_widget(handle, "side_pannel"), handle)
+    menu_btn := icon_button(IconData{file = "img/menu-icon.png"},
+        clicked = proc(handle: ^Handle, _: rawptr) {
+            widget_toggle(get_widget(handle, "side_pannel"), handle)
         },
         w = 20,
         h = 20,
-        attr = ButtonAttributes{
-            style = ButtonStyle{
+        attr = {
+            style = {
                 padding = {4, 4, 4, 4},
                 corner_radius = 5,
                 colors = OPTS.button_attr.style.colors,
@@ -140,62 +139,65 @@ main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
     )
     title := hbox(
         text("Demo App"),
-        attr = BoxAttributes{
-            props = BoxProperties{.FitH, .FitW},
-            style = BoxStyle{
-                background_color = Color{0, 100, 0, 255},
+        attr = {
+            props = {.FitH, .FitW},
+            style = {
+                background_color = {0, 100, 0, 255},
             },
         }
     )
     header := hbox(
-        align_widgets(menu_btn, {.Top, .Left}),
+        left(menu_btn),
         center(title),
-        attr = BoxAttributes{
-            props = BoxProperties{.FitH},
-            style = BoxStyle{
-                background_color = Color{0, 0, 255, 255},
+        attr = {
+            props = {.FitH},
+            style = {
+                background_color = {0, 0, 255, 255},
                 border_thickness = 2,
-                active_borders = ActiveBorders{.Bottom},
-                border_color = Color{0, 200, 200, 255},
-                padding = Padding{ 10, 10, 10, 10 },
+                active_borders = {.Bottom},
+                border_color = {0, 200, 200, 255},
+                padding = { 10, 10, 10, 10 },
             },
         },
         z_index = 1, // draw after to allow scrolling in the menu pannel
     )
     side_pannel := side_pannel_widget()
-    sgui.store_widget(handle, side_pannel, "side_pannel")
+    store_widget(handle, side_pannel, "side_pannel")
     content := hbox(
         side_pannel,
         // the draw box is at the end: since it is resizable, all the other parts needs to be align first
-        draw_box(draw_data, update_data, attr = DrawBoxAttributes{
-            props = DrawBoxProperties{.Zoomable, .WithScrollbar},
+        draw_box(draw_data, update_data, attr = {
+            props = {.Zoomable, .WithScrollbar},
             zoom_min = 1.,
             zoom_max = 10.,
             zoom_step = 0.2,
             scrollbars_attr = OPTS.scrollbars_attr,
         }),
         attr = BoxAttributes{
-            props = BoxProperties{},
-            style = BoxStyle{
-                background_color = Color{10, 10, 10, 255},
+            props = {},
+            style = {
+                background_color = {10, 10, 10, 255},
             },
         }
     )
-    footer := vbox(
-        center(text("footer")),
-        attr = BoxAttributes{
-            props = BoxProperties{.FitH},
-            style = BoxStyle{
-                background_color = Color{0, 100, 100, 255},
-                items_spacing = 10,
-                padding = Padding{ 4, 4, 4, 4 },
-            },
-        }
+    footer := align_widgets(
+        vbox(
+            center(text("footer")),
+            attr = {
+                props = {.FitH},
+                style = {
+                    background_color = {0, 100, 100, 255},
+                    items_spacing = 10,
+                    padding = { 4, 4, 4, 4 },
+                },
+            }
+        ),
+        {.Bottom, .HCenter}
     )
     return vbox(
         header,
         content,
-        align_widgets(footer, {.Bottom, .HCenter}),
+        footer,
     )
 }
 

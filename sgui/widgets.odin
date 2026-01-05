@@ -13,6 +13,8 @@ package sgui
  *
  */
 
+// TODO: we need a better way to locate hovered widgets to avoid scrolling issues
+
 import "core:fmt"
 import su "sdl_utils"
 import sdl "vendor:sdl3"
@@ -176,6 +178,9 @@ Menu :: struct { // top menu
 }
 
 Line :: struct { // separator line
+}
+
+FloatingWindow :: struct { // draggable floating window (can also be done by creating a separated ui in a separated window)
 }
 
 // text ////////////////////////////////////////////////////////////////////////
@@ -1049,6 +1054,14 @@ align_widgets :: proc(widget: ^Widget, alignment_policy: = AlignmentPolicy{.Top,
 
 center :: proc(widget: ^Widget) -> ^Widget {
     return align_widgets(widget, alignment_policy = AlignmentPolicy{.HCenter, .VCenter})
+}
+
+left :: proc(widget: ^Widget) -> ^Widget {
+    return align_widgets(widget, alignment_policy = AlignmentPolicy{.Left})
+}
+
+right :: proc(widget: ^Widget) -> ^Widget {
+    return align_widgets(widget, alignment_policy = AlignmentPolicy{.Right})
 }
 
 // radio button ////////////////////////////////////////////////////////////////
