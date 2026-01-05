@@ -912,12 +912,10 @@ box_resize :: proc(widget: ^Widget, w, h: f32) {// {{{
     self.scrollbars.vertical.enabled = self.content_h > self.h
     if !self.scrollbars.vertical.enabled {
         self.scrollbars.vertical.position = 0
-        self.scrollbars.vertical.target_position = 0
     }
     self.scrollbars.horizontal.enabled = self.content_w > self.w
     if !self.scrollbars.horizontal.enabled {
         self.scrollbars.horizontal.position = 0
-        self.scrollbars.horizontal.target_position = 0
     }
     scrollbars_resize(&self.scrollbars, self.w, self.h, self.content_w, self.content_h)
 }// }}}

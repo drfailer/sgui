@@ -48,7 +48,7 @@ Scrollbar :: struct {
     track_size: f32,
     window_size: f32,
     content_size: f32,
-    position, target_position: f32,
+    position: f32,
     thumb_position: f32,
     scale_factor: f32,
     thumb_scroll_step: f32,
@@ -106,7 +106,6 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
     // scrollbar moves when zooming and dezooming.
     if self.content_size != content_size {
         self.position *= content_size / self.content_size
-        self.target_position = self.position
     }
 
     self.window_size = window_size
@@ -169,14 +168,6 @@ scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) {
         scrollbar_scroll(self, -1, 10)
     } else if self.button2_state == .Clicked {
         scrollbar_scroll(self, 1, 10)
-    }
-
-    // update the position
-    // TODO: find a better smooth scrolling solution
-    if self.target_position < self.position {
-        scrollbar_update_position(self, max(self.position - 100, self.target_position))
-    } else if self.target_position > self.position {
-        scrollbar_update_position(self, min(self.position + 100, self.target_position))
     }
 }
 
@@ -276,8 +267,7 @@ scrollbars_draw :: proc(self: ^Scrollbars, handle: ^Handle) {
 /* event handlers */
 
 scrollbar_scroll :: proc(self: ^Scrollbar, scroll_count: i32, scroll_step: f32) {
-    self.target_position += cast(f32)scroll_count * scroll_step
-    self.target_position = clamp(self.target_position, 0, self.content_size - self.window_size)
+    scrollbar_update_position(self, self.position + cast(f32)scroll_count * scroll_step)
 }
 
 scrollbars_scroll :: proc(self: ^Scrollbars, vcount, hcount: i32, vstep, hstep: f32) {
@@ -367,7 +357,6 @@ scrollbar_click :: proc(self: ^Scrollbar, event: MouseClickEvent) {
             } else {
                 scrollbar_update_position(self, (cast(f32)event.x - self.x) * self.content_pixel_ratio - self.window_size / 2)
             }
-            self.target_position = self.position
         }
     } else {
         scrollbar_hover(self, event.x, event.y)
@@ -391,7 +380,6 @@ scrollbar_mouse_motion :: proc(self: ^Scrollbar, event: MouseMotionEvent) {
         } else {
             scrollbar_update_position(self, self.position + cast(f32)event.xd * self.content_pixel_ratio)
         }
-        self.target_position = self.position
     } else if self.button1_state != .Clicked && self.button2_state != .Clicked {
         scrollbar_hover(self, event.x, event.y)
     }
