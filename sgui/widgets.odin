@@ -1232,7 +1232,6 @@ draw_box :: proc(
     return draw_box_w
 }
 
-// TODO: clean this up
 draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     self := cast(^DrawBox)widget
 
@@ -1242,21 +1241,6 @@ draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
 
     zoombox_init(&self.zoombox, self)
 
-    add_event_handler(handle, self, proc(widget: ^Widget, event: KeyEvent, handle: ^Handle) -> bool {
-        if !event.down do return false
-        self := cast(^DrawBox)widget
-
-        vcount, hcount: i32
-
-        switch event.key {
-        case sdl.K_H: hcount = -1
-        case sdl.K_L: hcount = 1
-        case sdl.K_K: vcount = -1
-        case sdl.K_J: vcount = 1
-        }
-        scrollbars_scroll(&self.scrollbars, vcount, hcount, 100, 100)
-        return true
-    })
     add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
         if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
         self := cast(^DrawBox)widget
