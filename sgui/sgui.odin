@@ -39,7 +39,12 @@ Handle :: struct {
     widget_event_queue: queue.Queue(WidgetEvent),
 
     focused_widget: ^Widget,
+    hovered_widget: ^Widget, // TODO
+
+    /* widget storage */
     widget_storage: WidgetStorage,
+    store: proc(handle: ^Handle, key: WidgetKey, widget: ^Widget),
+    widget: proc(handle: ^Handle, key: WidgetKey) -> ^Widget,
 
     /* layers */
     layers: [dynamic]^Widget,
@@ -79,7 +84,9 @@ create :: proc() -> (handle: ^Handle) { // TODO: allocator
         widget_storage = WidgetStorage{
             tagged_widgets = make(map[WidgetTag]^Widget),
             named_widgets = make(map[string]^Widget),
-        }
+        },
+        store = store_widget,
+        widget = get_widget,
     }
 
     /* allocators */
@@ -547,7 +554,7 @@ unfocus_widget :: proc(handle: ^Handle, widget: ^Widget = nil) {
     handle.focused_widget = nil
 }
 
-store_named_widget :: proc(handle: ^Handle, widget: ^Widget, name: string) {
+store_named_widget :: proc(handle: ^Handle, name: string, widget: ^Widget) {
     if name in handle.widget_storage.named_widgets {
         log.warn("widget nmad `{}` is replaced.", name)
     }
@@ -562,7 +569,7 @@ get_named_widget :: proc(handle: ^Handle, name: string) -> ^Widget{
     return handle.widget_storage.named_widgets[name]
 }
 
-store_tagged_widget :: proc(handle: ^Handle, widget: ^Widget, tag: WidgetTag) {
+store_tagged_widget :: proc(handle: ^Handle, tag: WidgetTag, widget: ^Widget) {
     if tag in handle.widget_storage.tagged_widgets {
         log.warn("widget tagged `{}` is replaced.", tag)
     }
@@ -577,12 +584,22 @@ get_tagged_widget :: proc(handle: ^Handle, tag: WidgetTag) -> ^Widget{
     return handle.widget_storage.tagged_widgets[tag]
 }
 
-store_widget :: proc {
-    store_named_widget,
-    store_tagged_widget,
+WidgetKey :: union {
+    WidgetTag,
+    string,
 }
 
-get_widget :: proc {
-    get_named_widget,
-    get_tagged_widget,
+store_widget :: proc(handle: ^Handle, key: WidgetKey, widget: ^Widget) {
+    switch _ in key {
+    case WidgetTag: store_tagged_widget(handle, key.(WidgetTag), widget)
+    case string: store_named_widget(handle, key.(string), widget)
+    }
+}
+
+get_widget :: proc(handle: ^Handle, key: WidgetKey) -> ^Widget {
+    switch _ in key {
+    case WidgetTag: return get_tagged_widget(handle, key.(WidgetTag))
+    case string: return get_named_widget(handle, key.(string))
+    }
+    return nil
 }

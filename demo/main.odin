@@ -125,7 +125,7 @@ main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
     using sgui
     menu_btn := icon_button(IconData{file = "img/menu-icon.png"},
         clicked = proc(handle: ^Handle, _: rawptr) {
-            widget_toggle(get_widget(handle, "side_pannel"), handle)
+            widget_toggle(handle->widget("side_pannel"), handle)
         },
         w = 20,
         h = 20,
@@ -162,7 +162,7 @@ main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
         z_index = 1, // draw after to allow scrolling in the menu pannel
     )
     side_pannel := side_pannel_widget()
-    store_widget(handle, side_pannel, "side_pannel")
+    handle->store("side_pannel", side_pannel)
     content := hbox(
         side_pannel,
         // the draw box is at the end: since it is resizable, all the other parts needs to be align first
