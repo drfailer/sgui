@@ -124,68 +124,78 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
 
 main_layer :: proc(handle: ^sgui.Handle) -> ^sgui.Widget {
     using sgui
-    return vbox(
-        vbox(
-            align_widgets(
-                hbox(
-                    image("img/menu-icon.png", w = 20, h = 20),
-                    text("Top pannel"),
-                    text("Top pannel"),
-                    attr = BoxAttributes{
-                        props = BoxProperties{.FitH, .FitW},
-                        style = BoxStyle{
-                            background_color = Color{0, 100, 0, 255},
-                            items_spacing = 10,
-                            padding = Padding{ 10, 10, 10, 10 },
-                        },
-                    }
-                ),
-                alignment_policy = {.Top, .HCenter},
-            ),
-            attr = BoxAttributes{
-                props = BoxProperties{.FitH},
-                style = BoxStyle{
-                    background_color = Color{0, 0, 255, 255},
-                    border_thickness = 2,
-                    active_borders = ActiveBorders{.Bottom},
-                    border_color = Color{0, 200, 200, 255},
-                },
+    menu_btn := icon_button(sgui.IconData{file = "img/menu-icon.png"},
+        clicked = proc(handle: ^sgui.Handle, _: rawptr) {
+            sgui.widget_toggle(sgui.get_widget(handle, "side_pannel"), handle)
+        },
+        w = 20,
+        h = 20,
+        attr = ButtonAttributes{
+            style = ButtonStyle{
+                padding = {4, 4, 4, 4},
+                corner_radius = 5,
+                colors = OPTS.button_attr.style.colors,
             },
-            z_index = 1, // fixes the scroll ???
-        ),
-        vbox(
-            hbox(
-                side_pannel_widget(),
-                // the draw box is at the end: since it is resizable, all the other parts needs to be align first
-                draw_box(draw_data, update_data, attr = DrawBoxAttributes{
-                    props = DrawBoxProperties{.Zoomable, .WithScrollbar},
-                    zoom_min = 1.,
-                    zoom_max = 10.,
-                    zoom_step = 0.2,
-                    scrollbars_attr = OPTS.scrollbars_attr,
-                }),
-            ),
-            attr = BoxAttributes{
-                props = BoxProperties{},
-                style = BoxStyle{
-                    background_color = Color{10, 10, 10, 255},
-                },
-            }
-        ),
-        align_widgets(
-            vbox(
-                center(text("footer")),
-                attr = BoxAttributes{
-                    props = BoxProperties{.FitH},
-                    style = BoxStyle{
-                        background_color = Color{0, 100, 100, 255},
-                        items_spacing = 10,
-                        padding = Padding{ 4, 4, 4, 4 },
-                    },
-                }
-            ),
-            alignment_policy = {.Bottom, .HCenter},
-        ),
+        }
+    )
+    title := hbox(
+        text("Demo App"),
+        attr = BoxAttributes{
+            props = BoxProperties{.FitH, .FitW},
+            style = BoxStyle{
+                background_color = Color{0, 100, 0, 255},
+            },
+        }
+    )
+    header := hbox(
+        align_widgets(menu_btn, {.Top, .Left}),
+        center(title),
+        attr = BoxAttributes{
+            props = BoxProperties{.FitH},
+            style = BoxStyle{
+                background_color = Color{0, 0, 255, 255},
+                border_thickness = 2,
+                active_borders = ActiveBorders{.Bottom},
+                border_color = Color{0, 200, 200, 255},
+                padding = Padding{ 10, 10, 10, 10 },
+            },
+        },
+        z_index = 1, // draw after to allow scrolling in the menu pannel
+    )
+    side_pannel := side_pannel_widget()
+    sgui.store_widget(handle, side_pannel, "side_pannel")
+    content := hbox(
+        side_pannel,
+        // the draw box is at the end: since it is resizable, all the other parts needs to be align first
+        draw_box(draw_data, update_data, attr = DrawBoxAttributes{
+            props = DrawBoxProperties{.Zoomable, .WithScrollbar},
+            zoom_min = 1.,
+            zoom_max = 10.,
+            zoom_step = 0.2,
+            scrollbars_attr = OPTS.scrollbars_attr,
+        }),
+        attr = BoxAttributes{
+            props = BoxProperties{},
+            style = BoxStyle{
+                background_color = Color{10, 10, 10, 255},
+            },
+        }
+    )
+    footer := vbox(
+        center(text("footer")),
+        attr = BoxAttributes{
+            props = BoxProperties{.FitH},
+            style = BoxStyle{
+                background_color = Color{0, 100, 100, 255},
+                items_spacing = 10,
+                padding = Padding{ 4, 4, 4, 4 },
+            },
+        }
+    )
+    return vbox(
+        header,
+        content,
+        align_widgets(footer, {.Bottom, .HCenter}),
     )
 }
 

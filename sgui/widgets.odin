@@ -13,8 +13,6 @@ package sgui
  *
  */
 
-// TODO: use vtable technique for widget
-
 import "core:fmt"
 import su "sdl_utils"
 import sdl "vendor:sdl3"
@@ -289,7 +287,6 @@ text_draw :: proc(widget: ^Widget, handle: ^Handle) {
 // also need some helper functions to handle textures in draw boxes (not so
 // sure that this specific widget will be very useful for anything else that
 // printing a logo)
-// TODO: add icon buttons (label_button/icon_button)
 Image :: struct {
     using widget: Widget,
     file: string,
@@ -300,7 +297,8 @@ Image :: struct {
 
 image :: proc(
     file: string,
-    w, h: f32,
+    w: f32 = 0,
+    h: f32 = 0,
     srcrect := Rect{0, 0, 0, 0},
 ) -> ^Widget {
     image_w := new(Image)
@@ -363,6 +361,11 @@ ButtonAttributes :: struct {
     expand_w, expand_h: bool,
 }
 
+IconData :: struct {
+    file: string,
+    srcrect: Rect,
+}
+
 Button :: struct {
     using widget: Widget,
     label: string,
@@ -371,7 +374,9 @@ Button :: struct {
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
     attr: ButtonAttributes,
-    //icons: [ButtonState]Image,
+    icons_data: [ButtonState]IconData,
+    icons_image: [ButtonState]^su.Image,
+    iw, ih: f32,
 }
 
 button :: proc(
@@ -399,6 +404,54 @@ button :: proc(
     return button_w
 }
 
+icon_button_all_states :: proc(
+    icons_data: [ButtonState]IconData,
+    clicked: ButtonClickedProc,
+    w: f32 = 0,
+    h: f32 = 0,
+    clicked_data: rawptr = nil,
+    attr := OPTS.button_attr,
+) -> ^Widget {
+    button_w := cast(^Button)button(icons_data[.Idle].file, clicked, clicked_data, attr)
+    button_w.icons_data = icons_data
+    button_w.iw = w
+    button_w.ih = h
+    button_w.init = icon_button_init
+    button_w.destroy = icon_button_destroy
+    button_w.draw = icon_button_draw
+    return button_w
+}
+
+icon_button_idle_state :: proc(
+    icon: IconData,
+    clicked: ButtonClickedProc,
+    w: f32 = 0,
+    h: f32 = 0,
+    clicked_data: rawptr = nil,
+    attr := OPTS.button_attr,
+) -> ^Widget {
+    icons_data := [ButtonState]IconData{ .Idle = icon, .Hovered = icon, .Clicked = icon }
+    return icon_button_all_states(icons_data, clicked, w, h, clicked_data, attr)
+}
+
+icon_button :: proc{
+    icon_button_all_states,
+    icon_button_idle_state,
+}
+
+button_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(widget, event.x, event.y) do return false
+    self := cast(^Button)widget
+
+    if event.down {
+        self.state = .Clicked
+    } else if self.state == .Clicked {
+        self.state = .Idle
+        self.clicked(handle, self.clicked_data)
+    }
+    return true
+}
+
 button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     self := cast(^Button)widget
     self.text = create_text(handle, self.label, self.attr.style.label_font_path, self.attr.style.label_font_size)
@@ -407,19 +460,34 @@ button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.h += self.attr.style.padding.top + self.attr.style.padding.bottom
     self.min_w = self.w
     self.min_h = self.h
+    add_event_handler(handle, self, button_mouse_handler)
+}
 
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
-        if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(widget, event.x, event.y) do return false
-        self := cast(^Button)widget
+icon_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+    self := cast(^Button)widget
+    self.icons_image[.Idle] = create_image(handle, self.icons_data[.Idle].file, self.icons_data[.Idle].srcrect)
+    self.icons_image[.Hovered] = create_image(handle, self.icons_data[.Hovered].file, self.icons_data[.Hovered].srcrect)
+    self.icons_image[.Clicked] = create_image(handle, self.icons_data[.Clicked].file, self.icons_data[.Clicked].srcrect)
+    assert(self.icons_image[.Clicked].w == self.icons_image[.Idle].w)
+    assert(self.icons_image[.Clicked].h == self.icons_image[.Idle].h)
+    assert(self.icons_image[.Hovered].w == self.icons_image[.Idle].w)
+    assert(self.icons_image[.Hovered].h == self.icons_image[.Idle].h)
+    w := self.icons_image[.Idle].w if self.iw == 0 else self.iw
+    w += self.attr.style.padding.left + self.attr.style.padding.right
+    self.w = w
+    self.min_w = w
+    h := self.icons_image[.Idle].h if self.ih == 0 else self.ih
+    h += self.attr.style.padding.top + self.attr.style.padding.bottom
+    self.h = h
+    self.min_h = h
+    add_event_handler(handle, self, button_mouse_handler)
+}
 
-        if event.down {
-            self.state = .Clicked
-        } else if self.state == .Clicked {
-            self.state = .Idle
-            self.clicked(handle, self.clicked_data)
-        }
-        return true
-    })
+icon_button_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+    self := cast(^Button)widget
+    su.image_destroy(self.icons_image[.Idle])
+    su.image_destroy(self.icons_image[.Hovered])
+    su.image_destroy(self.icons_image[.Clicked])
 }
 
 button_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
@@ -433,15 +501,11 @@ button_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     }
 }
 
-button_draw :: proc(widget: ^Widget, handle: ^Handle) {
-    self := cast(^Button)widget
-    text_color := self.attr.style.colors[self.state].text
+button_draw_background :: proc(self: ^Button, handle: ^Handle) {
     bg_color := self.attr.style.colors[self.state].bg
     border_color := self.attr.style.colors[self.state].border
     border_thickness := self.attr.style.border_thickness
 
-    su.text_set_color(self.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
-    su.text_update(self.text)
     if self.attr.style.corner_radius > 0 {
         if border_thickness > 0 {
             draw_rounded_box_with_border(handle, self.x, self.y, self.w, self.h,
@@ -460,10 +524,27 @@ button_draw :: proc(widget: ^Widget, handle: ^Handle) {
                           self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                           bg_color)
     }
+}
+
+button_draw :: proc(widget: ^Widget, handle: ^Handle) {
+    self := cast(^Button)widget
+    text_color := self.attr.style.colors[self.state].text
+
+    su.text_set_color(self.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
+    su.text_update(self.text)
+    button_draw_background(self, handle)
     label_w, label_h := su.text_size(self.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
     draw_text(handle, self.text, label_x, label_y)
+}
+
+icon_button_draw :: proc(widget: ^Widget, handle: ^Handle) {
+    self := cast(^Button)widget
+    button_draw_background(self, handle)
+    icon_x := self.x + (self.w - self.iw) / 2.
+    icon_y := self.y + (self.h - self.ih) / 2.
+    draw_image(handle, self.icons_image[self.state], icon_x, icon_y, self.iw, self.ih)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
