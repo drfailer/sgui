@@ -35,13 +35,13 @@ DATA :: [?]MeasuredTime{
 DATA_BOX_HEIGHT :: 100
 MS_TO_PIXEL :: 1
 
-draw_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) {
-    box_data := &box.data.(sgui.DrawBox)
+draw_data :: proc(handle: ^sgui.Handle, box_widget: ^sgui.Widget, _: rawptr) {
+    box := cast(^sgui.DrawBox)box_widget
     data_rect := sgui.Rect{
-        x = -box_data.scrollbars.horizontal.position,
-        y = (box.h - box_data.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box_data.scrollbars.vertical.position,
+        x = -box.scrollbars.horizontal.position,
+        y = (box.h - box.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box.scrollbars.vertical.position,
         w = box.w,
-        h = box_data.zoombox.lvl * DATA_BOX_HEIGHT,
+        h = box.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 
     if data_rect.y < 0 {
@@ -55,14 +55,14 @@ draw_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) {
 
     // compute the scale depending on the zoom level
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    scaling_factor := box_data.zoombox.lvl * MS_TO_PIXEL
+    scaling_factor := box.zoombox.lvl * MS_TO_PIXEL
 
     for data, idx in DATA {
         data_rect.w = scaling_factor * cast(f32)(data.end - data.begin)
         sgui.draw_rounded_box(handle, data_rect.x, data_rect.y,
-            data_rect.w, data_rect.h, box_data.zoombox.lvl * 20, sgui.Color{255, 255 * cast(u8)(idx % 2), 255, 255})
+            data_rect.w, data_rect.h, box.zoombox.lvl * 20, sgui.Color{255, 255 * cast(u8)(idx % 2), 255, 255})
         sgui.draw_rounded_box(handle, data_rect.x + 1, data_rect.y + 1,
-            data_rect.w - 2, data_rect.h - 2, box_data.zoombox.lvl * 20, sgui.Color{100, 100 * cast(u8)(idx % 2), 100, 255})
+            data_rect.w - 2, data_rect.h - 2, box.zoombox.lvl * 20, sgui.Color{100, 100 * cast(u8)(idx % 2), 100, 255})
         data_rect.x += data_rect.w
 
         if data_rect.x > box.w {
@@ -73,12 +73,12 @@ draw_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) {
     sgui.draw_rounded_frame(handle, 400, 400, 100, 100, 20, sgui.Color{255, 255, 255, 255})
 }
 
-update_data :: proc(handle: ^sgui.Handle, box: ^sgui.Widget, _: rawptr) -> sgui.ContentSize {
+update_data :: proc(handle: ^sgui.Handle, box_widget: ^sgui.Widget, _: rawptr) -> sgui.ContentSize {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    box_data := &box.data.(sgui.DrawBox)
+    box := cast(^sgui.DrawBox)box_widget
     return sgui.ContentSize{
-        box_data.zoombox.lvl * MS_TO_PIXEL * cast(f32)ttl_time,
-        box_data.zoombox.lvl * DATA_BOX_HEIGHT,
+        box.zoombox.lvl * MS_TO_PIXEL * cast(f32)ttl_time,
+        box.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 }
 
