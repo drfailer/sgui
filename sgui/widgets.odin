@@ -785,7 +785,7 @@ box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
         self := cast(^Box)widget
 
         if event.mods == {} {
-            scrollbars_scroll(&self.scrollbars, -event.y, 0, 100, 100)
+            scrollbars_scroll(&self.scrollbars, -event.y, -event.x, 100, 100)
             box_align(self, self.x, self.y)
         }
         return true
@@ -1009,12 +1009,14 @@ box_resize :: proc(widget: ^Widget, w, h: f32) {// {{{
 box_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     self := cast(^Box)widget
 
+    if scrollbars_update(&self.scrollbars, handle) {
+        box_align(self, self.x, self.y)
+    }
     for child in self.widgets {
         if child.update != nil && !child.disabled {
             child->update(handle, self)
         }
     }
-    scrollbars_update(&self.scrollbars, handle)
 }// }}}
 
 box_draw :: proc(widget: ^Widget, handle: ^Handle) {// {{{

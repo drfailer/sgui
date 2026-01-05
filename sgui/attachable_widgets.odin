@@ -162,22 +162,29 @@ scrollbar_update_position :: proc(self: ^Scrollbar, position: f32) {
     self.thumb_position = self.position / self.content_pixel_ratio
 }
 
-scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) {
+scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) -> bool {
+    updated := false
     // scroll while buttons are clicked
     if self.button1_state == .Clicked {
         scrollbar_scroll(self, -1, 10)
+        updated = true
     } else if self.button2_state == .Clicked {
         scrollbar_scroll(self, 1, 10)
+        updated = true
     }
+    return updated
 }
 
-scrollbars_update :: proc(self: ^Scrollbars, handle: ^Handle) {
+scrollbars_update :: proc(self: ^Scrollbars, handle: ^Handle) -> bool {
+    updated := false
+
     if self.vertical.enabled && .V_Disabled not_in self.attr.props {
-        scrollbar_update(&self.vertical, handle)
+        updated |= scrollbar_update(&self.vertical, handle)
     }
     if self.horizontal.enabled && .H_Disabled not_in self.attr.props {
-        scrollbar_update(&self.horizontal, handle)
+        updated |= scrollbar_update(&self.horizontal, handle)
     }
+    return updated
 }
 
 scrollbar_buttons_draw :: proc(self: ^Scrollbar, handle: ^Handle) {

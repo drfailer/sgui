@@ -376,6 +376,7 @@ process_events :: proc(handle: ^Handle) {
     event: sdl.Event
     for sdl.PollEvent(&event) {
         #partial switch event.type {
+        case .WINDOW_CLOSE_REQUESTED: fallthrough
         case .QUIT:
             handle.run = false
         case .WINDOW_RESIZED:
