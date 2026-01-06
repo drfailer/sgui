@@ -162,7 +162,7 @@ scrollbar_update_position :: proc(self: ^Scrollbar, position: f32) {
     self.thumb_position = self.position / self.content_pixel_ratio
 }
 
-scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) -> bool {
+scrollbar_update :: proc(self: ^Scrollbar, ui: ^Ui) -> bool {
     updated := false
     // scroll while buttons are clicked
     if self.button1_state == .Clicked {
@@ -175,31 +175,31 @@ scrollbar_update :: proc(self: ^Scrollbar, handle: ^Handle) -> bool {
     return updated
 }
 
-scrollbars_update :: proc(self: ^Scrollbars, handle: ^Handle) -> bool {
+scrollbars_update :: proc(self: ^Scrollbars, ui: ^Ui) -> bool {
     updated := false
 
     if self.vertical.enabled && .V_Disabled not_in self.attr.props {
-        updated |= scrollbar_update(&self.vertical, handle)
+        updated |= scrollbar_update(&self.vertical, ui)
     }
     if self.horizontal.enabled && .H_Disabled not_in self.attr.props {
-        updated |= scrollbar_update(&self.horizontal, handle)
+        updated |= scrollbar_update(&self.horizontal, ui)
     }
     return updated
 }
 
-scrollbar_buttons_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
+scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
     if self.direction == .Vertical {
         XOFFSET :: 0
         YOFFSET :: 2
         draw_triangle( // ^
-            handle,
+            ui,
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + YOFFSET,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.style.button_color[self.button1_state]
         )
         draw_triangle( // v
-            handle,
+            ui,
             self.x + XOFFSET,                       self.y + self.window_size - SCROLLBAR_THICKNESS + YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + self.window_size - YOFFSET,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + self.window_size - SCROLLBAR_THICKNESS + YOFFSET,
@@ -209,14 +209,14 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
         XOFFSET :: 2
         YOFFSET :: 0
         draw_triangle( // <
-            handle,
+            ui,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + YOFFSET,
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.style.button_color[self.button1_state]
         )
         draw_triangle( // >
-            handle,
+            ui,
             self.x + self.window_size - SCROLLBAR_THICKNESS + XOFFSET, self.y + YOFFSET,
             self.x + self.window_size - XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
             self.x + self.window_size - SCROLLBAR_THICKNESS + XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
@@ -225,7 +225,7 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
     }
 }
 
-scrollbar_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
+scrollbar_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
     if !self.enabled do return
 
     // TODO: button background in style
@@ -233,8 +233,8 @@ scrollbar_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
     // TODO: thumb style (rounded/squared/border)
     if self.direction == .Vertical {
         thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.left + self.style.track_padding.right)
-        draw_rect(handle, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.style.track_color)
-        draw_rounded_box(handle,
+        draw_rect(ui, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.style.track_color)
+        draw_rounded_box(ui,
             self.x + self.style.track_padding.left,
             self.y + self.thumb_position + SCROLLBAR_THICKNESS,
             thumb_thickness,
@@ -244,8 +244,8 @@ scrollbar_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
         )
     } else {
         thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.top + self.style.track_padding.bottom)
-        draw_rect(handle, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.style.track_color)
-        draw_rounded_box(handle,
+        draw_rect(ui, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.style.track_color)
+        draw_rounded_box(ui,
             self.x + self.thumb_position + SCROLLBAR_THICKNESS,
             self.y + self.style.track_padding.top,
             self.thumb_size,
@@ -255,18 +255,18 @@ scrollbar_draw :: proc(self: ^Scrollbar, handle: ^Handle) {
         )
     }
 
-    scrollbar_buttons_draw(self, handle)
+    scrollbar_buttons_draw(self, ui)
 }
 
-scrollbars_draw :: proc(self: ^Scrollbars, handle: ^Handle) {
+scrollbars_draw :: proc(self: ^Scrollbars, ui: ^Ui) {
     if .V_Disabled not_in self.attr.props {
         if .V_ShowOnHover not_in self.attr.props || self.vertical.hovered {
-            scrollbar_draw(&self.vertical, handle)
+            scrollbar_draw(&self.vertical, ui)
         }
     }
     if .H_Disabled not_in self.attr.props {
         if .H_ShowOnHover not_in self.attr.props || self.horizontal.hovered {
-            scrollbar_draw(&self.horizontal, handle)
+            scrollbar_draw(&self.horizontal, ui)
         }
     }
 }

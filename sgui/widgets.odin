@@ -3,13 +3,13 @@ package sgui
 /*
  * How widgets should work:
  * - widget_name(args) -> create a widget (set user handlers, and properites)
- * - widget_name_init(handle, x, y, h, w, args) -> initialization that requires the handle + init position and size (depends on widgets in the tree!)
+ * - widget_name_init(ui, x, y, h, w, args) -> initialization that reqhandleres the ui + init position and size (depends on widgets in the tree!)
  *
  * note: the way the size of the widget is computed may vary since some widgets
  * have a fixed size (buttons, ...)
  *
  * create the widget tree:
- * widget_init(handle, ...)
+ * widget_init(ui, ...)
  *
  */
 
@@ -26,10 +26,10 @@ Pixel :: distinct [4]u8
 
 // widget //////////////////////////////////////////////////////////////////////
 
-WidgetInitProc :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget)
-WidgetDestroyProc :: proc(widget: ^Widget, handle: ^Handle)
-WidgetUpdateProc :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget)
-WidgetDrawProc :: proc(widget: ^Widget, handle: ^Handle)
+WidgetInitProc :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget)
+WidgetDestroyProc :: proc(widget: ^Widget, ui: ^Ui)
+WidgetUpdateProc :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget)
+WidgetDrawProc :: proc(widget: ^Widget, ui: ^Ui)
 WidgetResizeProc :: proc(widget: ^Widget, pw, ph: f32)
 WidgetAlignProc :: proc(widget: ^Widget, px, py: f32)
 
@@ -74,33 +74,33 @@ Widget :: struct {
     align: WidgetAlignProc,
 }
 
-widget_init :: proc(widget: ^Widget, handle: ^Handle) {
+widget_init :: proc(widget: ^Widget, ui: ^Ui) {
     if widget.init == nil do return
     root := Widget{
         x = 0,
         y = 0,
-        w = cast(f32)handle.window_w,
-        h = cast(f32)handle.window_h,
+        w = cast(f32)ui.window_w,
+        h = cast(f32)ui.window_h,
     }
-    widget->init(handle, &root)
-    widget_resize(widget, handle)
+    widget->init(ui, &root)
+    widget_resize(widget, ui)
 }
 
-widget_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+widget_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     if widget.destroy == nil do return
-    widget->destroy(handle)
+    widget->destroy(ui)
 }
 
-widget_resize :: proc(widget: ^Widget, handle: ^Handle) {
+widget_resize :: proc(widget: ^Widget, ui: ^Ui) {
     if widget.disabled do return
     if .FillW in widget.size_policy {
-        widget.w = handle.window_w
+        widget.w = ui.window_w
     }
     if .FillH in widget.size_policy {
-        widget.h = handle.window_h
+        widget.h = ui.window_h
     }
     if widget.resize != nil {
-        widget->resize(handle.window_w, handle.window_h)
+        widget->resize(ui.window_w, ui.window_h)
     }
     widget_align(widget, 0, 0)
 }
@@ -113,23 +113,23 @@ widget_align :: proc(widget: ^Widget, x, y: f32) {
     }
 }
 
-widget_update :: proc(handle: ^Handle, widget: ^Widget) {
+widget_update :: proc(ui: ^Ui, widget: ^Widget) {
     if widget.update == nil do return
     root := Widget{
-        x = handle.rel_rect.x,
-        y = handle.rel_rect.y,
-        w = handle.rel_rect.w,
-        h = handle.rel_rect.h,
+        x = ui.rel_rect.x,
+        y = ui.rel_rect.y,
+        w = ui.rel_rect.w,
+        h = ui.rel_rect.h,
     }
-    widget->update(handle, &root)
+    widget->update(ui, &root)
 }
 
-widget_draw :: proc(widget: ^Widget, handle: ^Handle) {
+widget_draw :: proc(widget: ^Widget, ui: ^Ui) {
     // if widget.draw == nil do return // assume it is never the case
-    if !handle.processing_ordered_draws && widget.z_index > 0 {
-        add_ordered_draw(handle, widget)
+    if !ui.processing_ordered_draws && widget.z_index > 0 {
+        add_ordered_draw(ui, widget)
     } else if !widget.disabled && !widget.invisible {
-        widget->draw(handle)
+        widget->draw(ui)
     }
 }
 
@@ -137,19 +137,19 @@ widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
     return mouse_on_region(mx, my, widget.x, widget.y, widget.w, widget.h)
 }
 
-widget_enable :: proc(widget: ^Widget, handle: ^Handle) {
+widget_enable :: proc(widget: ^Widget, ui: ^Ui) {
     widget.disabled = false
-    handle.resize = true
+    ui.resize = true
 }
 
-widget_disable :: proc(widget: ^Widget, handle: ^Handle) {
+widget_disable :: proc(widget: ^Widget, ui: ^Ui) {
     widget.disabled = true
-    handle.resize = true
+    ui.resize = true
 }
 
-widget_toggle :: proc(widget: ^Widget, handle: ^Handle) {
+widget_toggle :: proc(widget: ^Widget, ui: ^Ui) {
     widget.disabled = !widget.disabled
-    handle.resize = true
+    ui.resize = true
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -168,7 +168,7 @@ Slider :: struct {
 DropDownSelector :: struct {
 }
 
-SwitchButton :: struct {
+SwitchButton :: struct { // add a drawn one and an icon one (two icons for the states)
 }
 
 Tabs :: struct {
@@ -183,9 +183,12 @@ Line :: struct { // separator line
 FloatingWindow :: struct { // draggable floating window (can also be done by creating a separated ui in a separated window)
 }
 
+CollapsableText :: struct {
+}
+
 // text ////////////////////////////////////////////////////////////////////////
 
-// TODO: text wrapping
+// TODO: dynamic wrapping
 
 TextStyle :: struct {
     font: su.FontPath,
@@ -242,9 +245,9 @@ text :: proc {
     text_from_proc,
 }
 
-text_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+text_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Text)widget
-    self.text = create_text(handle, self.content, self.attr.style.font, self.attr.style.font_size)
+    self.text = create_text(ui, self.content, self.attr.style.font, self.attr.style.font_size)
     su.text_set_color(self.text, su.Color{
         self.attr.style.color.r,
         self.attr.style.color.g,
@@ -259,7 +262,7 @@ text_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.min_h = h
 }
 
-text_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+text_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Text)widget
     if self.content_proc != nil {
         content, color := self.content_proc(self.content_proc_data)
@@ -271,7 +274,7 @@ text_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
         su.text_update(self.text)
         w, h := su.text_size(self.text)
         if w > self.w || h > self.h {
-            handle.resize = true
+            ui.resize = true
         }
         self.w = w
         self.h = h
@@ -280,16 +283,16 @@ text_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     }
 }
 
-text_draw :: proc(widget: ^Widget, handle: ^Handle) {
+text_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Text)widget
-    draw_text(handle, self.text, self.x, self.y)
+    draw_text(ui, self.text, self.x, self.y)
 }
 
 // image ///////////////////////////////////////////////////////////////////////
 
 // TODO: add a custom size for the texture
 // can the size be relative to the original image size (ratio?)???
-// also need some helper functions to handle textures in draw boxes (not so
+// also need some helper functions to ui textures in draw boxes (not so
 // sure that this specific widget will be very useful for anything else that
 // printing a logo)
 Image :: struct {
@@ -319,9 +322,9 @@ image :: proc(
     return image_w
 }
 
-image_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+image_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Image)widget
-    self.image = create_image(handle, self.file, self.srcrect)
+    self.image = create_image(ui, self.file, self.srcrect)
     w := self.image.w if self.iw == 0 else self.iw
     self.w = w
     self.min_w = w
@@ -330,21 +333,21 @@ image_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     self.min_h = h
 }
 
-image_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+image_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Image)widget
     su.image_destroy(self.image)
 }
 
-image_draw :: proc(widget: ^Widget, handle: ^Handle) {
+image_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Image)widget
-    draw_image(handle, self.image, self.x, self.y, self.w, self.h)
+    draw_image(ui, self.image, self.x, self.y, self.w, self.h)
 }
 
 // button //////////////////////////////////////////////////////////////////////
 
 ButtonState :: enum { Idle, Hovered, Clicked }
 
-ButtonClickedProc :: proc(handle: ^Handle, clicked_data: rawptr)
+ButtonClickedProc :: proc(ui: ^Ui, clicked_data: rawptr)
 
 ButtonColors :: struct {
     text: Color,
@@ -444,7 +447,7 @@ icon_button :: proc{
     icon_button_idle_state,
 }
 
-button_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+button_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
     if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(widget, event.x, event.y) do return false
     self := cast(^Button)widget
 
@@ -452,27 +455,27 @@ button_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, handle: ^H
         self.state = .Clicked
     } else if self.state == .Clicked {
         self.state = .Idle
-        self.clicked(handle, self.clicked_data)
+        self.clicked(ui, self.clicked_data)
     }
     return true
 }
 
-button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Button)widget
-    self.text = create_text(handle, self.label, self.attr.style.label_font_path, self.attr.style.label_font_size)
+    self.text = create_text(ui, self.label, self.attr.style.label_font_path, self.attr.style.label_font_size)
     self.w, self.h = su.text_size(self.text)
     self.w += self.attr.style.padding.left + self.attr.style.padding.right
     self.h += self.attr.style.padding.top + self.attr.style.padding.bottom
     self.min_w = self.w
     self.min_h = self.h
-    add_event_handler(handle, self, button_mouse_handler)
+    add_event_handler(ui, self, button_mouse_handler)
 }
 
-icon_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+icon_button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Button)widget
-    self.icons_image[.Idle] = create_image(handle, self.icons_data[.Idle].file, self.icons_data[.Idle].srcrect)
-    self.icons_image[.Hovered] = create_image(handle, self.icons_data[.Hovered].file, self.icons_data[.Hovered].srcrect)
-    self.icons_image[.Clicked] = create_image(handle, self.icons_data[.Clicked].file, self.icons_data[.Clicked].srcrect)
+    self.icons_image[.Idle] = create_image(ui, self.icons_data[.Idle].file, self.icons_data[.Idle].srcrect)
+    self.icons_image[.Hovered] = create_image(ui, self.icons_data[.Hovered].file, self.icons_data[.Hovered].srcrect)
+    self.icons_image[.Clicked] = create_image(ui, self.icons_data[.Clicked].file, self.icons_data[.Clicked].srcrect)
     assert(self.icons_image[.Clicked].w == self.icons_image[.Idle].w)
     assert(self.icons_image[.Clicked].h == self.icons_image[.Idle].h)
     assert(self.icons_image[.Hovered].w == self.icons_image[.Idle].w)
@@ -485,19 +488,19 @@ icon_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     h += self.attr.style.padding.top + self.attr.style.padding.bottom
     self.h = h
     self.min_h = h
-    add_event_handler(handle, self, button_mouse_handler)
+    add_event_handler(ui, self, button_mouse_handler)
 }
 
-icon_button_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+icon_button_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Button)widget
     su.image_destroy(self.icons_image[.Idle])
     su.image_destroy(self.icons_image[.Hovered])
     su.image_destroy(self.icons_image[.Clicked])
 }
 
-button_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+button_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Button)widget
-    if widget_is_hovered(self, handle.mouse_x, handle.mouse_y) {
+    if widget_is_hovered(self, ui.mouse_x, ui.mouse_y) {
         if self.state == .Idle {
             self.state = .Hovered
         }
@@ -506,50 +509,50 @@ button_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     }
 }
 
-button_draw_background :: proc(self: ^Button, handle: ^Handle) {
+button_draw_background :: proc(self: ^Button, ui: ^Ui) {
     bg_color := self.attr.style.colors[self.state].bg
     border_color := self.attr.style.colors[self.state].border
     border_thickness := self.attr.style.border_thickness
 
     if self.attr.style.corner_radius > 0 {
         if border_thickness > 0 {
-            draw_rounded_box_with_border(handle, self.x, self.y, self.w, self.h,
+            draw_rounded_box_with_border(ui, self.x, self.y, self.w, self.h,
                                          self.attr.style.corner_radius, border_thickness,
                                          border_color, bg_color)
         } else {
-            draw_rounded_box(handle, self.x + border_thickness, self.y + border_thickness,
+            draw_rounded_box(ui, self.x + border_thickness, self.y + border_thickness,
                              self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                              self.attr.style.corner_radius, bg_color)
         }
     } else {
         if border_thickness > 0 {
-            draw_rect(handle, self.x, self.y, self.w, self.h, border_color)
+            draw_rect(ui, self.x, self.y, self.w, self.h, border_color)
         }
-        draw_rect(handle, self.x + border_thickness, self.y + border_thickness,
+        draw_rect(ui, self.x + border_thickness, self.y + border_thickness,
                           self.w - 2 * border_thickness, self.h - 2 * border_thickness,
                           bg_color)
     }
 }
 
-button_draw :: proc(widget: ^Widget, handle: ^Handle) {
+button_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Button)widget
     text_color := self.attr.style.colors[self.state].text
 
     su.text_set_color(self.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
     su.text_update(self.text)
-    button_draw_background(self, handle)
+    button_draw_background(self, ui)
     label_w, label_h := su.text_size(self.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
-    draw_text(handle, self.text, label_x, label_y)
+    draw_text(ui, self.text, label_x, label_y)
 }
 
-icon_button_draw :: proc(widget: ^Widget, handle: ^Handle) {
+icon_button_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Button)widget
-    button_draw_background(self, handle)
+    button_draw_background(self, ui)
     icon_x := self.x + (self.w - self.iw) / 2.
     icon_y := self.y + (self.h - self.ih) / 2.
-    draw_image(handle, self.icons_image[self.state], icon_x, icon_y, self.iw, self.ih)
+    draw_image(ui, self.icons_image[self.state], icon_x, icon_y, self.iw, self.ih)
 }
 
 // boxes ///////////////////////////////////////////////////////////////////////
@@ -772,16 +775,16 @@ box_add_widget :: proc(widget: ^Widget, child: ^Widget) {// {{{
     append(&self.widgets, child)
 }// }}}
 
-box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
+box_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {// {{{
     self := cast(^Box)widget
 
     for child in self.widgets {
         if child.init != nil {
-            child->init(handle, self)
+            child->init(ui, self)
         }
     }
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
-        if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
+    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
+        if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
         self := cast(^Box)widget
 
         if event.mods == {} {
@@ -790,12 +793,12 @@ box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
         }
         return true
     })
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
         self := cast(^Box)widget
         scrollbars_click(&self.scrollbars, event)
         return true
     })
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool {
         self := cast(^Box)widget
         scrollbars_mouse_motion(&self.scrollbars, event)
         box_align(self, self.x, self.y)
@@ -803,11 +806,11 @@ box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
     })
 }// }}}
 
-box_destroy :: proc(widget: ^Widget, handle: ^Handle) {// {{{
+box_destroy :: proc(widget: ^Widget, ui: ^Ui) {// {{{
     self := cast(^Box)widget
 
     for child in self.widgets {
-        widget_destroy(child, handle)
+        widget_destroy(child, ui)
     }
 }// }}}
 
@@ -1006,44 +1009,44 @@ box_resize :: proc(widget: ^Widget, w, h: f32) {// {{{
     scrollbars_resize(&self.scrollbars, self.w, self.h, self.content_w, self.content_h)
 }// }}}
 
-box_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {// {{{
+box_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {// {{{
     self := cast(^Box)widget
 
-    if scrollbars_update(&self.scrollbars, handle) {
+    if scrollbars_update(&self.scrollbars, ui) {
         box_align(self, self.x, self.y)
     }
     for child in self.widgets {
         if child.update != nil && !child.disabled {
-            child->update(handle, self)
+            child->update(ui, self)
         }
     }
 }// }}}
 
-box_draw :: proc(widget: ^Widget, handle: ^Handle) {// {{{
+box_draw :: proc(widget: ^Widget, ui: ^Ui) {// {{{
     self := cast(^Box)widget
 
     if self.attr.style.background_color.a > 0 {
-        draw_rect(handle, self.x, self.y, self.w, self.h, self.attr.style.background_color)
+        draw_rect(ui, self.x, self.y, self.w, self.h, self.attr.style.background_color)
     }
 
     for child in self.widgets {
-        widget_draw(child, handle)
+        widget_draw(child, ui)
     }
-    scrollbars_draw(&self.scrollbars, handle)
+    scrollbars_draw(&self.scrollbars, ui)
 
     bt := self.attr.style.border_thickness
     bc := self.attr.style.border_color
     if .Top in self.attr.style.active_borders {
-        draw_rect(handle, self.x, self.y, self.w, bt, bc)
+        draw_rect(ui, self.x, self.y, self.w, bt, bc)
     }
     if .Bottom in self.attr.style.active_borders {
-        draw_rect(handle, self.x, self.y + self.h - bt, self.w, bt, bc)
+        draw_rect(ui, self.x, self.y + self.h - bt, self.w, bt, bc)
     }
     if .Left in self.attr.style.active_borders {
-        draw_rect(handle, self.x, self.y, bt, self.h, bc)
+        draw_rect(ui, self.x, self.y, bt, self.h, bc)
     }
     if .Right in self.attr.style.active_borders {
-        draw_rect(handle, self.x + self.w - bt, self.y, bt, self.h, bc)
+        draw_rect(ui, self.x + self.w - bt, self.y, bt, self.h, bc)
     }
 }// }}}
 
@@ -1112,10 +1115,10 @@ radio_button :: proc(
     return radio_button_w
 }
 
-radio_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+radio_button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^RadioButton)widget
 
-    self.label_text = create_text(handle, self.label, self.attr.style.font, self.attr.style.font_size)
+    self.label_text = create_text(ui, self.label, self.attr.style.font, self.attr.style.font_size)
     label_color := su.Color{
         self.attr.style.label_color.r,
         self.attr.style.label_color.g,
@@ -1137,7 +1140,7 @@ radio_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
         self.label_offset = (d - label_h) / 2
     }
 
-    add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
         self := cast(^RadioButton)widget
         button_size := 2 * self.attr.style.base_radius
         button_x := self.x
@@ -1150,9 +1153,9 @@ radio_button_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     })
 }
 
-radio_button_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {}
+radio_button_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {}
 
-radio_button_draw :: proc(widget: ^Widget, handle: ^Handle) {
+radio_button_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^RadioButton)widget
 
     r := self.attr.style.base_radius
@@ -1161,16 +1164,16 @@ radio_button_draw :: proc(widget: ^Widget, handle: ^Handle) {
     by := self.y + self.button_offset + r
     bx := self.x + r
     if self.attr.style.border_thickness > 0 {
-        draw_circle(handle, bx, by, r, self.attr.style.border_color)
+        draw_circle(ui, bx, by, r, self.attr.style.border_color)
     }
-    draw_circle(handle, bx, by, bgr, self.attr.style.background_color)
+    draw_circle(ui, bx, by, bgr, self.attr.style.background_color)
     if self.checked {
-        draw_circle(handle, bx, by, dr, self.attr.style.dot_color)
+        draw_circle(ui, bx, by, dr, self.attr.style.dot_color)
     }
 
     text_xoffset := 2 * r + self.attr.style.label_padding
     text_yoffset := self.label_offset
-    draw_text(handle, self.label_text, self.x + text_xoffset, self.y + text_yoffset)
+    draw_text(ui, self.label_text, self.x + text_xoffset, self.y + text_yoffset)
 }
 
 radio_button_get_value :: proc(widget: ^Widget) -> bool {
@@ -1212,19 +1215,19 @@ DrawBox :: struct {
     content_size: ContentSize,
     zoombox: ZoomBox,
     scrollbars: Scrollbars,
-    user_init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
-    user_destroy: proc(handle: ^Handle, user_data: rawptr),
-    user_update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize,
-    user_draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
+    user_init: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr),
+    user_destroy: proc(ui: ^Ui, user_data: rawptr),
+    user_update: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr) -> ContentSize,
+    user_draw: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr),
     user_data: rawptr,
     attr: DrawBoxAttributes,
 }
 
 draw_box :: proc(
-    draw: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr),
-    update: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
-    init: proc(handle: ^Handle, widget: ^Widget, user_data: rawptr) = nil,
-    destroy: proc(handle: ^Handle, user_data: rawptr) = nil,
+    draw: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr),
+    update: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr) -> ContentSize = nil,
+    init: proc(ui: ^Ui, widget: ^Widget, user_data: rawptr) = nil,
+    destroy: proc(ui: ^Ui, user_data: rawptr) = nil,
     data: rawptr = nil,
     attr := OPTS.draw_box_attr,
 ) -> ^Widget {
@@ -1247,18 +1250,18 @@ draw_box :: proc(
     return draw_box_w
 }
 
-draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+draw_box_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^DrawBox)widget
 
     if self.user_init != nil {
-        self.user_init(handle, self, self.user_data)
+        self.user_init(ui, self, self.user_data)
     }
 
     zoombox_init(&self.zoombox, self)
 
     if .Zoomable in self.attr.props {
-        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
-            if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
+        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
+            if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
             self := cast(^DrawBox)widget
             if .Control in event.mods {
                 return zoombox_zoom_handler(&self.zoombox, event.x, event.y, event.mods)
@@ -1267,8 +1270,8 @@ draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
         })
     }
     if .WithScrollbar in self.attr.props {
-        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseWheelEvent, handle: ^Handle) -> bool {
-            if !widget_is_hovered(widget, handle.mouse_x, handle.mouse_y) do return false
+        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
+            if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
             self := cast(^DrawBox)widget
 
             if .Control not_in event.mods {
@@ -1277,12 +1280,12 @@ draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
             }
             return false
         })
-        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseClickEvent, handle: ^Handle) -> bool {
+        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
             self := cast(^DrawBox)widget
             scrollbars_click(&self.scrollbars, event)
             return true
         })
-        add_event_handler(handle, self, proc(widget: ^Widget, event: MouseMotionEvent, handle: ^Handle) -> bool {
+        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool {
             self := cast(^DrawBox)widget
             scrollbars_mouse_motion(&self.scrollbars, event)
             return true
@@ -1290,32 +1293,32 @@ draw_box_init :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
     }
 }
 
-draw_box_destroy :: proc(widget: ^Widget, handle: ^Handle) {
+draw_box_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^DrawBox)widget
     if self.user_destroy != nil {
-        self.user_destroy(handle, self.user_data)
+        self.user_destroy(ui, self.user_data)
     }
 }
 
-draw_box_update :: proc(widget: ^Widget, handle: ^Handle, parent: ^Widget) {
+draw_box_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^DrawBox)widget
     if self.user_update != nil {
-        self.content_size = self.user_update(handle, self, self.user_data)
+        self.content_size = self.user_update(ui, self, self.user_data)
     }
     if .WithScrollbar in self.attr.props {
         scrollbars_resize(&self.scrollbars, self.w, self.h, self.content_size.width, self.content_size.height)
         scrollbars_align(&self.scrollbars, self.x, self.y)
-        scrollbars_update(&self.scrollbars, handle)
+        scrollbars_update(&self.scrollbars, ui)
     }
 }
 
-draw_box_draw :: proc(widget: ^Widget, handle: ^Handle) {
+draw_box_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^DrawBox)widget
-    old_rel_rect := handle.rel_rect
-    handle.rel_rect = Rect{self.x, self.y, self.w, self.h}
-    self.user_draw(handle, self, self.user_data)
-    handle.rel_rect = old_rel_rect
+    old_rel_rect := ui.rel_rect
+    ui.rel_rect = Rect{self.x, self.y, self.w, self.h}
+    self.user_draw(ui, self, self.user_data)
+    ui.rel_rect = old_rel_rect
     if .WithScrollbar in self.attr.props {
-        scrollbars_draw(&self.scrollbars, handle)
+        scrollbars_draw(&self.scrollbars, ui)
     }
 }
