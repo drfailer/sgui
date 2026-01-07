@@ -290,11 +290,6 @@ text_draw :: proc(widget: ^Widget, ui: ^Ui) {
 
 // image ///////////////////////////////////////////////////////////////////////
 
-// TODO: add a custom size for the texture
-// can the size be relative to the original image size (ratio?)???
-// also need some helper functions to ui textures in draw boxes (not so
-// sure that this specific widget will be very useful for anything else that
-// printing a logo)
 Image :: struct {
     using widget: Widget,
     file: string,
@@ -632,7 +627,7 @@ box :: proc(// {{{
         align = box_align,
         layout = layout,
         widgets = widget_list,
-        scrollbars = scrollbars(),
+        scrollbars = scrollbars_create(),
         attr = attr,
     }
 
@@ -783,27 +778,7 @@ box_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {// {{{
             child->init(ui, self)
         }
     }
-    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
-        if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
-        self := cast(^Box)widget
-
-        if event.mods == {} {
-            scrollbars_scroll(&self.scrollbars, -event.y, -event.x, 100, 100)
-            box_align(self, self.x, self.y)
-        }
-        return true
-    })
-    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
-        self := cast(^Box)widget
-        scrollbars_click(&self.scrollbars, event)
-        return true
-    })
-    add_event_handler(ui, self, proc(widget: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool {
-        self := cast(^Box)widget
-        scrollbars_mouse_motion(&self.scrollbars, event)
-        box_align(self, self.x, self.y)
-        return true
-    })
+    scrollbars_set_event_handlers(self, ui)
 }// }}}
 
 box_destroy :: proc(widget: ^Widget, ui: ^Ui) {// {{{
@@ -1239,7 +1214,7 @@ draw_box :: proc(
         update = draw_box_update,
         draw = draw_box_draw,
         zoombox = zoombox(attr.zoom_min, attr.zoom_max, attr.zoom_step),
-        scrollbars = scrollbars(attr.scrollbars_attr),
+        scrollbars = scrollbars_create(attr.scrollbars_attr),
         user_draw = draw,
         user_init = init,
         user_destroy = destroy,
@@ -1257,8 +1232,6 @@ draw_box_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
         self.user_init(ui, self, self.user_data)
     }
 
-    zoombox_init(&self.zoombox, self)
-
     if .Zoomable in self.attr.props {
         add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
             if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
@@ -1270,26 +1243,7 @@ draw_box_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
         })
     }
     if .WithScrollbar in self.attr.props {
-        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
-            if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
-            self := cast(^DrawBox)widget
-
-            if .Control not_in event.mods {
-                scrollbars_scroll(&self.scrollbars, -event.y, 0, 100, 100)
-                return true
-            }
-            return false
-        })
-        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
-            self := cast(^DrawBox)widget
-            scrollbars_click(&self.scrollbars, event)
-            return true
-        })
-        add_event_handler(ui, self, proc(widget: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool {
-            self := cast(^DrawBox)widget
-            scrollbars_mouse_motion(&self.scrollbars, event)
-            return true
-        })
+        scrollbars_set_event_handlers(self, ui)
     }
 }
 
