@@ -73,7 +73,7 @@ OrderedDraw :: struct {
 }
 
 Rect :: sdl.FRect
-Color :: distinct [4]u8
+Color :: su.Color
 
 // create & destroy ////////////////////////////////////////////////////////////
 
@@ -451,8 +451,11 @@ process_events :: proc(ui: ^Ui) {
 
 // text utilities //////////////////////////////////////////////////////////////
 
-create_text :: proc(ui: ^Ui, content: string, font: string, font_size: f32) -> ^su.Text {
-    return su.text_engine_create_text(ui.text_engine, content, font, font_size)
+create_text :: proc(ui: ^Ui, content: string, font: string, font_size: f32, color := Color{0, 0, 0, 0}) -> ^su.Text {
+    text := su.text_engine_create_text(ui.text_engine, content, font, font_size)
+    su.text_set_color(text, color)
+    su.text_update(text)
+    return text
 }
 
 draw_text :: proc(ui: ^Ui, text: ^su.Text, x, y: f32) {

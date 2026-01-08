@@ -2,15 +2,12 @@ package sgui
 
 /*
  * How widgets should work:
- * - widget_name(args) -> create a widget (set user handlers, and properites)
- * - widget_name_init(ui, x, y, h, w, args) -> initialization that reqhandleres the ui + init position and size (depends on widgets in the tree!)
- *
- * note: the way the size of the widget is computed may vary since some widgets
- * have a fixed size (buttons, ...)
- *
- * create the widget tree:
- * widget_init(ui, ...)
- *
+ * - w(args, attr): create the widget.
+ * - w_init(w, ui, parent): initialize the widget and allocates underlying data structures.
+ * - w_destroy(w, ui): called when the widget is destroyed.
+ * - w_update(w, ui): updated the widget before drawing a new frame.
+ * - w_draw(w, ui): draw the widget.
+ * - w_resize(w, pw, ph) && w_align(w, px, py): resize and align components inside the widget (used by layout widgets).
  */
 
 // TODO: we need a better way to locate hovered widgets to avoid scrolling issues
@@ -21,8 +18,6 @@ import sdl "vendor:sdl3"
 import sdl_img "vendor:sdl3/image"
 import "core:strings"
 import "core:log"
-
-Pixel :: distinct [4]u8
 
 // widget //////////////////////////////////////////////////////////////////////
 
@@ -247,14 +242,11 @@ text :: proc {
 
 text_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Text)widget
-    self.text = create_text(ui, self.content, self.attr.style.font, self.attr.style.font_size)
-    su.text_set_color(self.text, su.Color{
-        self.attr.style.color.r,
-        self.attr.style.color.g,
-        self.attr.style.color.b,
-        self.attr.style.color.a
-    })
-    su.text_update(self.text)
+    self.text = create_text(ui,
+                            self.content,
+                            self.attr.style.font,
+                            self.attr.style.font_size,
+                            self.attr.style.color)
     w, h := su.text_size(self.text)
     self.w = w
     self.h = h
@@ -267,7 +259,7 @@ text_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     if self.content_proc != nil {
         content, color := self.content_proc(self.content_proc_data)
         su.text_set_text(self.text, content)
-        su.text_set_color(self.text, sdl.Color{color.r, color.g, color.b, color.a})
+        su.text_set_color(self.text, color)
         if self.attr.style.wrap_width > 0 {
             su.text_set_wrap_width(self.text, self.attr.style.wrap_width)
         }
@@ -1093,15 +1085,11 @@ radio_button :: proc(
 radio_button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^RadioButton)widget
 
-    self.label_text = create_text(ui, self.label, self.attr.style.font, self.attr.style.font_size)
-    label_color := su.Color{
-        self.attr.style.label_color.r,
-        self.attr.style.label_color.g,
-        self.attr.style.label_color.b,
-        self.attr.style.label_color.a,
-    }
-    su.text_set_color(self.label_text, label_color)
-    su.text_update(self.label_text)
+    self.label_text = create_text(ui,
+                                  self.label,
+                                  self.attr.style.font,
+                                  self.attr.style.font_size,
+                                  self.attr.style.label_color)
     label_w, label_h := su.text_size(self.label_text)
 
     d := 2 * self.attr.style.base_radius
