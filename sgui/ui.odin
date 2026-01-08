@@ -101,10 +101,8 @@ create :: proc() -> (ui: ^Ui) { // TODO: allocator
 destroy :: proc(ui: ^Ui) {
     su.text_engine_destroy(ui.text_engine)
     su.texture_cache_destroy(ui.texture_cache)
-    sdl_ttf.Quit()
     sdl.DestroyRenderer(ui.renderer)
     sdl.DestroyWindow(ui.window)
-    sdl.Quit()
     // TODO: use an arena
     delete(ui.event_handlers.key)
     delete(ui.event_handlers.mouse_click)
@@ -125,24 +123,13 @@ destroy :: proc(ui: ^Ui) {
 
 // init ////////////////////////////////////////////////////////////////////////
 
-init :: proc(ui: ^Ui) {
-    /* sdl */
-    if !sdl.Init(sdl.InitFlags{.VIDEO, .EVENTS}) {
-        fmt.printfln("error: {}", sdl.GetError())
-        return
-    }
-
+start :: proc(ui: ^Ui) {
     if !sdl.CreateWindowAndRenderer("Hello window", WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS, &ui.window, &ui.renderer) {
         fmt.printfln("error: {}", sdl.GetError())
         return
     }
 
     sdl.SetRenderDrawBlendMode(ui.renderer, sdl.BLENDMODE_BLEND)
-
-    if !sdl_ttf.Init() {
-        fmt.printfln("error: couldn't init sdl_ttf.")
-        return
-    }
 
     ui.text_engine = su.text_engine_create(ui.renderer)
     ui.texture_cache = su.texture_cache_create(ui.renderer)
@@ -218,7 +205,7 @@ terminate :: proc(ui: ^Ui) {
 // run /////////////////////////////////////////////////////////////////////////
 
 run :: proc(ui: ^Ui) {
-    init(ui)
+    start(ui)
 
     for ui.run {
         ui.dt = cast(f32)time.duration_seconds(time.tick_lap_time(&ui.tick))

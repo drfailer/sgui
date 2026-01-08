@@ -212,10 +212,13 @@ main :: proc() {
     context.logger = log.create_console_logger()
     defer log.destroy_console_logger(context.logger)
 
-    ui := sgui.create()
-    defer sgui.destroy(ui)
+    sgui.init()
+    {
+        ui := sgui.create()
+        defer sgui.destroy(ui)
 
-    sgui.add_layer(ui, sgui.make_widget(ui, main_layer))
-
-    sgui.run(ui)
+        sgui.add_layer(ui, sgui.make_widget(ui, main_layer))
+        sgui.run(ui)
+    }
+    sgui.fini()
 }
