@@ -31,7 +31,7 @@ Ui :: struct {
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
     text_engine: ^su.TextEngine,
-    texture_cache: ^su.TextureCache,
+    texture_engine: ^su.TextureEngine,
     mouse_x, mouse_y: f32,
     window_w, window_h: f32,
     resize: bool,
@@ -100,7 +100,7 @@ create :: proc() -> (ui: ^Ui) { // TODO: allocator
 
 destroy :: proc(ui: ^Ui) {
     su.text_engine_destroy(ui.text_engine)
-    su.texture_cache_destroy(ui.texture_cache)
+    su.texture_engine_destroy(ui.texture_engine)
     sdl.DestroyRenderer(ui.renderer)
     sdl.DestroyWindow(ui.window)
     // TODO: use an arena
@@ -132,7 +132,7 @@ start :: proc(ui: ^Ui) {
     sdl.SetRenderDrawBlendMode(ui.renderer, sdl.BLENDMODE_BLEND)
 
     ui.text_engine = su.text_engine_create(ui.renderer)
-    ui.texture_cache = su.texture_cache_create(ui.renderer)
+    ui.texture_engine = su.texture_engine_create(ui.renderer)
 
     w, h: i32
     assert(sdl.GetWindowSize(ui.window, &w, &h));
@@ -462,7 +462,7 @@ draw_text :: proc(ui: ^Ui, text: ^su.Text, x, y: f32) {
 // image utilities /////////////////////////////////////////////////////////////
 
 create_image :: proc(ui: ^Ui, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> ^su.Image {
-    return su.image_create(ui.texture_cache, path, srcrect)
+    return su.image_create(ui.texture_engine, path, srcrect)
 }
 
 draw_image :: proc(ui: ^Ui, image: ^su.Image, x, y, w, h: f32) {

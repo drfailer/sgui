@@ -8,46 +8,46 @@ import "core:strings"
 Texture :: sdl.Texture
 Rect :: sdl.FRect
 
-// texture cache ///////////////////////////////////////////////////////////////
+// texture engine ///////////////////////////////////////////////////////////////
 
-TextureCache :: struct {
-    textures: map[string]^Texture,
+TextureEngine :: struct {
+    cache: map[string]^Texture,
     renderer: ^sdl.Renderer,
 }
 
-texture_cache_create :: proc(renderer: ^sdl.Renderer) -> (cache: ^TextureCache) {
-    cache = new(TextureCache)
-    cache.textures = make(map[string]^Texture)
-    cache.renderer = renderer
-    return cache
+texture_engine_create :: proc(renderer: ^sdl.Renderer) -> (engine: ^TextureEngine) {
+    engine = new(TextureEngine)
+    engine.cache = make(map[string]^Texture)
+    engine.renderer = renderer
+    return engine
 }
 
-texture_cache_destroy :: proc(cache: ^TextureCache) {
-    for _, texture in cache.textures {
+texture_engine_destroy :: proc(engine: ^TextureEngine) {
+    for _, texture in engine.cache {
         sdl.DestroyTexture(texture)
     }
-    delete(cache.textures)
-    free(cache)
+    delete(engine.cache)
+    free(engine)
 }
 
-texture_cache_load_texture :: proc(cache: ^TextureCache, path: string) -> (texture: ^Texture) {
+texture_engine_load_texture :: proc(engine: ^TextureEngine, path: string) -> (texture: ^Texture) {
     if len(path) == 0 {
-        log.error("texture_cache_load_texture called with empty path.")
+        log.error("texture_engine_load_texture called with empty path.")
     }
-    if path in cache.textures {
-        texture = cache.textures[path]
+    if path in engine.cache {
+        texture = engine.cache[path]
     } else {
         cpath := strings.clone_to_cstring(path, context.temp_allocator)
-        texture = sdl_img.LoadTexture(cache.renderer, cpath)
-        cache.textures[path] = texture
+        texture = sdl_img.LoadTexture(engine.renderer, cpath)
+        engine.cache[path] = texture
     }
     return texture
 }
 
-texture_cache_delete_texture :: proc(cache: ^TextureCache, path: string) {
-    if path in cache.textures {
-        sdl.DestroyTexture(cache.textures[path])
-        delete_key(&cache.textures, path)
+texture_engine_delete_texture :: proc(engine: ^TextureEngine, path: string) {
+    if path in engine.cache {
+        sdl.DestroyTexture(engine.cache[path])
+        delete_key(&engine.cache, path)
     }
 }
 
@@ -60,9 +60,9 @@ Image :: struct {
     w, h: f32,
 }
 
-image_create :: proc(cache: ^TextureCache, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> (image: ^Image) {
+image_create :: proc(engine: ^TextureEngine, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> (image: ^Image) {
     image = new(Image)
-    image.texture = texture_cache_load_texture(cache, path)
+    image.texture = texture_engine_load_texture(engine, path)
     sdl.GetTextureSize(image.texture, &image.w, &image.h)
     image.path = path
     image.srcrect = srcrect
