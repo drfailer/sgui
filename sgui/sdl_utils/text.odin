@@ -157,7 +157,7 @@ font_cache_get_font :: proc(cache: ^FontCache, path: FontPath, size: FontSize) -
         map_insert(&cache.fonts[path], size, font)
     }
     if font == nil {
-        log.error("font_cache_get_font returned nil font.")
+        log.error("font_cache_get_font returned nil font ", path, sdl.GetError())
     }
     return font
 }
