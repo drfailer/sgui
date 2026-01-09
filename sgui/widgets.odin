@@ -11,6 +11,7 @@ package sgui
  */
 
 // TODO: we need a better way to locate hovered widgets to avoid scrolling issues
+// TODO: we should be able to specify the allocator to widget constructors
 
 import "core:fmt"
 import su "sdl_utils"
@@ -178,9 +179,6 @@ Line :: struct { // separator line
 FloatingWindow :: struct { // draggable floating window (can also be done by creating a separated ui in a separated window)
 }
 
-CollapsableText :: struct {
-}
-
 // text ////////////////////////////////////////////////////////////////////////
 
 // TODO: dynamic wrapping
@@ -278,6 +276,131 @@ text_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
 text_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Text)widget
     draw_text(ui, self.text, self.x, self.y)
+}
+
+// collapsable section /////////////////////////////////////////////////////////
+
+CollapsableSectionStyle :: struct {
+    // TODO
+    content_padding: Padding,
+    // symbol_size???
+    // hover_color???
+}
+
+CollapsableSectionAttributes :: struct {
+    style: CollapsableSectionStyle,
+}
+
+CollapsableSection :: struct {
+    using widget: Widget,
+    label: ^Text,
+    content: ^Box,
+    opened: bool,
+    state: ButtonState,
+}
+
+collapsable_section :: proc(
+    label: string,
+    content: ..^Widget,
+    attr := CollapsableSectionAttributes{},
+) -> ^Widget {
+    collapsable_section_w := new(CollapsableSection)
+    collapsable_section_w^ = CollapsableSection{
+        init = collapsable_section_init,
+        destroy = collapsable_section_destroy,
+        draw = collapsable_section_draw,
+        align = collapsable_section_align,
+        resize = collapsable_section_resize,
+        label = cast(^Text)text(label),
+        content = cast(^Box)vbox(
+            ..content,
+            attr = {
+                props = {.FitW, .FitH}
+            },
+        ),
+    }
+    return collapsable_section_w
+}
+
+collapsable_section_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
+    if event.button != sdl.BUTTON_LEFT || !widget_is_hovered(widget, event.x, event.y) do return false
+    self := cast(^CollapsableSection)widget
+
+    if event.down {
+        self.state = .Clicked
+    } else if self.state == .Clicked {
+        self.state = .Idle
+        self.opened = !self.opened
+        ui.resize = true
+    }
+    return true
+}
+
+collapsable_section_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
+    self := cast(^CollapsableSection)widget
+    self.label->init(ui, parent)
+    self.content->init(ui, parent)
+    self.w = self.label.w
+    self.h = self.label.h
+
+    add_event_handler(ui, self, collapsable_section_mouse_handler)
+}
+
+collapsable_section_destroy :: proc(widget: ^Widget, ui: ^Ui) {
+    self := cast(^CollapsableSection)widget
+    self.content->destroy(ui)
+}
+
+COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
+COLLAPSABLE_SECTION_SYMBOL_SIZE :: 8
+collapsable_section_draw :: proc(widget: ^Widget, ui: ^Ui) {
+    self := cast(^CollapsableSection)widget
+    symbol_x := self.x + self.label.w + COLLAPSABLE_SECTION_SYMBOL_PADDING
+    symbol_y := self.y + self.label.h / 2
+
+    self.label->draw(ui) // TODO: draw triangle
+    if self.opened {
+        draw_triangle(
+            ui,
+            symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
+            symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
+            symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
+            self.label.attr.style.color)
+        self.content->draw(ui)
+    } else {
+        draw_triangle(
+            ui,
+            symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
+            symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y,
+            symbol_x, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
+            self.label.attr.style.color)
+    }
+}
+
+collapsable_section_align :: proc(widget: ^Widget, x, y: f32) {
+    self := cast(^CollapsableSection)widget
+    self.x = x // TODO: spacing???
+    self.y = y
+    widget_align(self.label, x, y)
+    if self.opened {
+        widget_align(self.content, x, y + self.label.h)
+    }
+}
+
+collapsable_section_resize :: proc(widget: ^Widget, w, h: f32) {
+    self := cast(^CollapsableSection)widget
+
+    // TODO: add open symbol size
+    if self.opened {
+        self.content->resize(w, h)
+        self.w = max(self.label.w, self.content.w)
+        self.h = self.label.h + self.content.h // TODO: spacing???
+    } else {
+        self.w = self.label.w
+        self.h = self.label.h
+    }
+    self.min_w = self.w
+    self.min_h = self.h
 }
 
 // image ///////////////////////////////////////////////////////////////////////

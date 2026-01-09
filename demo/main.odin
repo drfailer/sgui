@@ -92,6 +92,13 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
+            collapsable_section(
+                "Collapsable Section",
+                text("- point 1"),
+                text("- point 2"),
+                text("- point 3"),
+                text("- point 4"),
+            ),
             attr = {
                 props = {.FitH, .FitW},
                 style = {
