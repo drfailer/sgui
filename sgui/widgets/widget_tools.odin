@@ -25,23 +25,11 @@ ScrollbarDirection :: enum {
     Horizontal,
 }
 
-ScrollbarThumbState :: enum {
-    Idle,
-    Hovered,
-    Selected,
-}
-
-ScrollbarButtonState :: enum {
-    Idle,
-    Hovered,
-    Clicked,
-}
-
 ScrollbarStyle :: struct {
     track_color: sgui.Color,
     track_padding: Padding,
-    thumb_color: [ScrollbarThumbState]sgui.Color,
-    button_color: [ScrollbarButtonState]sgui.Color,
+    thumb_color: [sgui.WidgetMouseState]sgui.Color,
+    button_color: [sgui.WidgetMouseState]sgui.Color,
 }
 
 Scrollbar :: struct {
@@ -60,9 +48,9 @@ Scrollbar :: struct {
     content_pixel_ratio: f32,
     scroll_step: f32,
     // states
-    thumb_state: ScrollbarThumbState,
-    button1_state: ScrollbarButtonState,
-    button2_state: ScrollbarButtonState,
+    thumb_state: sgui.WidgetMouseState,
+    button1_state: sgui.WidgetMouseState,
+    button2_state: sgui.WidgetMouseState,
     style: ScrollbarStyle,
 }
 
@@ -274,7 +262,7 @@ scrollbar_hover :: proc(self: ^Scrollbar, mx, my: f32) {
 scrollbar_click_handler :: proc(self: ^Scrollbar, event: sgui.MouseClickEvent) {
     if event.down {
         if self.thumb_state == .Hovered {
-            self.thumb_state = .Selected
+            self.thumb_state = .Clicked
         } else if self.button1_state == .Hovered {
             self.button1_state = .Clicked
         } else if self.button2_state == .Hovered {
@@ -292,7 +280,7 @@ scrollbar_click_handler :: proc(self: ^Scrollbar, event: sgui.MouseClickEvent) {
 }
 
 scrollbar_mouse_motion_handler :: proc(self: ^Scrollbar, event: sgui.MouseMotionEvent) {
-    if self.thumb_state == .Selected {
+    if self.thumb_state == .Clicked {
         if self.direction == .Vertical {
             scrollbar_update_position(self, self.position + cast(f32)event.yd * self.content_pixel_ratio)
         } else {

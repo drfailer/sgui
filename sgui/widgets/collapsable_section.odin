@@ -21,7 +21,7 @@ CollapsableSection :: struct {
     label: ^Text,
     content: ^Box,
     opened: bool,
-    state: ButtonState,
+    state: sgui.WidgetMouseState,
 }
 
 collapsable_section :: proc(

@@ -70,6 +70,12 @@ Widget :: struct {
     align: WidgetAlignProc,
 }
 
+WidgetMouseState :: enum {
+    Idle,
+    Hovered,
+    Clicked,
+}
+
 widget_init :: proc(widget: ^Widget, ui: ^Ui) {
     if widget.init == nil do return
     root := Widget{

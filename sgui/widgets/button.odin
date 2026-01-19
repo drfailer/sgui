@@ -4,8 +4,6 @@ import ".."
 import "../gla"
 import sdl "vendor:sdl3"
 
-// TODO: this should be a more generic enum like WidgetMouseState
-ButtonState :: enum { Idle, Hovered, Clicked }
 
 ButtonClickedProc :: proc(ui: ^sgui.Ui, clicked_data: rawptr)
 
@@ -21,7 +19,7 @@ ButtonStyle :: struct {
     padding: Padding,
     border_thickness: f32,
     corner_radius: f32,
-    colors: [ButtonState]ButtonColors,
+    colors: [sgui.WidgetMouseState]ButtonColors,
 }
 
 ButtonAttributes :: struct {
@@ -38,12 +36,12 @@ Button :: struct {
     using widget: sgui.Widget,
     label: string,
     text: ^gla.Text,
-    state: ButtonState,
+    state: sgui.WidgetMouseState,
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
     attr: ButtonAttributes,
-    icons_data: [ButtonState]IconData,
-    icons_image: [ButtonState]^gla.Image,
+    icons_data: [sgui.WidgetMouseState]IconData,
+    icons_image: [sgui.WidgetMouseState]^gla.Image,
     iw, ih: f32,
 }
 
@@ -73,7 +71,7 @@ button :: proc(
 }
 
 icon_button_all_states :: proc(
-    icons_data: [ButtonState]IconData,
+    icons_data: [sgui.WidgetMouseState]IconData,
     clicked: ButtonClickedProc,
     w: f32 = 0,
     h: f32 = 0,
@@ -98,7 +96,7 @@ icon_button_idle_state :: proc(
     clicked_data: rawptr = nil,
     attr := OPTS.button_attr,
 ) -> ^sgui.Widget {
-    icons_data := [ButtonState]IconData{ .Idle = icon, .Hovered = icon, .Clicked = icon }
+    icons_data := [sgui.WidgetMouseState]IconData{ .Idle = icon, .Hovered = icon, .Clicked = icon }
     return icon_button_all_states(icons_data, clicked, w, h, clicked_data, attr)
 }
 
