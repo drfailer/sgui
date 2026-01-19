@@ -1,4 +1,4 @@
-package sdl_utils
+package gla
 
 import "core:fmt"
 import "core:mem"

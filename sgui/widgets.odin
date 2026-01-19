@@ -14,7 +14,7 @@ package sgui
 // TODO: we should be able to specify the allocator to widget constructors
 
 import "core:fmt"
-import su "sdl_utils"
+import gla "gla"
 import sdl "vendor:sdl3"
 import sdl_img "vendor:sdl3/image"
 import "core:strings"
@@ -184,8 +184,8 @@ FloatingWindow :: struct { // draggable floating window (can also be done by cre
 // TODO: dynamic wrapping
 
 TextStyle :: struct {
-    font: su.FontPath,
-    font_size: su.FontSize,
+    font: gla.FontPath,
+    font_size: gla.FontSize,
     color: Color,
     wrap_width: f32,
 }
@@ -196,7 +196,7 @@ TextAttributes :: struct {
 
 Text :: struct {
     using widget: Widget,
-    text: ^su.Text,
+    text: ^gla.Text,
     content: string,
     content_proc: proc(data: rawptr) -> (string, Color),
     content_proc_data: rawptr,
@@ -245,7 +245,7 @@ text_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
                             self.attr.style.font,
                             self.attr.style.font_size,
                             self.attr.style.color)
-    w, h := su.text_size(self.text)
+    w, h := gla.text_size(self.text)
     self.w = w
     self.h = h
     self.min_w = w
@@ -256,13 +256,13 @@ text_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Text)widget
     if self.content_proc != nil {
         content, color := self.content_proc(self.content_proc_data)
-        su.text_set_text(self.text, content)
-        su.text_set_color(self.text, color)
+        gla.text_set_text(self.text, content)
+        gla.text_set_color(self.text, color)
         if self.attr.style.wrap_width > 0 {
-            su.text_set_wrap_width(self.text, self.attr.style.wrap_width)
+            gla.text_set_wrap_width(self.text, self.attr.style.wrap_width)
         }
-        su.text_update(self.text)
-        w, h := su.text_size(self.text)
+        gla.text_update(self.text)
+        w, h := gla.text_size(self.text)
         if w > self.w || h > self.h {
             ui.resize = true
         }
@@ -408,7 +408,7 @@ collapsable_section_resize :: proc(widget: ^Widget, w, h: f32) {
 Image :: struct {
     using widget: Widget,
     file: string,
-    image: ^su.Image,
+    image: ^gla.Image,
     srcrect: Rect,
     iw, ih: f32,
 }
@@ -445,7 +445,7 @@ image_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
 
 image_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Image)widget
-    su.image_destroy(self.image)
+    gla.image_destroy(self.image)
 }
 
 image_draw :: proc(widget: ^Widget, ui: ^Ui) {
@@ -466,8 +466,8 @@ ButtonColors :: struct {
 }
 
 ButtonStyle :: struct {
-    label_font_path: su.FontPath,
-    label_font_size: su.FontSize,
+    label_font_path: gla.FontPath,
+    label_font_size: gla.FontSize,
     padding: Padding,
     border_thickness: f32,
     corner_radius: f32,
@@ -487,13 +487,13 @@ IconData :: struct {
 Button :: struct {
     using widget: Widget,
     label: string,
-    text: ^su.Text,
+    text: ^gla.Text,
     state: ButtonState,
     clicked: ButtonClickedProc,
     clicked_data: rawptr,
     attr: ButtonAttributes,
     icons_data: [ButtonState]IconData,
-    icons_image: [ButtonState]^su.Image,
+    icons_image: [ButtonState]^gla.Image,
     iw, ih: f32,
 }
 
@@ -573,7 +573,7 @@ button_mouse_handler :: proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -
 button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
     self := cast(^Button)widget
     self.text = create_text(ui, self.label, self.attr.style.label_font_path, self.attr.style.label_font_size)
-    self.w, self.h = su.text_size(self.text)
+    self.w, self.h = gla.text_size(self.text)
     self.w += self.attr.style.padding.left + self.attr.style.padding.right
     self.h += self.attr.style.padding.top + self.attr.style.padding.bottom
     self.min_w = self.w
@@ -603,9 +603,9 @@ icon_button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
 
 icon_button_destroy :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Button)widget
-    su.image_destroy(self.icons_image[.Idle])
-    su.image_destroy(self.icons_image[.Hovered])
-    su.image_destroy(self.icons_image[.Clicked])
+    gla.image_destroy(self.icons_image[.Idle])
+    gla.image_destroy(self.icons_image[.Hovered])
+    gla.image_destroy(self.icons_image[.Clicked])
 }
 
 button_update :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
@@ -648,10 +648,10 @@ button_draw :: proc(widget: ^Widget, ui: ^Ui) {
     self := cast(^Button)widget
     text_color := self.attr.style.colors[self.state].text
 
-    su.text_set_color(self.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
-    su.text_update(self.text)
+    gla.text_set_color(self.text, sdl.Color{text_color.r, text_color.g, text_color.b, text_color.a})
+    gla.text_update(self.text)
     button_draw_background(self, ui)
-    label_w, label_h := su.text_size(self.text)
+    label_w, label_h := gla.text_size(self.text)
     label_x := self.x + (self.w - label_w) / 2.
     label_y := self.y + (self.h - label_h) / 2.
     draw_text(ui, self.text, label_x, label_y)
@@ -1171,7 +1171,7 @@ RadioButtonStyle :: struct {
     label_padding: f32,
     label_color: Color,
     font: string,
-    font_size: su.FontSize,
+    font_size: gla.FontSize,
 }
 
 RadioButtonAttributes :: struct {
@@ -1182,7 +1182,7 @@ RadioButton :: struct {
     using widget: Widget,
     checked: bool,
     label: string,
-    label_text: ^su.Text,
+    label_text: ^gla.Text,
     button_offset: f32,
     label_offset: f32,
     attr: RadioButtonAttributes,
@@ -1213,7 +1213,7 @@ radio_button_init :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget) {
                                   self.attr.style.font,
                                   self.attr.style.font_size,
                                   self.attr.style.label_color)
-    label_w, label_h := su.text_size(self.label_text)
+    label_w, label_h := gla.text_size(self.label_text)
 
     d := 2 * self.attr.style.base_radius
     self.w = d + self.attr.style.label_padding + label_w

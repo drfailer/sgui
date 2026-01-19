@@ -6,7 +6,7 @@ package sgui
  */
 
 import "core:fmt"
-import su "sdl_utils"
+import gla "gla"
 import sdl "vendor:sdl3"
 import "core:log"
 

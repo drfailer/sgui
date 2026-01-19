@@ -1,4 +1,4 @@
-package sdl_utils
+package gla
 
 import sdl "vendor:sdl3"
 import sdl_img "vendor:sdl3/image"

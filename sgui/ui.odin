@@ -10,7 +10,7 @@ import "core:container/queue"
 import "core:container/priority_queue"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
-import su "sdl_utils"
+import gla "gla"
 
 // TODO: rework the sdl backend, we need a more generic api!!!
 
@@ -30,8 +30,8 @@ Ui :: struct {
     /* sdl */
     window: ^sdl.Window,
     renderer: ^sdl.Renderer,
-    text_engine: ^su.TextEngine,
-    texture_engine: ^su.TextureEngine,
+    text_engine: ^gla.TextEngine,
+    texture_engine: ^gla.TextureEngine,
     mouse_x, mouse_y: f32,
     window_w, window_h: f32,
     resize: bool,
@@ -73,7 +73,7 @@ OrderedDraw :: struct {
 }
 
 Rect :: sdl.FRect
-Color :: su.Color
+Color :: gla.Color
 
 // create & destroy ////////////////////////////////////////////////////////////
 
@@ -99,8 +99,8 @@ create :: proc() -> (ui: ^Ui) { // TODO: allocator
 }
 
 destroy :: proc(ui: ^Ui) {
-    su.text_engine_destroy(ui.text_engine)
-    su.texture_engine_destroy(ui.texture_engine)
+    gla.text_engine_destroy(ui.text_engine)
+    gla.texture_engine_destroy(ui.texture_engine)
     sdl.DestroyRenderer(ui.renderer)
     sdl.DestroyWindow(ui.window)
     // TODO: use an arena
@@ -131,8 +131,8 @@ start :: proc(ui: ^Ui) {
 
     sdl.SetRenderDrawBlendMode(ui.renderer, sdl.BLENDMODE_BLEND)
 
-    ui.text_engine = su.text_engine_create(ui.renderer)
-    ui.texture_engine = su.texture_engine_create(ui.renderer)
+    ui.text_engine = gla.text_engine_create(ui.renderer)
+    ui.texture_engine = gla.texture_engine_create(ui.renderer)
 
     w, h: i32
     assert(sdl.GetWindowSize(ui.window, &w, &h));
@@ -451,25 +451,25 @@ process_events :: proc(ui: ^Ui) {
 
 // text utilities //////////////////////////////////////////////////////////////
 
-create_text :: proc(ui: ^Ui, content: string, font: string, font_size: f32, color := Color{0, 0, 0, 0}) -> ^su.Text {
-    text := su.text_engine_create_text(ui.text_engine, content, font, font_size)
-    su.text_set_color(text, color)
-    su.text_update(text)
+create_text :: proc(ui: ^Ui, content: string, font: string, font_size: f32, color := Color{0, 0, 0, 0}) -> ^gla.Text {
+    text := gla.text_engine_create_text(ui.text_engine, content, font, font_size)
+    gla.text_set_color(text, color)
+    gla.text_update(text)
     return text
 }
 
-draw_text :: proc(ui: ^Ui, text: ^su.Text, x, y: f32) {
-    su.text_draw(text, x + ui.rel_rect.x, y + ui.rel_rect.y)
+draw_text :: proc(ui: ^Ui, text: ^gla.Text, x, y: f32) {
+    gla.text_draw(text, x + ui.rel_rect.x, y + ui.rel_rect.y)
 }
 
 // image utilities /////////////////////////////////////////////////////////////
 
-create_image :: proc(ui: ^Ui, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> ^su.Image {
-    return su.image_create(ui.texture_engine, path, srcrect)
+create_image :: proc(ui: ^Ui, path: string, srcrect: Rect = Rect{0, 0, 0, 0}) -> ^gla.Image {
+    return gla.image_create(ui.texture_engine, path, srcrect)
 }
 
-draw_image :: proc(ui: ^Ui, image: ^su.Image, x, y, w, h: f32) {
-    su.image_draw(ui.renderer, image, ui.rel_rect.x + x, ui.rel_rect.y + y, w, h)
+draw_image :: proc(ui: ^Ui, image: ^gla.Image, x, y, w, h: f32) {
+    gla.image_draw(ui.renderer, image, ui.rel_rect.x + x, ui.rel_rect.y + y, w, h)
 }
 
 // ordered draw ////////////////////////////////////////////////////////////////
