@@ -1,13 +1,15 @@
-package sgui
+package widgets
 
 /*
  * This file contains the tools used by widgets such as scrollbars, magnifiers,
  * ...
  */
 
+// TODO: the scrollbar should be a widget
+
 import "core:fmt"
-import gla "gla"
-import sdl "vendor:sdl3"
+import "../gla"
+import ".."
 import "core:log"
 
 // scrollbar ///////////////////////////////////////////////////////////////////
@@ -36,10 +38,10 @@ ScrollbarButtonState :: enum {
 }
 
 ScrollbarStyle :: struct {
-    track_color: Color,
+    track_color: sgui.Color,
     track_padding: Padding,
-    thumb_color: [ScrollbarThumbState]Color,
-    button_color: [ScrollbarButtonState]Color,
+    thumb_color: [ScrollbarThumbState]sgui.Color,
+    button_color: [ScrollbarButtonState]sgui.Color,
 }
 
 Scrollbar :: struct {
@@ -115,7 +117,7 @@ scrollbar_update_position :: proc(self: ^Scrollbar, position: f32) {
     self.thumb_position = self.position / self.content_pixel_ratio
 }
 
-scrollbar_update :: proc(self: ^Scrollbar, ui: ^Ui) -> bool {
+scrollbar_update :: proc(self: ^Scrollbar, ui: ^sgui.Ui) -> bool {
     updated := false
     // scroll while buttons are clicked
     if self.button1_state == .Clicked {
@@ -128,18 +130,18 @@ scrollbar_update :: proc(self: ^Scrollbar, ui: ^Ui) -> bool {
     return updated
 }
 
-scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
+scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
     if self.direction == .Vertical {
         XOFFSET :: 0
         YOFFSET :: 2
-        draw_triangle( // ^
+        sgui.draw_triangle( // ^
             ui,
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + YOFFSET,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.style.button_color[self.button1_state]
         )
-        draw_triangle( // v
+        sgui.draw_triangle( // v
             ui,
             self.x + XOFFSET,                       self.y + self.window_size - SCROLLBAR_THICKNESS + YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + self.window_size - YOFFSET,
@@ -149,14 +151,14 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
     } else {
         XOFFSET :: 2
         YOFFSET :: 0
-        draw_triangle( // <
+        sgui.draw_triangle( // <
             ui,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + YOFFSET,
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.style.button_color[self.button1_state]
         )
-        draw_triangle( // >
+        sgui.draw_triangle( // >
             ui,
             self.x + self.window_size - SCROLLBAR_THICKNESS + XOFFSET, self.y + YOFFSET,
             self.x + self.window_size - XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
@@ -166,7 +168,7 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
     }
 }
 
-scrollbar_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
+scrollbar_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
     if !self.enabled do return
 
     // TODO: button background in style
@@ -174,8 +176,8 @@ scrollbar_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
     // TODO: thumb style (rounded/squared/border)
     if self.direction == .Vertical {
         thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.left + self.style.track_padding.right)
-        draw_rect(ui, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.style.track_color)
-        draw_rounded_box(ui,
+        sgui.draw_rect(ui, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.style.track_color)
+        sgui.draw_rounded_box(ui,
             self.x + self.style.track_padding.left,
             self.y + self.thumb_position + SCROLLBAR_THICKNESS,
             thumb_thickness,
@@ -185,8 +187,8 @@ scrollbar_draw :: proc(self: ^Scrollbar, ui: ^Ui) {
         )
     } else {
         thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.top + self.style.track_padding.bottom)
-        draw_rect(ui, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.style.track_color)
-        draw_rounded_box(ui,
+        sgui.draw_rect(ui, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.style.track_color)
+        sgui.draw_rounded_box(ui,
             self.x + self.thumb_position + SCROLLBAR_THICKNESS,
             self.y + self.style.track_padding.top,
             self.thumb_size,
@@ -269,7 +271,7 @@ scrollbar_hover :: proc(self: ^Scrollbar, mx, my: f32) {
         }
 }
 
-scrollbar_click_handler :: proc(self: ^Scrollbar, event: MouseClickEvent) {
+scrollbar_click_handler :: proc(self: ^Scrollbar, event: sgui.MouseClickEvent) {
     if event.down {
         if self.thumb_state == .Hovered {
             self.thumb_state = .Selected
@@ -289,7 +291,7 @@ scrollbar_click_handler :: proc(self: ^Scrollbar, event: MouseClickEvent) {
     }
 }
 
-scrollbar_mouse_motion_handler :: proc(self: ^Scrollbar, event: MouseMotionEvent) {
+scrollbar_mouse_motion_handler :: proc(self: ^Scrollbar, event: sgui.MouseMotionEvent) {
     if self.thumb_state == .Selected {
         if self.direction == .Vertical {
             scrollbar_update_position(self, self.position + cast(f32)event.yd * self.content_pixel_ratio)
@@ -357,7 +359,7 @@ scrollbars_resize :: proc(self: ^Scrollbars, window_w, window_h, content_w, cont
     }
 }
 
-scrollbars_update :: proc(self: ^Scrollbars, ui: ^Ui) -> bool {
+scrollbars_update :: proc(self: ^Scrollbars, ui: ^sgui.Ui) -> bool {
     updated := false
 
     if self.vertical.enabled && .V_Disabled not_in self.attr.props {
@@ -369,7 +371,7 @@ scrollbars_update :: proc(self: ^Scrollbars, ui: ^Ui) -> bool {
     return updated
 }
 
-scrollbars_draw :: proc(self: ^Scrollbars, ui: ^Ui) {
+scrollbars_draw :: proc(self: ^Scrollbars, ui: ^sgui.Ui) {
     if .V_Disabled not_in self.attr.props {
         if .V_ShowOnHover not_in self.attr.props || self.vertical.hovered {
             scrollbar_draw(&self.vertical, ui)
@@ -393,7 +395,7 @@ scrollbars_scroll_handler :: proc(self: ^Scrollbars, vcount, hcount: i32, vstep,
     }
 }
 
-scrollbars_click_handler :: proc(self: ^Scrollbars, event: MouseClickEvent) {
+scrollbars_click_handler :: proc(self: ^Scrollbars, event: sgui.MouseClickEvent) {
     // TODO: do not test the second bar if the first is true
     if self.vertical.enabled && .V_Disabled not_in self.attr.props {
         scrollbar_click_handler(&self.vertical, event)
@@ -403,7 +405,7 @@ scrollbars_click_handler :: proc(self: ^Scrollbars, event: MouseClickEvent) {
     }
 }
 
-scrollbars_mouse_motion_handler :: proc(self: ^Scrollbars, event: MouseMotionEvent) {
+scrollbars_mouse_motion_handler :: proc(self: ^Scrollbars, event: sgui.MouseMotionEvent) {
     // TODO: do not test the second bar if the first is true
     if self.vertical.enabled && .V_Disabled not_in self.attr.props {
         scrollbar_mouse_motion_handler(&self.vertical, event)
@@ -418,26 +420,26 @@ scrollbars_mouse_motion_handler :: proc(self: ^Scrollbars, event: MouseMotionEve
  * expects that the given widget store the scrollbars in a field named
  * `scrollbars`.
  */
-scrollbars_set_event_handlers :: proc(parent_widget: $T, ui: ^Ui) {
-    add_event_handler(ui, parent_widget, proc(widget: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool {
-        if !widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
+scrollbars_set_event_handlers :: proc(parent_widget: $T, ui: ^sgui.Ui) {
+    sgui.add_event_handler(ui, parent_widget, proc(widget: ^sgui.Widget, event: sgui.MouseWheelEvent, ui: ^sgui.Ui) -> bool {
+        if !sgui.widget_is_hovered(widget, ui.mouse_x, ui.mouse_y) do return false
         self := cast(T)widget
 
         if event.mods == {} {
             scrollbars_scroll_handler(&self.scrollbars, -event.y, -event.x, 100, 100)
-            widget_align(self, self.x, self.y)
+            sgui.widget_align(self, self.x, self.y)
         }
         return true
     })
-    add_event_handler(ui, parent_widget, proc(widget: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool {
+    sgui.add_event_handler(ui, parent_widget, proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
         self := cast(T)widget
         scrollbars_click_handler(&self.scrollbars, event)
         return true
     })
-    add_event_handler(ui, parent_widget, proc(widget: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool {
+    sgui.add_event_handler(ui, parent_widget, proc(widget: ^sgui.Widget, event: sgui.MouseMotionEvent, ui: ^sgui.Ui) -> bool {
         self := cast(T)widget
         scrollbars_mouse_motion_handler(&self.scrollbars, event)
-        widget_align(self, self.x, self.y)
+        sgui.widget_align(self, self.x, self.y)
         return true
     })
 }
@@ -460,7 +462,7 @@ zoombox :: proc(min, max, inc: f32, lvl: f32 = 1.) -> ZoomBox {
     }
 }
 
-zoombox_zoom_handler :: proc(zoombox: ^ZoomBox, x, y: i32, mods: bit_set[KeyMod]) -> bool {
+zoombox_zoom_handler :: proc(zoombox: ^ZoomBox, x, y: i32, mods: bit_set[sgui.KeyMod]) -> bool {
     if .Control not_in mods {
         return false
     }

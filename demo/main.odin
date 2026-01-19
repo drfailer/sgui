@@ -7,6 +7,7 @@ import "core:strings"
 import "core:mem"
 import "core:log"
 import "../sgui"
+import "../sgui/widgets"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
@@ -36,7 +37,7 @@ DATA_BOX_HEIGHT :: 100
 MS_TO_PIXEL :: 1
 
 draw_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) {
-    box := cast(^sgui.DrawBox)box_widget
+    box := cast(^widgets.DrawBox)box_widget
     data_rect := sgui.Rect{
         x = -box.scrollbars.horizontal.position,
         y = (box.h - box.zoombox.lvl * DATA_BOX_HEIGHT) / 2. - box.scrollbars.vertical.position,
@@ -73,17 +74,17 @@ draw_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) {
     sgui.draw_rounded_frame(ui, 400, 400, 100, 100, 20, sgui.Color{255, 255, 255, 255})
 }
 
-update_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) -> sgui.ContentSize {
+update_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) -> widgets.ContentSize {
     ttl_time := DATA[len(DATA) - 1].end - DATA[0].begin
-    box := cast(^sgui.DrawBox)box_widget
-    return sgui.ContentSize{
+    box := cast(^widgets.DrawBox)box_widget
+    return widgets.ContentSize{
         box.zoombox.lvl * MS_TO_PIXEL * cast(f32)ttl_time,
         box.zoombox.lvl * DATA_BOX_HEIGHT,
     }
 }
 
 side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
-    using sgui
+    using widgets
     widget = hbox(
         vbox(
             text("Side Pannel"),
@@ -121,10 +122,10 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
 }
 
 main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
-    using sgui
+    using widgets
     menu_btn := icon_button(IconData{file = "img/menu-icon.png"},
-        clicked = proc(ui: ^Ui, _: rawptr) {
-            widget_toggle(ui->widget("side_pannel"), ui)
+        clicked = proc(ui: ^sgui.Ui, _: rawptr) {
+            sgui.widget_toggle(ui->widget("side_pannel"), ui)
         },
         w = 20,
         h = 20,
@@ -146,8 +147,8 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
         }
     )
     header := hbox(
-        left(menu_btn),
-        center(title),
+        sgui.left(menu_btn),
+        sgui.center(title),
         attr = {
             props = {.FitH},
             style = {
@@ -179,9 +180,9 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             },
         }
     )
-    footer := align_widgets(
+    footer := sgui.align_widgets(
         vbox(
-            center(text("footer")),
+            sgui.center(text("footer")),
             attr = {
                 props = {.FitH},
                 style = {
