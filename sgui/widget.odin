@@ -57,6 +57,9 @@ Widget :: struct {
     invisible: bool,
     focused: bool,
 
+    /* childs widgets if any */
+    children: [dynamic]^Widget,
+
     /* policies */
     size_policy: SizePolicy,
     alignment_policy: AlignmentPolicy,
@@ -135,6 +138,7 @@ widget_draw :: proc(widget: ^Widget, ui: ^Ui) {
     }
 }
 
+// TODO: need a way to know which widget is actually hovered
 widget_is_hovered :: proc(widget: ^Widget, mx, my: f32) -> bool {
     return mouse_on_region(mx, my, widget.x, widget.y, widget.w, widget.h)
 }

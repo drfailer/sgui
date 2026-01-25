@@ -43,7 +43,6 @@ BoxAttributes :: struct {
 Box :: struct {
     using widget: sgui.Widget,
     layout: BoxLayout,
-    widgets: [dynamic]^sgui.Widget,
     scrollbars: Scrollbars,
     content_w, content_h: f32,
     attr: BoxAttributes,
@@ -62,14 +61,7 @@ box :: proc(
     widgets: ..^sgui.Widget,
 ) -> ^sgui.Widget {
     box_w := new(Box)
-    widget_list := make([dynamic]^sgui.Widget)
 
-    for widget in widgets {
-        if widget.alignment_policy == {} {
-            widget.alignment_policy = sgui.AlignmentPolicy{.Top, .Left}
-        }
-        append(&widget_list, widget)
-    }
     box_w^ = Box{
         z_index = z_index,
         min_w = attr.w,
@@ -81,9 +73,15 @@ box :: proc(
         resize = box_resize,
         align = box_align,
         layout = layout,
-        widgets = widget_list,
         scrollbars = scrollbars_create(),
         attr = attr,
+    }
+
+    for widget in widgets {
+        if widget.alignment_policy == {} {
+            widget.alignment_policy = sgui.AlignmentPolicy{.Top, .Left}
+        }
+        append(&box_w.children, widget)
     }
 
     box_w.min_w = attr.min_w
@@ -121,7 +119,7 @@ hbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, z_index: u64 = 0)
 box_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     self := cast(^Box)widget
 
-    for child in self.widgets {
+    for child in self.children {
         if child.init != nil {
             child->init(ui, self)
         }
@@ -134,7 +132,7 @@ box_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
 box_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Box)widget
 
-    for child in self.widgets {
+    for child in self.children {
         sgui.widget_destroy(child, ui)
     }
 }
@@ -147,7 +145,7 @@ box_update :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     if scrollbars_update(&self.scrollbars, ui) {
         box_align(self, self.x, self.y)
     }
-    for child in self.widgets {
+    for child in self.children {
         if child.update != nil && !child.disabled {
             child->update(ui, self)
         }
@@ -163,7 +161,7 @@ box_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
         sgui.draw_rect(ui, self.x, self.y, self.w, self.h, self.attr.style.background_color)
     }
 
-    for child in self.widgets {
+    for child in self.children {
         sgui.widget_draw(child, ui)
     }
     scrollbars_draw(&self.scrollbars, ui)
@@ -210,7 +208,7 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
     top_y := y + self.attr.style.padding.top
     bottom_y := y + self.content_h - self.attr.style.padding.bottom
 
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         wx, wy: f32
 
@@ -252,7 +250,7 @@ hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
     top_y := y + self.attr.style.padding.top
     bottom_y := y + self.content_h - self.attr.style.padding.bottom
 
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         wx, wy: f32
 
@@ -314,7 +312,7 @@ vbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     ttl_w, max_w, ttl_h, max_h: f32
     nb_expandable_widgets := 0
 
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         box_resize_widget(child, w, h)
         if .FillH in child.size_policy {
@@ -327,7 +325,7 @@ vbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     box_update_size(self, w, h)
 
     remaining_h := self.h - ttl_h - self.attr.style.items_spacing * cast(f32)nb_expandable_widgets
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         if .FillW not_in child.size_policy && .FillH not_in child.size_policy do continue
         ww, wh := child.w, child.h
@@ -346,7 +344,7 @@ hbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     ttl_w, max_w, ttl_h, max_h: f32
     nb_expandable_widgets := 0
 
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         box_resize_widget(child, w, h)
         if .FillW in child.size_policy {
@@ -359,7 +357,7 @@ hbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     box_update_size(self, w, h)
 
     remaining_w := self.w - ttl_w - self.attr.style.items_spacing * cast(f32)nb_expandable_widgets
-    for child in self.widgets {
+    for child in self.children {
         if child.disabled do continue
         if .FillW not_in child.size_policy && .FillH not_in child.size_policy do continue
         ww, wh := child.w, child.h
@@ -379,7 +377,7 @@ box_find_content_w :: proc(widget: ^sgui.Widget, parent_w: f32) -> (w: f32, ttl_
     ttl_w = padding_w
     has_widget_on_right := false
 
-    for widget in self.widgets {
+    for widget in self.children {
         if widget.disabled || .FillW in widget.size_policy do continue
         if .Right in widget.alignment_policy {
             has_widget_on_right = true
@@ -403,7 +401,7 @@ box_find_content_h :: proc(widget: ^sgui.Widget, parent_h: f32) -> (h: f32, ttl_
     ttl_h = padding_h
     has_widget_on_bottom := false
 
-    for widget in self.widgets {
+    for widget in self.children {
         if widget.disabled || .FillH in widget.size_policy do continue
         if .Bottom in widget.alignment_policy {
             has_widget_on_bottom = true
@@ -491,5 +489,5 @@ box_add_widget :: proc(widget: ^sgui.Widget, child: ^sgui.Widget) {
     if child.alignment_policy == {} {
         child.alignment_policy = sgui.AlignmentPolicy{.Top, .Left}
     }
-    append(&self.widgets, child)
+    append(&self.children, child)
 }
