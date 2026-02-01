@@ -123,7 +123,8 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
 
 main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
     using widgets
-    menu_btn := icon_button(IconData{file = "img/menu-icon.png"},
+    menu_btn := icon_button(
+        IconData{file = "img/menu-icon.png"},
         clicked = proc(ui: ^sgui.Ui, _: rawptr) {
             sgui.widget_toggle(ui->widget("side_pannel"), ui)
         },

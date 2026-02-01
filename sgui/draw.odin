@@ -14,16 +14,6 @@ draw_rect :: proc(ui: ^Ui, x, y, w, h: f32, color: Color) {
     sdl.RenderFillRect(ui.renderer, &Rect{sx + ui.rel_rect.x, sy + ui.rel_rect.y, sw, sh})
 }
 
-@(private="file")
-multiply_color :: proc(color: Color, a: f32) -> Color {
-    return Color{
-        cast(u8)(cast(f32)color.r * a),
-        cast(u8)(cast(f32)color.g * a),
-        cast(u8)(cast(f32)color.b * a),
-        color.a,
-    }
-}
-
 distance_ceil :: proc(r, y: f32) -> f32 {
     x := math.sqrt(abs(r * r - y * y))
     return math.ceil(x) - x
