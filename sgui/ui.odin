@@ -37,7 +37,7 @@ Ui :: struct {
     resize: bool,
 
     /* event handlers */
-    event_handlers: EventUirs,
+    event_handlers: EventUis,
     widget_event_queue: queue.Queue(WidgetEvent),
 
     focused_widget: ^Widget,
@@ -227,18 +227,18 @@ run :: proc(ui: ^Ui) {
 
 // events //////////////////////////////////////////////////////////////////////
 
-EventUir :: struct($P: typeid) {
+EventUi :: struct($P: typeid) {
     exec: P,
     widget: ^Widget,
 }
 
-EventUirs :: struct {
+EventUis :: struct {
     mods: bit_set[KeyMod],
-    key: [dynamic]EventUir(KeyEventUirProc),
-    mouse_click: [dynamic]EventUir(MouseClickEventUirProc), // TODO: use a more efficent data stucture?
-    mouse_motion: [dynamic]EventUir(MouseMotionEventUirProc), // TODO: use a more efficent data stucture?
-    mouse_wheel: [dynamic]EventUir(MouseWheelEventUirProc),
-    widget_event: map[WidgetEventTag][dynamic]WidgetEventUir
+    key: [dynamic]EventUi(KeyEventUiProc),
+    mouse_click: [dynamic]EventUi(MouseClickEventUiProc), // TODO: use a more efficent data stucture?
+    mouse_motion: [dynamic]EventUi(MouseMotionEventUiProc), // TODO: use a more efficent data stucture?
+    mouse_wheel: [dynamic]EventUi(MouseWheelEventUiProc),
+    widget_event: map[WidgetEventTag][dynamic]WidgetEventUi
 }
 
 Event :: sdl.Event
@@ -253,7 +253,7 @@ KeyEvent :: struct {
     down: bool,
     mods: KeyMods,
 }
-KeyEventUirProc :: proc(self: ^Widget, event: KeyEvent, ui: ^Ui) -> bool
+KeyEventUiProc :: proc(self: ^Widget, event: KeyEvent, ui: ^Ui) -> bool
 
 MouseClickEvent :: struct {
     button: u8,
@@ -262,19 +262,19 @@ MouseClickEvent :: struct {
     x, y: f32,
     mods: KeyMods,
 }
-MouseClickEventUirProc :: proc(self: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool
+MouseClickEventUiProc :: proc(self: ^Widget, event: MouseClickEvent, ui: ^Ui) -> bool
 
 MouseMotionEvent :: struct {
     x, y, xd, yd: f32,
     mods: KeyMods,
 }
-MouseMotionEventUirProc :: proc(self: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool
+MouseMotionEventUiProc :: proc(self: ^Widget, event: MouseMotionEvent, ui: ^Ui) -> bool
 
 MouseWheelEvent :: struct {
     x, y: i32,
     mods: KeyMods,
 }
-MouseWheelEventUirProc :: proc(self: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool
+MouseWheelEventUiProc :: proc(self: ^Widget, event: MouseWheelEvent, ui: ^Ui) -> bool
 
 WidgetEventTag :: u64
 WidgetEvent :: struct {
@@ -282,30 +282,30 @@ WidgetEvent :: struct {
     emitter: ^Widget,
     data: rawptr,
 }
-WidgetEventUirProc :: proc(self: ^Widget, event: WidgetEvent, ui: ^Ui) -> bool
-WidgetEventUir :: struct {
+WidgetEventUiProc :: proc(self: ^Widget, event: WidgetEvent, ui: ^Ui) -> bool
+WidgetEventUi :: struct {
     widget: ^Widget,
     emitter: ^Widget,
-    exec: WidgetEventUirProc,
+    exec: WidgetEventUiProc,
     exec_data: rawptr
 }
 
 /* event api */
 
-add_key_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: KeyEventUirProc) {
-    append(&ui.event_handlers.key, EventUir(KeyEventUirProc){exec, widget})
+add_key_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: KeyEventUiProc) {
+    append(&ui.event_handlers.key, EventUi(KeyEventUiProc){exec, widget})
 }
 
-add_mouse_wheel_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseWheelEventUirProc) {
-    append(&ui.event_handlers.mouse_wheel, EventUir(MouseWheelEventUirProc){exec, widget})
+add_mouse_wheel_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseWheelEventUiProc) {
+    append(&ui.event_handlers.mouse_wheel, EventUi(MouseWheelEventUiProc){exec, widget})
 }
 
-add_mouse_click_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseClickEventUirProc) {
-    append(&ui.event_handlers.mouse_click, EventUir(MouseClickEventUirProc){exec, widget})
+add_mouse_click_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseClickEventUiProc) {
+    append(&ui.event_handlers.mouse_click, EventUi(MouseClickEventUiProc){exec, widget})
 }
 
-add_mouse_motion_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseMotionEventUirProc) {
-    append(&ui.event_handlers.mouse_motion, EventUir(MouseMotionEventUirProc){exec, widget})
+add_mouse_motion_event_handler :: proc(ui: ^Ui, widget: ^Widget, exec: MouseMotionEventUiProc) {
+    append(&ui.event_handlers.mouse_motion, EventUi(MouseMotionEventUiProc){exec, widget})
 }
 
 add_widget_event_handler :: proc(
@@ -313,13 +313,13 @@ add_widget_event_handler :: proc(
     widget: ^Widget,
     emitter: ^Widget,
     tag: WidgetEventTag,
-    exec: WidgetEventUirProc,
+    exec: WidgetEventUiProc,
     exec_data: rawptr = nil
 ) {
     if tag not_in ui.event_handlers.widget_event {
-        ui.event_handlers.widget_event[tag] = make([dynamic]WidgetEventUir)
+        ui.event_handlers.widget_event[tag] = make([dynamic]WidgetEventUi)
     }
-    append(&ui.event_handlers.widget_event[tag], WidgetEventUir{
+    append(&ui.event_handlers.widget_event[tag], WidgetEventUi{
         widget = widget,
         emitter = emitter,
         exec = exec,
