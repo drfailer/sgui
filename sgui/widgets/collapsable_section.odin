@@ -124,6 +124,7 @@ collapsable_section_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
         self.w = self.label.w
         self.h = self.label.h
     }
+    self.w += COLLAPSABLE_SECTION_SYMBOL_SIZE
     self.min_w = self.w
     self.min_h = self.h
 }
