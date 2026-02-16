@@ -5,7 +5,7 @@ import "../gla"
 import sdl "vendor:sdl3"
 
 
-ButtonClickedProc :: proc(ui: ^sgui.Ui, clicked_data: rawptr)
+ButtonOnClickProc :: proc(ui: ^sgui.Ui, on_click_data: rawptr)
 
 ButtonColors :: struct {
     text: sgui.Color,
@@ -37,8 +37,8 @@ Button :: struct {
     label: string,
     text: ^gla.Text,
     state: sgui.WidgetMouseState,
-    clicked: ButtonClickedProc,
-    clicked_data: rawptr,
+    on_click: ButtonOnClickProc,
+    on_click_data: rawptr,
     attr: ButtonAttributes,
     icons_data: [sgui.WidgetMouseState]IconData,
     icons_image: [sgui.WidgetMouseState]^gla.Image,
@@ -47,8 +47,8 @@ Button :: struct {
 
 button :: proc(
     label: string,
-    clicked: ButtonClickedProc,
-    clicked_data: rawptr = nil,
+    on_click: ButtonOnClickProc,
+    on_click_data: rawptr = nil,
     attr := OPTS.button_attr,
 ) -> ^sgui.Widget {
     button_w := new(Button)
@@ -57,8 +57,8 @@ button :: proc(
         update = button_update,
         draw = button_draw,
         label = label,
-        clicked = clicked,
-        clicked_data = clicked_data,
+        on_click = on_click,
+        on_click_data = on_click_data,
         attr = attr,
     }
     if attr.expand_w {
@@ -72,13 +72,13 @@ button :: proc(
 
 icon_button_all_states :: proc(
     icons_data: [sgui.WidgetMouseState]IconData,
-    clicked: ButtonClickedProc,
+    on_click: ButtonOnClickProc,
     w: f32 = 0,
     h: f32 = 0,
-    clicked_data: rawptr = nil,
+    on_click_data: rawptr = nil,
     attr := OPTS.button_attr,
 ) -> ^sgui.Widget {
-    button_w := cast(^Button)button(icons_data[.Idle].file, clicked, clicked_data, attr)
+    button_w := cast(^Button)button(icons_data[.Idle].file, on_click, on_click_data, attr)
     button_w.icons_data = icons_data
     button_w.iw = w
     button_w.ih = h
@@ -90,14 +90,14 @@ icon_button_all_states :: proc(
 
 icon_button_idle_state :: proc(
     icon: IconData,
-    clicked: ButtonClickedProc,
+    on_click: ButtonOnClickProc,
     w: f32 = 0,
     h: f32 = 0,
-    clicked_data: rawptr = nil,
+    on_click_data: rawptr = nil,
     attr := OPTS.button_attr,
 ) -> ^sgui.Widget {
     icons_data := [sgui.WidgetMouseState]IconData{ .Idle = icon, .Hovered = icon, .Clicked = icon }
-    return icon_button_all_states(icons_data, clicked, w, h, clicked_data, attr)
+    return icon_button_all_states(icons_data, on_click, w, h, on_click_data, attr)
 }
 
 icon_button :: proc{
@@ -113,7 +113,7 @@ button_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, 
         self.state = .Clicked
     } else if self.state == .Clicked {
         self.state = .Idle
-        self.clicked(ui, self.clicked_data)
+        self.on_click(ui, self.on_click_data)
     }
     return true
 }
