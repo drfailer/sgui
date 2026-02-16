@@ -5,6 +5,8 @@ import "../gla"
 import sdl "vendor:sdl3"
 
 
+RadioButtonOnClickProc :: proc(ui: ^sgui.Ui, checked: bool, on_click_data: rawptr)
+
 RadioButtonStyle :: struct {
     base_radius: f32,
     border_thickness: f32,
@@ -29,13 +31,18 @@ RadioButton :: struct {
     label_text: ^gla.Text,
     button_offset: f32,
     label_offset: f32,
+    on_click: RadioButtonOnClickProc,
+    on_click_data: rawptr,
     attr: RadioButtonAttributes,
 }
 
+// TODO: this should take a callback on_check as input
 radio_button :: proc(
     label: string,
     attr := OPTS.radio_button_attr,
     default_checked := false,
+    on_click: RadioButtonOnClickProc = nil,
+    on_click_data: rawptr = nil,
 ) -> ^sgui.Widget {
     radio_button_w := new(RadioButton)
     radio_button_w^ = RadioButton{
@@ -44,6 +51,8 @@ radio_button :: proc(
         draw = radio_button_draw,
         checked = default_checked,
         label = label,
+        on_click = on_click,
+        on_click_data = on_click_data,
         attr = attr,
     }
     return radio_button_w
@@ -77,6 +86,9 @@ radio_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widg
         button_y := self.y + self.button_offset
         if event.down && event.button == sdl.BUTTON_LEFT && sgui.mouse_on_region(event.x, event.y, button_x, button_y, button_size, button_size) {
             self.checked = !self.checked
+            if self.on_click != nil {
+                self.on_click(ui, self.checked, self.on_click_data)
+            }
             return true
         }
         return false

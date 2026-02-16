@@ -93,6 +93,9 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
+            radio_button("radio button 2", on_click = proc(ui: ^sgui.Ui, checked: bool, _: rawptr) {
+                fmt.println("radio button clicked, status = {}", checked);
+            }),
             collapsable_section(
                 "Collapsable Section",
                 text("- point 1"),
