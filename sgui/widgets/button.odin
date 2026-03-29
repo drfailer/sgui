@@ -83,7 +83,7 @@ icon_button_all_states :: proc(
     button_w.iw = w
     button_w.ih = h
     button_w.init = icon_button_init
-    button_w.destroy = icon_button_destroy
+    button_w.fini = icon_button_fini
     button_w.draw = icon_button_draw
     return button_w
 }
@@ -149,7 +149,7 @@ icon_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widge
     sgui.add_event_handler(ui, self, button_mouse_handler)
 }
 
-icon_button_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+icon_button_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Button)widget
     gla.image_destroy(self.icons_image[.Idle])
     gla.image_destroy(self.icons_image[.Hovered])

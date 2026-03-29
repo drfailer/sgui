@@ -54,7 +54,7 @@ box :: proc(
     layout: BoxLayout,
     attr: BoxAttributes,
     init: sgui.WidgetInitProc,
-    destroy: sgui.WidgetDestroyProc,
+    fini: sgui.WidgetFiniProc,
     update: sgui.WidgetUpdateProc,
     draw: sgui.WidgetDrawProc,
     z_index: u64,
@@ -67,7 +67,7 @@ box :: proc(
         min_w = attr.w,
         min_h = attr.h,
         init = init,
-        destroy = destroy,
+        fini = fini,
         update = update,
         draw = draw,
         resize = box_resize,
@@ -107,11 +107,11 @@ box :: proc(
 }
 
 vbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^sgui.Widget {
-    return box(.Vertical, attr, box_init, box_destroy, box_update, box_draw, z_index, ..widgets)
+    return box(.Vertical, attr, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
 }
 
 hbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^sgui.Widget {
-    return box(.Horizontal, attr, box_init, box_destroy, box_update, box_draw, z_index, ..widgets)
+    return box(.Horizontal, attr, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
 }
 
 // init ////////////////////////////////////////////////////////////////////////
@@ -127,13 +127,13 @@ box_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     scrollbars_set_event_handlers(self, ui)
 }
 
-// destroy /////////////////////////////////////////////////////////////////////
+// fini /////////////////////////////////////////////////////////////////////
 
-box_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+box_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Box)widget
 
     for child in self.children {
-        sgui.widget_destroy(child, ui)
+        sgui.widget_fini(child, ui)
     }
 }
 

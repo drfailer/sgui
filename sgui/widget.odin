@@ -4,7 +4,7 @@ package sgui
  * How widgets should work:
  * - w(args, attr): create the widget.
  * - w_init(w, ui, parent): initialize the widget and allocates underlying data structures.
- * - w_destroy(w, ui): called when the widget is destroyed.
+ * - w_fini(w, ui): called when the ui is terminating.
  * - w_update(w, ui): updated the widget before drawing a new frame.
  * - w_draw(w, ui): draw the widget.
  * - w_resize(w, pw, ph) && w_align(w, px, py): resize and align components inside the widget (used by layout widgets).
@@ -23,7 +23,7 @@ import "core:log"
 // widget //////////////////////////////////////////////////////////////////////
 
 WidgetInitProc :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget)
-WidgetDestroyProc :: proc(widget: ^Widget, ui: ^Ui)
+WidgetFiniProc :: proc(widget: ^Widget, ui: ^Ui)
 WidgetUpdateProc :: proc(widget: ^Widget, ui: ^Ui, parent: ^Widget)
 WidgetDrawProc :: proc(widget: ^Widget, ui: ^Ui)
 WidgetResizeProc :: proc(widget: ^Widget, pw, ph: f32)
@@ -66,7 +66,7 @@ Widget :: struct {
 
     /* procs */
     init: WidgetInitProc,
-    destroy: WidgetDestroyProc,
+    fini: WidgetFiniProc,
     update: WidgetUpdateProc,
     draw: WidgetDrawProc,
     resize: WidgetResizeProc,
@@ -91,9 +91,9 @@ widget_init :: proc(widget: ^Widget, ui: ^Ui) {
     widget_resize(widget, ui)
 }
 
-widget_destroy :: proc(widget: ^Widget, ui: ^Ui) {
-    if widget.destroy == nil do return
-    widget->destroy(ui)
+widget_fini :: proc(widget: ^Widget, ui: ^Ui) {
+    if widget.fini == nil do return
+    widget->fini(ui)
 }
 
 widget_resize :: proc(widget: ^Widget, ui: ^Ui) {

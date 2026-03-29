@@ -32,7 +32,7 @@ collapsable_section :: proc(
     collapsable_section_w := new(CollapsableSection)
     collapsable_section_w^ = CollapsableSection{
         init = collapsable_section_init,
-        destroy = collapsable_section_destroy,
+        fini = collapsable_section_fini,
         draw = collapsable_section_draw,
         align = collapsable_section_align,
         resize = collapsable_section_resize,
@@ -71,9 +71,9 @@ collapsable_section_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sg
     sgui.add_event_handler(ui, self, collapsable_section_mouse_handler)
 }
 
-collapsable_section_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+collapsable_section_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^CollapsableSection)widget
-    self.content->destroy(ui)
+    self.content->fini(ui)
 }
 
 COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5

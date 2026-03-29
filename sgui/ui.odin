@@ -199,7 +199,9 @@ draw :: proc(ui: ^Ui) {
 // terminate ///////////////////////////////////////////////////////////////////
 
 terminate :: proc(ui: ^Ui) {
-    widget_destroy(ui.layers[ui.current_layer], ui)
+    for layer in ui.layers {
+        widget_fini(layer, ui)
+    }
 }
 
 // run /////////////////////////////////////////////////////////////////////////
@@ -534,6 +536,7 @@ switch_to_layer :: proc(ui: ^Ui, layer_idx: int) -> bool {
 
 // widgets utilities ///////////////////////////////////////////////////////////
 
+@(deprecated="this function will be removed, the user should be responsible to change the context allocator.")
 make_widget :: proc(ui: ^Ui, widget_proc: proc(ui: ^Ui) -> ^Widget) -> ^Widget {
     context.allocator = ui.widget_allocator
     return widget_proc(ui)

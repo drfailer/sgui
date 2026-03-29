@@ -20,7 +20,7 @@ image :: proc(
     image_w := new(Image)
     image_w^ = Image{
         init = image_init,
-        destroy = image_destroy,
+        fini = image_fini,
         draw = image_draw,
         file = file,
         srcrect = srcrect,
@@ -41,7 +41,7 @@ image_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     self.min_h = h
 }
 
-image_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+image_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Image)widget
     gla.image_destroy(self.image)
 }

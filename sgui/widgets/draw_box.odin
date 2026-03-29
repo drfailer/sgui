@@ -27,7 +27,7 @@ DrawBox :: struct {
     zoombox: ZoomBox,
     scrollbars: Scrollbars,
     user_init: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr),
-    user_destroy: proc(ui: ^sgui.Ui, user_data: rawptr),
+    user_fini: proc(ui: ^sgui.Ui, user_data: rawptr),
     user_update: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr) -> ContentSize,
     user_draw: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr),
     user_data: rawptr,
@@ -38,7 +38,7 @@ draw_box :: proc(
     draw: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr),
     update: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr) -> ContentSize = nil,
     init: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr) = nil,
-    destroy: proc(ui: ^sgui.Ui, user_data: rawptr) = nil,
+    fini: proc(ui: ^sgui.Ui, user_data: rawptr) = nil,
     data: rawptr = nil,
     attr := OPTS.draw_box_attr,
 ) -> ^sgui.Widget {
@@ -46,14 +46,14 @@ draw_box :: proc(
     draw_box_w^ = DrawBox{
         size_policy = {.FillW, .FillH},
         init = draw_box_init,
-        destroy = draw_box_destroy,
+        fini = draw_box_fini,
         update = draw_box_update,
         draw = draw_box_draw,
         zoombox = zoombox(attr.zoom_min, attr.zoom_max, attr.zoom_step),
         scrollbars = scrollbars_create(attr.scrollbars_attr),
         user_draw = draw,
         user_init = init,
-        user_destroy = destroy,
+        user_fini = fini,
         user_update = update,
         user_data = data,
         attr = attr,
@@ -83,10 +83,10 @@ draw_box_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) 
     }
 }
 
-draw_box_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+draw_box_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^DrawBox)widget
-    if self.user_destroy != nil {
-        self.user_destroy(ui, self.user_data)
+    if self.user_fini != nil {
+        self.user_fini(ui, self.user_data)
     }
 }
 
