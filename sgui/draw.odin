@@ -234,6 +234,7 @@ draw_rounded_box :: proc (ui: ^Ui, bx, by, bw, bh, radius: f32, color: Color) {
 // TODO: we should be able to configure the ring/rounded frame border thickness!
 
 draw_rounded_frame :: proc (ui: ^Ui, bx, by, bw, bh, radius: f32, color: Color) {
+    // TODO: this is not right, we should draw the rounded corners properly in that case
     if bw < radius || bh < radius {
         if bw < 1 || bh < 1 do return
         draw_rect(ui, bx, by, bw, 1, color)
@@ -385,6 +386,18 @@ draw_line :: proc(ui: ^Ui, x0, y0, x1, y1: f32, color: Color) {
     }
 }
 
+// Note: this triangle function is not greate and we would need a real
+// rasterizer, or at least a better alrogrithm to handle the anti-aliazing. The
+// current "trick" is to use the drawline function (which draws anti-alized
+// lines), to draw the edges with anti-aliazing, and fill the inside of the
+// triangle without overriding the lines. I experiemented other techiniques,
+// however, anti-alizing on lines requires to iterate on either x or y
+// depending on the steepness of the edge, which makes things non trivial. Even
+// though it is inneficient, the current method remains simple, we'll switch to
+// a better algorithm if we hit a performance wall later. Anti-alizing is a
+// complex topic, and the most of the functions of this module use hacks rather
+// than really efficient techniques (this is more an experiment/playground and
+// should not be used in performance oriented apps).
 draw_triangle :: proc(ui: ^Ui, x0, y0, x1, y1, x2, y2: f32, color: Color) {
     x0, y0, x1, y1, x2, y2 := x0, y0, x1, y1, x2, y2
 
@@ -413,19 +426,27 @@ draw_triangle :: proc(ui: ^Ui, x0, y0, x1, y1, x2, y2: f32, color: Color) {
     for iy := y0; iy <= y1; iy += 1. {
         xl := a02 * (iy - y0) + x0
         xr := a01 * (iy - y1) + x1
-        if xl >= xr {
+        if xl > xr {
             swap(&xl, &xr)
         }
-        draw_rect(ui, xl, iy, xr - xl, 1, color)
+        xl += 0.5
+        xr -= 0.5
+        draw_rect(ui, xl, iy, xr - xl + 1, 1, color)
     }
 
     // second half
     for iy := y1; iy <= y2; iy += 1. {
         xl := a02 * (iy - y0) + x0
         xr := a12 * (iy - y2) + x2
-        if xl >= xr {
+        if xl > xr {
             swap(&xl, &xr)
         }
-        draw_rect(ui, xl, iy, xr - xl, 1, color)
+        xl += 0.5
+        xr -= 0.5
+        draw_rect(ui, xl, iy, xr - xl + 1, 1, color)
     }
+
+    draw_line(ui, x0, y0, x1, y1, color)
+    draw_line(ui, x0, y0, x2, y2, color)
+    draw_line(ui, x1, y1, x2, y2, color)
 }

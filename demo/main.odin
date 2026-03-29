@@ -1,3 +1,4 @@
+#+feature using-stmt
 package demo
 
 import "core:fmt"
@@ -72,6 +73,10 @@ draw_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) {
     }
 
     sgui.draw_rounded_frame(ui, 400, 400, 100, 100, 20, sgui.Color{255, 255, 255, 255})
+
+    sgui.draw_triangle(ui, 100, 100, 100, 200, 800, 150, sgui.Color{255, 255, 255, 255})
+
+    sgui.draw_triangle(ui, 400, 100, 500, 100, 450, 800, sgui.Color{255, 255, 255, 255})
 }
 
 update_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) -> widgets.ContentSize {
