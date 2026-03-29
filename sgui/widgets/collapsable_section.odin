@@ -77,7 +77,7 @@ collapsable_section_destroy :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
 }
 
 COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
-COLLAPSABLE_SECTION_SYMBOL_SIZE :: 8
+COLLAPSABLE_SECTION_SYMBOL_SIZE :: 9
 collapsable_section_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^CollapsableSection)widget
     symbol_x := self.x + self.label.w + COLLAPSABLE_SECTION_SYMBOL_PADDING
