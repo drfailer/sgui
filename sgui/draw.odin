@@ -371,16 +371,16 @@ draw_line :: proc(ui: ^Ui, x0, y0, x1, y1: f32, color: Color) {
 
     // main loop
     if steep {
-        for x in (xpxl1 + 1)..<xpxl2 {
-            draw_point_with_alpha(ui, math.floor(intery), x, color, rfpart(intery))
-            draw_point_with_alpha(ui, math.floor(intery) + 1, x, color,  fpart(intery))
-            intery = intery + gradient
+        for y in (xpxl1 + 1)..<xpxl2 {
+            draw_point_with_alpha(ui, math.floor(intery), y, color, rfpart(intery))
+            draw_point_with_alpha(ui, math.floor(intery) + 1, y, color,  fpart(intery))
+            intery += gradient
         }
     } else {
         for x in (xpxl1 + 1)..<xpxl2 {
             draw_point_with_alpha(ui, x, math.floor(intery), color, rfpart(intery))
             draw_point_with_alpha(ui, x, math.floor(intery) + 1, color, fpart(intery))
-            intery = intery + gradient
+            intery += gradient
         }
     }
 }
