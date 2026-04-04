@@ -6,16 +6,6 @@ import sdl "vendor:sdl3"
 
 ActiveBorders :: bit_set[Side]
 
-BoxStyle :: struct {
-    background_color: sgui.Color,
-    border_thickness: f32,
-    active_borders: ActiveBorders,
-    border_color: sgui.Color,
-    padding: Padding,
-    items_spacing: f32,
-    // TODO: corner radius (only if all the borders are activated)
-}
-
 BoxLayout :: enum {
     Vertical,
     Horizontal,
@@ -33,6 +23,13 @@ BoxAttributes :: struct {
     size_policy: BoxSizePolicy,
     w, h: f32,
     min_w, min_h: f32,
+    background_color: sgui.Color,
+    border_thickness: f32,
+    active_borders: ActiveBorders,
+    border_color: sgui.Color,
+    padding: Padding,
+    items_spacing: f32,
+    // TODO: corner radius (only if all the borders are activated)
 }
 
 Box :: struct {
@@ -41,7 +38,6 @@ Box :: struct {
     scrollbars: Scrollbars,
     content_w, content_h: f32,
     attr: BoxAttributes,
-    style: BoxStyle,
 }
 
 // constructors ////////////////////////////////////////////////////////////////
@@ -49,7 +45,6 @@ Box :: struct {
 box :: proc(
     layout: BoxLayout,
     attr: BoxAttributes,
-    style: BoxStyle,
     init: sgui.WidgetInitProc,
     fini: sgui.WidgetFiniProc,
     update: sgui.WidgetUpdateProc,
@@ -72,7 +67,6 @@ box :: proc(
         layout = layout,
         scrollbars = scrollbars_create(),
         attr = attr,
-        style = style,
     }
 
     for widget in widgets {
@@ -104,12 +98,12 @@ box :: proc(
     return box_w
 }
 
-vbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, style := BoxStyle{}, z_index: u64 = 0) -> ^sgui.Widget {
-    return box(.Vertical, attr, style, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
+vbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^sgui.Widget {
+    return box(.Vertical, attr, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
 }
 
-hbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, style := BoxStyle{}, z_index: u64 = 0) -> ^sgui.Widget {
-    return box(.Horizontal, attr, style, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
+hbox :: proc(widgets: ..^sgui.Widget, attr := BoxAttributes{}, z_index: u64 = 0) -> ^sgui.Widget {
+    return box(.Horizontal, attr, box_init, box_fini, box_update, box_draw, z_index, ..widgets)
 }
 
 // init ////////////////////////////////////////////////////////////////////////
@@ -155,8 +149,8 @@ box_update :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
 box_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Box)widget
 
-    if self.style.background_color.a > 0 {
-        sgui.draw_rect(ui, self.x, self.y, self.w, self.h, self.style.background_color)
+    if self.attr.background_color.a > 0 {
+        sgui.draw_rect(ui, self.x, self.y, self.w, self.h, self.attr.background_color)
     }
 
     for child in self.children {
@@ -164,18 +158,18 @@ box_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     }
     scrollbars_draw(&self.scrollbars, ui)
 
-    bt := self.style.border_thickness
-    bc := self.style.border_color
-    if .Top in self.style.active_borders {
+    bt := self.attr.border_thickness
+    bc := self.attr.border_color
+    if .Top in self.attr.active_borders {
         sgui.draw_rect(ui, self.x, self.y, self.w, bt, bc)
     }
-    if .Bottom in self.style.active_borders {
+    if .Bottom in self.attr.active_borders {
         sgui.draw_rect(ui, self.x, self.y + self.h - bt, self.w, bt, bc)
     }
-    if .Left in self.style.active_borders {
+    if .Left in self.attr.active_borders {
         sgui.draw_rect(ui, self.x, self.y, bt, self.h, bc)
     }
-    if .Right in self.style.active_borders {
+    if .Right in self.attr.active_borders {
         sgui.draw_rect(ui, self.x + self.w - bt, self.y, bt, self.h, bc)
     }
 }
@@ -201,10 +195,10 @@ box_align :: proc(widget: ^sgui.Widget, x, y: f32) {
 
 vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
     self := cast(^Box)widget
-    left_x := x + self.style.padding.left
-    right_x := x + self.content_w - self.style.padding.right
-    top_y := y + self.style.padding.top
-    bottom_y := y + self.content_h - self.style.padding.bottom
+    left_x := x + self.attr.padding.left
+    right_x := x + self.content_w - self.attr.padding.right
+    top_y := y + self.attr.padding.top
+    bottom_y := y + self.content_h - self.attr.padding.bottom
 
     for child in self.children {
         if child.disabled do continue
@@ -212,16 +206,16 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
 
         if .FitH in self.attr.size_policy {
             wy = top_y
-            top_y += child.h + self.style.items_spacing
+            top_y += child.h + self.attr.items_spacing
         } else {
             if .VCenter in child.alignment_policy {
-                wy = y + self.style.padding.top + (self.content_h - child.h) / 2.
+                wy = y + self.attr.padding.top + (self.content_h - child.h) / 2.
             } else if .Bottom in child.alignment_policy {
                 wy = bottom_y - child.h
-                bottom_y -= child.h + self.style.items_spacing
+                bottom_y -= child.h + self.attr.items_spacing
             } else {
                 wy = top_y
-                top_y += child.h + self.style.items_spacing
+                top_y += child.h + self.attr.items_spacing
             }
         }
 
@@ -230,7 +224,7 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
             wx = left_x
         } else {
             if .HCenter in child.alignment_policy {
-                wx = x + self.style.padding.left + (self.content_w - child.w) / 2.
+                wx = x + self.attr.padding.left + (self.content_w - child.w) / 2.
             } else if .Right in child.alignment_policy {
                 wx = right_x - child.w
             } else {
@@ -243,10 +237,10 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
 
 hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
     self := cast(^Box)widget
-    left_x := x + self.style.padding.left
-    right_x := x + self.content_w - self.style.padding.right
-    top_y := y + self.style.padding.top
-    bottom_y := y + self.content_h - self.style.padding.bottom
+    left_x := x + self.attr.padding.left
+    right_x := x + self.content_w - self.attr.padding.right
+    top_y := y + self.attr.padding.top
+    bottom_y := y + self.content_h - self.attr.padding.bottom
 
     for child in self.children {
         if child.disabled do continue
@@ -257,7 +251,7 @@ hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
             wy = top_y
         } else {
             if .VCenter in child.alignment_policy {
-                wy = y + self.style.padding.top + (self.content_h - child.h) / 2.
+                wy = y + self.attr.padding.top + (self.content_h - child.h) / 2.
             } else if .Bottom in child.alignment_policy {
                 wy = bottom_y - child.h
             } else {
@@ -267,16 +261,16 @@ hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
 
         if .FitW in self.attr.size_policy {
             wx = left_x
-            left_x += child.w + self.style.items_spacing
+            left_x += child.w + self.attr.items_spacing
         } else {
             if .HCenter in child.alignment_policy {
-                wx = x + self.style.padding.left + (self.content_w - child.w) / 2.
+                wx = x + self.attr.padding.left + (self.content_w - child.w) / 2.
             } else if .Right in child.alignment_policy {
                 wx = right_x - child.w
-                right_x -= child.w + self.style.items_spacing
+                right_x -= child.w + self.attr.items_spacing
             } else {
                 wx = left_x
-                left_x += child.w + self.style.items_spacing
+                left_x += child.w + self.attr.items_spacing
             }
         }
         sgui.widget_align(child, wx, wy)
@@ -322,7 +316,7 @@ vbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     self.content_h, ttl_h, max_h = box_find_content_h(self, h)
     box_update_size(self, w, h)
 
-    remaining_h := self.h - ttl_h - self.style.items_spacing * cast(f32)nb_expandable_widgets
+    remaining_h := self.h - ttl_h - self.attr.items_spacing * cast(f32)nb_expandable_widgets
     for child in self.children {
         if child.disabled do continue
         if .FillW not_in child.size_policy && .FillH not_in child.size_policy do continue
@@ -354,7 +348,7 @@ hbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     self.content_h, ttl_h, max_h = box_find_content_h(self, h)
     box_update_size(self, w, h)
 
-    remaining_w := self.w - ttl_w - self.style.items_spacing * cast(f32)nb_expandable_widgets
+    remaining_w := self.w - ttl_w - self.attr.items_spacing * cast(f32)nb_expandable_widgets
     for child in self.children {
         if child.disabled do continue
         if .FillW not_in child.size_policy && .FillH not_in child.size_policy do continue
@@ -371,7 +365,7 @@ hbox_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
 
 box_find_content_w :: proc(widget: ^sgui.Widget, parent_w: f32) -> (w: f32, ttl_w: f32, max_w: f32) {
     self := cast(^Box)widget
-    padding_w := self.style.padding.left + self.style.padding.right
+    padding_w := self.attr.padding.left + self.attr.padding.right
     ttl_w = padding_w
     has_widget_on_right := false
 
@@ -382,9 +376,9 @@ box_find_content_w :: proc(widget: ^sgui.Widget, parent_w: f32) -> (w: f32, ttl_
         }
         ww := widget.min_w
         max_w = max(max_w, ww)
-        ttl_w += ww + self.style.items_spacing
+        ttl_w += ww + self.attr.items_spacing
     }
-    ttl_w -= self.style.items_spacing
+    ttl_w -= self.attr.items_spacing
     w = max_w + padding_w if self.layout == .Vertical else ttl_w
 
     if has_widget_on_right {
@@ -395,7 +389,7 @@ box_find_content_w :: proc(widget: ^sgui.Widget, parent_w: f32) -> (w: f32, ttl_
 
 box_find_content_h :: proc(widget: ^sgui.Widget, parent_h: f32) -> (h: f32, ttl_h: f32, max_h: f32) {
     self := cast(^Box)widget
-    padding_h := self.style.padding.top + self.style.padding.bottom
+    padding_h := self.attr.padding.top + self.attr.padding.bottom
     ttl_h = padding_h
     has_widget_on_bottom := false
 
@@ -406,9 +400,9 @@ box_find_content_h :: proc(widget: ^sgui.Widget, parent_h: f32) -> (h: f32, ttl_
         }
         wh := widget.min_h
         max_h = max(max_h, wh)
-        ttl_h += wh + self.style.items_spacing
+        ttl_h += wh + self.attr.items_spacing
     }
-    h = ttl_h - self.style.items_spacing if self.layout == .Vertical else max_h + padding_h
+    h = ttl_h - self.attr.items_spacing if self.layout == .Vertical else max_h + padding_h
 
     if has_widget_on_bottom {
         return max(h, parent_h), ttl_h, max_h
@@ -461,20 +455,20 @@ box_update_size :: proc(widget: ^sgui.Widget, w, h: f32) {
         self.h = max(self.min_h, self.h)
     }
 
-    bt := self.style.border_thickness
-    if .Top in self.style.active_borders {
+    bt := self.attr.border_thickness
+    if .Top in self.attr.active_borders {
         self.h += bt
         self.min_h += bt
     }
-    if .Bottom in self.style.active_borders {
+    if .Bottom in self.attr.active_borders {
         self.h += bt
         self.min_h += bt
     }
-    if .Left in self.style.active_borders {
+    if .Left in self.attr.active_borders {
         self.w += bt
         self.min_w += bt
     }
-    if .Right in self.style.active_borders {
+    if .Right in self.attr.active_borders {
         self.w += bt
         self.min_w += bt
     }

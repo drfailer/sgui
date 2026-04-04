@@ -108,11 +108,13 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
                 text("- point 3"),
                 text("- point 4"),
             ),
-            attr = { size_policy = {.FitH, .FitW}, },
-            style = { items_spacing = 10, },
+            attr = {
+                size_policy = {.FitH, .FitW},
+                items_spacing = 10,
+            },
         ),
-        attr = { size_policy = {.FitW}, },
-        style = {
+        attr = {
+            size_policy = {.FitW},
             background_color = {255, 0, 0, 255},
             padding = {10, 10, 10, 20},
             border_thickness = 2,
@@ -132,22 +134,24 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
         },
         w = 20,
         h = 20,
-        style = {
+        attr = {
             padding = {4, 4, 4, 4},
             corner_radius = 5,
-            colors = DEFAULT_STYLES.button.colors,
+            colors = DEFAULT_ATTRS.button.colors,
         },
     )
     title := hbox(
         text("Demo App"),
-        attr = { size_policy = {.FitH, .FitW}, },
-        style = { background_color = {0, 100, 0, 255}, },
+        attr = {
+            size_policy = {.FitH, .FitW},
+            background_color = {0, 100, 0, 255},
+        },
     )
     header_w := hbox(
         sgui.left(menu_btn),
         sgui.center(title),
-        attr = { size_policy = {.FitH}, },
-        style = {
+        attr = {
+            size_policy = {.FitH},
             background_color = {0, 0, 255, 255},
             border_thickness = 2,
             active_borders = {.Bottom},
@@ -168,13 +172,13 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             zoom_step = 0.2,
             scrollbars_attr = DEFAULT_ATTRS.scrollbars,
         }),
-        style = { background_color = {10, 10, 10, 255}, },
+        attr = { background_color = {10, 10, 10, 255}, },
     )
     footer := sgui.align_widgets(
         vbox(
             sgui.center(text("footer")),
-            attr = { size_policy = {.FitH}, },
-            style = {
+            attr = {
+                size_policy = {.FitH},
                 background_color = {0, 100, 100, 255},
                 items_spacing = 10,
                 padding = { 4, 4, 4, 4 },

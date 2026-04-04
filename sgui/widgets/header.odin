@@ -4,20 +4,15 @@ import ".."
 import "../gla"
 import sdl "vendor:sdl3"
 
-// TODO: this should be named header
 
 COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
 COLLAPSABLE_SECTION_SYMBOL_SIZE :: 9
 
-HeaderStyle :: struct {
+HeaderAttributes :: struct {
     // TODO
     content_padding: Padding,
     // symbol_size???
     // hover_color???
-}
-
-HeaderAttributes :: struct {
-    // TODO
 }
 
 Header :: struct {
@@ -27,14 +22,12 @@ Header :: struct {
     opened: bool,
     state: sgui.WidgetMouseState,
     attr: HeaderAttributes,
-    style: HeaderStyle,
 }
 
 header :: proc(
     label: string,
     content: ..^sgui.Widget,
     attr := HeaderAttributes{},
-    style := HeaderStyle{},
 ) -> ^sgui.Widget {
     header_w := new(Header)
     header_w^ = Header{
@@ -49,7 +42,6 @@ header :: proc(
             attr = { size_policy = {.FitW, .FitH} },
         ),
         attr = attr,
-        style = style,
     }
     return header_w
 }
@@ -95,7 +87,7 @@ header_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
             symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
-            self.label.style.color)
+            self.label.attr.color)
         self.content->draw(ui)
     } else {
         sgui.draw_triangle(
@@ -103,7 +95,7 @@ header_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
             symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y,
             symbol_x, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
-            self.label.style.color)
+            self.label.attr.color)
     }
 }
 

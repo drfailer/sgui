@@ -6,14 +6,12 @@ import "../gla"
 
 // TODO: dynamic wrapping
 
-TextStyle :: struct {
+TextAttributes :: struct {
     font: gla.FontPath,
     font_size: gla.FontSize,
     color: sgui.Color,
     wrap_width: f32,
 }
-
-TextAttributes :: struct {}
 
 Text :: struct {
     using widget: sgui.Widget,
@@ -22,10 +20,9 @@ Text :: struct {
     content_proc: proc(data: rawptr) -> (string, sgui.Color),
     content_proc_data: rawptr,
     attr: TextAttributes,
-    style: TextStyle,
 }
 
-text_from_string :: proc(content: string, attr := DEFAULT_ATTRS.text, style := DEFAULT_STYLES.text) -> ^sgui.Widget {
+text_from_string :: proc(content: string, attr := DEFAULT_ATTRS.text) -> ^sgui.Widget {
     text_w := new(Text)
     text_w^ = Text{
         init = text_init,
@@ -33,7 +30,6 @@ text_from_string :: proc(content: string, attr := DEFAULT_ATTRS.text, style := D
         draw = text_draw,
         content = content,
         attr = attr,
-        style = style,
     }
     return text_w
 }
@@ -42,7 +38,6 @@ text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, sgui.Color),
     content_proc_data: rawptr,
     attr := DEFAULT_ATTRS.text,
-    style := DEFAULT_STYLES.text,
 ) -> ^sgui.Widget {
     text_w := new(Text)
     text_w^ = Text{
@@ -52,7 +47,6 @@ text_from_proc :: proc(
         content_proc = content_proc,
         content_proc_data = content_proc_data,
         attr = attr,
-        style = style,
     }
     return text_w
 }
@@ -67,9 +61,9 @@ text_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     self := cast(^Text)widget
     self.text = sgui.create_text(ui,
                             self.content,
-                            self.style.font,
-                            self.style.font_size,
-                            self.style.color)
+                            self.attr.font,
+                            self.attr.font_size,
+                            self.attr.color)
     w, h := gla.text_size(self.text)
     self.w = w
     self.h = h
@@ -83,8 +77,8 @@ text_update :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
         content, color := self.content_proc(self.content_proc_data)
         gla.text_set_text(self.text, content)
         gla.text_set_color(self.text, color)
-        if self.style.wrap_width > 0 {
-            gla.text_set_wrap_width(self.text, self.style.wrap_width)
+        if self.attr.wrap_width > 0 {
+            gla.text_set_wrap_width(self.text, self.attr.wrap_width)
         }
         gla.text_update(self.text)
         w, h := gla.text_size(self.text)

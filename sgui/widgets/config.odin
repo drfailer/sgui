@@ -21,15 +21,14 @@ WidgetAttrs :: struct {
     scrollbars: ScrollbarsAttributes,
 }
 
-WidgetStyles :: struct {
-    text: TextStyle,
-    button: ButtonStyle,
-    radio_button: RadioButtonStyle,
-    scrollbar: ScrollbarStyle,
-}
-
-DEFAULT_STYLES := WidgetStyles{
-    button = ButtonStyle{
+DEFAULT_ATTRS := WidgetAttrs{
+    text = TextAttributes{
+        font = FONT,
+        font_size = FONT_SIZE,
+        color = sgui.Color{0, 0, 0, 255},
+        wrap_width = 0,
+    },
+    button = ButtonAttributes{
         label_font_path = FONT,
         label_font_size = FONT_SIZE,
         padding = {2, 2, 2, 2},
@@ -53,7 +52,7 @@ DEFAULT_STYLES := WidgetStyles{
             },
         },
     },
-    radio_button = RadioButtonStyle{
+    radio_button = RadioButtonAttributes{
         base_radius = 6,
         border_thickness = 1,
         dot_radius = 2,
@@ -65,37 +64,23 @@ DEFAULT_STYLES := WidgetStyles{
         font = FONT,
         font_size = FONT_SIZE,
     },
-    text = TextStyle{
-        font = FONT,
-        font_size = FONT_SIZE,
-        color = sgui.Color{0, 0, 0, 255},
-        wrap_width = 0,
-    },
-}
-
-DEFAULT_ATTRS := WidgetAttrs{
-    text = TextAttributes{},
-    button = ButtonAttributes{},
-    radio_button = RadioButtonAttributes{},
     draw_box = DrawBoxAttributes{
         props = DrawBoxProperties{.Zoomable, .WithScrollbar},
         zoom_min = 1, zoom_max = 100, zoom_step = 1,
     },
     scrollbars = ScrollbarsAttributes{
         props = ScrollbarsProperties{},
-        style = ScrollbarStyle{
-            track_color = sgui.Color{50, 50, 50, 255},
-            track_padding = Padding{0, 0, 0, 0},
-            thumb_color = [sgui.WidgetMouseState]sgui.Color{
-                .Idle = sgui.Color{100, 100, 100, 255},
-                .Hovered = sgui.Color{120, 120, 110, 255},
-                .Clicked = sgui.Color{110, 110, 110, 255},
-            },
-            button_color = [sgui.WidgetMouseState]sgui.Color{
-                .Idle = sgui.Color{100, 100, 100, 255},
-                .Hovered = sgui.Color{120, 120, 110, 255},
-                .Clicked = sgui.Color{110, 110, 110, 255},
-            },
-        }
+        track_color = sgui.Color{50, 50, 50, 255},
+        track_padding = Padding{0, 0, 0, 0},
+        thumb_color = [sgui.WidgetMouseState]sgui.Color{
+            .Idle = sgui.Color{100, 100, 100, 255},
+            .Hovered = sgui.Color{120, 120, 110, 255},
+            .Clicked = sgui.Color{110, 110, 110, 255},
+        },
+        button_color = [sgui.WidgetMouseState]sgui.Color{
+            .Idle = sgui.Color{100, 100, 100, 255},
+            .Hovered = sgui.Color{120, 120, 110, 255},
+            .Clicked = sgui.Color{110, 110, 110, 255},
+        },
     },
 }

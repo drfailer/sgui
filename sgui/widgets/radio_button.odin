@@ -7,7 +7,7 @@ import sdl "vendor:sdl3"
 
 RadioButtonOnClickProc :: proc(ui: ^sgui.Ui, checked: bool, on_click_data: rawptr)
 
-RadioButtonStyle :: struct {
+RadioButtonAttributes :: struct {
     base_radius: f32,
     border_thickness: f32,
     dot_radius: f32,
@@ -20,10 +20,6 @@ RadioButtonStyle :: struct {
     font_size: gla.FontSize,
 }
 
-RadioButtonAttributes :: struct {
-    // emtpy
-}
-
 RadioButton :: struct {
     using widget: sgui.Widget,
     checked: bool,
@@ -34,13 +30,11 @@ RadioButton :: struct {
     on_click: RadioButtonOnClickProc,
     on_click_data: rawptr,
     attr: RadioButtonAttributes,
-    style: RadioButtonStyle,
 }
 
 radio_button :: proc(
     label: string,
     attr := DEFAULT_ATTRS.radio_button,
-    style := DEFAULT_STYLES.radio_button,
     default_checked := false,
     on_click: RadioButtonOnClickProc = nil,
     on_click_data: rawptr = nil,
@@ -55,7 +49,6 @@ radio_button :: proc(
         on_click = on_click,
         on_click_data = on_click_data,
         attr = attr,
-        style = style,
     }
     return radio_button_w
 }
@@ -65,13 +58,13 @@ radio_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widg
 
     self.label_text = sgui.create_text(ui,
                                   self.label,
-                                  self.style.font,
-                                  self.style.font_size,
-                                  self.style.label_color)
+                                  self.attr.font,
+                                  self.attr.font_size,
+                                  self.attr.label_color)
     label_w, label_h := gla.text_size(self.label_text)
 
-    d := 2 * self.style.base_radius
-    self.w = d + self.style.label_padding + label_w
+    d := 2 * self.attr.base_radius
+    self.w = d + self.attr.label_padding + label_w
     self.h = max(d, label_h)
     self.min_w = self.w
     self.min_h = self.h
@@ -83,7 +76,7 @@ radio_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widg
 
     sgui.add_event_handler(ui, self, proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
         self := cast(^RadioButton)widget
-        button_size := 2 * self.style.base_radius
+        button_size := 2 * self.attr.base_radius
         button_x := self.x
         button_y := self.y + self.button_offset
         if event.down && event.button == sdl.BUTTON_LEFT && sgui.mouse_on_region(event.x, event.y, button_x, button_y, button_size, button_size) {
@@ -102,20 +95,20 @@ radio_button_update :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Wi
 radio_button_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^RadioButton)widget
 
-    r := self.style.base_radius
-    bgr := self.style.base_radius - self.style.border_thickness
-    dr := self.style.dot_radius
+    r := self.attr.base_radius
+    bgr := self.attr.base_radius - self.attr.border_thickness
+    dr := self.attr.dot_radius
     by := self.y + self.button_offset + r
     bx := self.x + r
-    if self.style.border_thickness > 0 {
-        sgui.draw_circle(ui, bx, by, r, self.style.border_color)
+    if self.attr.border_thickness > 0 {
+        sgui.draw_circle(ui, bx, by, r, self.attr.border_color)
     }
-    sgui.draw_circle(ui, bx, by, bgr, self.style.background_color)
+    sgui.draw_circle(ui, bx, by, bgr, self.attr.background_color)
     if self.checked {
-        sgui.draw_circle(ui, bx, by, dr, self.style.dot_color)
+        sgui.draw_circle(ui, bx, by, dr, self.attr.dot_color)
     }
 
-    text_xoffset := 2 * r + self.style.label_padding
+    text_xoffset := 2 * r + self.attr.label_padding
     text_yoffset := self.label_offset
     sgui.draw_text(ui, self.label_text, self.x + text_xoffset, self.y + text_yoffset)
 }
