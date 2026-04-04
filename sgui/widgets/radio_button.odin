@@ -39,7 +39,7 @@ RadioButton :: struct {
 // TODO: this should take a callback on_check as input
 radio_button :: proc(
     label: string,
-    attr := OPTS.radio_button_attr,
+    attr := DEFAULT_ATTRS.radio_button,
     default_checked := false,
     on_click: RadioButtonOnClickProc = nil,
     on_click_data: rawptr = nil,

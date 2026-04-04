@@ -323,7 +323,7 @@ Scrollbars :: struct {
     attr: ScrollbarsAttributes,
 }
 
-scrollbars_create :: proc(attr := OPTS.scrollbars_attr) -> Scrollbars {
+scrollbars_create :: proc(attr := DEFAULT_ATTRS.scrollbars) -> Scrollbars {
     return Scrollbars{
         vertical = Scrollbar{
             direction = .Vertical,

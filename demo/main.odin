@@ -132,13 +132,11 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
         },
         w = 20,
         h = 20,
-        attr = {
-            style = {
-                padding = {4, 4, 4, 4},
-                corner_radius = 5,
-                colors = OPTS.button_attr.style.colors,
-            },
-        }
+        style = {
+            padding = {4, 4, 4, 4},
+            corner_radius = 5,
+            colors = DEFAULT_STYLES.button.colors,
+        },
     )
     title := hbox(
         text("Demo App"),
@@ -168,7 +166,7 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             zoom_min = 1.,
             zoom_max = 10.,
             zoom_step = 0.2,
-            scrollbars_attr = OPTS.scrollbars_attr,
+            scrollbars_attr = DEFAULT_ATTRS.scrollbars,
         }),
         style = { background_color = {10, 10, 10, 255}, },
     )

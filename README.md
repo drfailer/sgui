@@ -112,7 +112,7 @@ widget attributes (props, style, data, ...). SGUI currently uses a global
 variable to set the default value:
 
 ```odin
-my_widget :: proc(args..., attr := OPTS.my_widget_attr)
+my_widget :: proc(args..., attr := DEFAULT_ATTRS.my_widget_attr)
 ```
 
 This way, each application can set the default values of the widgets at the

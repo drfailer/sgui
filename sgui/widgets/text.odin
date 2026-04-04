@@ -26,7 +26,7 @@ Text :: struct {
     attr: TextAttributes,
 }
 
-text_from_string :: proc(content: string, attr := OPTS.text_attr) -> ^sgui.Widget {
+text_from_string :: proc(content: string, attr := DEFAULT_ATTRS.text) -> ^sgui.Widget {
     text_w := new(Text)
     text_w^ = Text{
         init = text_init,
@@ -41,7 +41,7 @@ text_from_string :: proc(content: string, attr := OPTS.text_attr) -> ^sgui.Widge
 text_from_proc :: proc(
     content_proc: proc(data: rawptr) -> (string, sgui.Color),
     content_proc_data: rawptr,
-    attr := OPTS.text_attr,
+    attr := DEFAULT_ATTRS.text,
 ) -> ^sgui.Widget {
     text_w := new(Text)
     text_w^ = Text{
