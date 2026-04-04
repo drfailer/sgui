@@ -17,7 +17,7 @@ HeaderStyle :: struct {
 }
 
 HeaderAttributes :: struct {
-    style: HeaderStyle,
+    // TODO
 }
 
 Header :: struct {
@@ -26,12 +26,15 @@ Header :: struct {
     content: ^Box,
     opened: bool,
     state: sgui.WidgetMouseState,
+    attr: HeaderAttributes,
+    style: HeaderStyle,
 }
 
 header :: proc(
     label: string,
     content: ..^sgui.Widget,
     attr := HeaderAttributes{},
+    style := HeaderStyle{},
 ) -> ^sgui.Widget {
     header_w := new(Header)
     header_w^ = Header{
@@ -47,6 +50,8 @@ header :: proc(
                 props = {.FitW, .FitH}
             },
         ),
+        attr = attr,
+        style = style,
     }
     return header_w
 }
