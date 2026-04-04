@@ -17,6 +17,7 @@ WidgetAttrs :: struct {
     text: TextAttributes,
     button: ButtonAttributes,
     radio_button: RadioButtonAttributes,
+    switch_button: SwitchButtonAttributes,
     draw_box: DrawBoxAttributes,
     scrollbars: ScrollbarsAttributes,
 }
@@ -66,6 +67,13 @@ DEFAULT_ATTRS := WidgetAttrs{
             color = sgui.Color{0, 0, 0, 255},
             padding = {left = 10},
         }
+    },
+    switch_button = SwitchButtonAttributes{
+        thumb_size = 20,
+        thumb_padding = 1,
+        corner_radius = 0,
+        background_color = sgui.Color{100, 100, 100, 255},
+        thumb_color = sgui.Color{200, 200, 200, 255},
     },
     draw_box = DrawBoxAttributes{
         props = DrawBoxProperties{.Zoomable, .WithScrollbar},
