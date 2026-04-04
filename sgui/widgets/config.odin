@@ -27,6 +27,7 @@ DEFAULT_ATTRS := WidgetAttrs{
         font_size = FONT_SIZE,
         color = sgui.Color{0, 0, 0, 255},
         wrap_width = 0,
+        padding = {0, 0, 0, 0},
     },
     button = ButtonAttributes{
         label_font_path = FONT,
@@ -59,10 +60,12 @@ DEFAULT_ATTRS := WidgetAttrs{
         border_color = sgui.Color{0, 0, 0, 255},
         background_color = sgui.Color{255, 255, 255, 255},
         dot_color = sgui.Color{0, 0, 0, 255},
-        label_padding = 10,
-        label_color = sgui.Color{0, 0, 0, 255},
-        font = FONT,
-        font_size = FONT_SIZE,
+        label = {
+            font = FONT,
+            font_size = FONT_SIZE,
+            color = sgui.Color{0, 0, 0, 255},
+            padding = {left = 10},
+        }
     },
     draw_box = DrawBoxAttributes{
         props = DrawBoxProperties{.Zoomable, .WithScrollbar},

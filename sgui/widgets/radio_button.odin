@@ -14,19 +14,15 @@ RadioButtonAttributes :: struct {
     border_color: sgui.Color,
     background_color: sgui.Color,
     dot_color: sgui.Color,
-    label_padding: f32,
-    label_color: sgui.Color,
-    font: string,
-    font_size: gla.FontSize,
+    label: TextAttributes,
 }
 
 RadioButton :: struct {
     using widget: sgui.Widget,
     checked: bool,
-    label: string,
-    label_text: ^gla.Text,
-    button_offset: f32,
-    label_offset: f32,
+    // used to center the label/button when the they don't have the same height
+    label_offset, button_offset: f32,
+    label: Text,
     on_click: RadioButtonOnClickProc,
     on_click_data: rawptr,
     attr: RadioButtonAttributes,
@@ -45,7 +41,10 @@ radio_button :: proc(
         update = radio_button_update,
         draw = radio_button_draw,
         checked = default_checked,
-        label = label,
+        label = Text{
+            content = label,
+            attr = attr.label,
+        },
         on_click = on_click,
         on_click_data = on_click_data,
         attr = attr,
@@ -56,22 +55,17 @@ radio_button :: proc(
 radio_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     self := cast(^RadioButton)widget
 
-    self.label_text = sgui.create_text(ui,
-                                  self.label,
-                                  self.attr.font,
-                                  self.attr.font_size,
-                                  self.attr.label_color)
-    label_w, label_h := gla.text_size(self.label_text)
+    text_init(&self.label, ui, parent)
 
     d := 2 * self.attr.base_radius
-    self.w = d + self.attr.label_padding + label_w
-    self.h = max(d, label_h)
+    self.w = d + self.label.w
+    self.h = max(d, self.label.h)
     self.min_w = self.w
     self.min_h = self.h
-    if label_h > d {
-        self.button_offset = (label_h - d) / 2
+    if self.label.h > d {
+        self.button_offset = (self.label.h - d) / 2
     } else {
-        self.label_offset = (d - label_h) / 2
+        self.label_offset = (d - self.label.h) / 2
     }
 
     sgui.add_event_handler(ui, self, proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
@@ -107,10 +101,10 @@ radio_button_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     if self.checked {
         sgui.draw_circle(ui, bx, by, dr, self.attr.dot_color)
     }
-
-    text_xoffset := 2 * r + self.attr.label_padding
-    text_yoffset := self.label_offset
-    sgui.draw_text(ui, self.label_text, self.x + text_xoffset, self.y + text_yoffset)
+    // note: this is not complex enough to justify adding an align function for this button
+    self.label.x = self.x + 2 * r
+    self.label.y = self.y + self.label_offset
+    text_draw(&self.label, ui)
 }
 
 radio_button_get_value :: proc(widget: ^sgui.Widget) -> bool {
