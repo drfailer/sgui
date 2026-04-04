@@ -97,7 +97,7 @@ header_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
             symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
-            self.label.attr.style.color)
+            self.label.style.color)
         self.content->draw(ui)
     } else {
         sgui.draw_triangle(
@@ -105,7 +105,7 @@ header_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
             symbol_x, symbol_y - COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
             symbol_x + COLLAPSABLE_SECTION_SYMBOL_SIZE, symbol_y,
             symbol_x, symbol_y + COLLAPSABLE_SECTION_SYMBOL_SIZE / 2,
-            self.label.attr.style.color)
+            self.label.style.color)
     }
 }
 

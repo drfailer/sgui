@@ -64,18 +64,17 @@ DEFAULT_STYLES := WidgetStyles{
         label_color = sgui.Color{0, 0, 0, 255},
         font = FONT,
         font_size = FONT_SIZE,
-    }
+    },
+    text = TextStyle{
+        font = FONT,
+        font_size = FONT_SIZE,
+        color = sgui.Color{0, 0, 0, 255},
+        wrap_width = 0,
+    },
 }
 
 DEFAULT_ATTRS := WidgetAttrs{
-    text = TextAttributes{
-        style = TextStyle{
-            font = FONT,
-            font_size = FONT_SIZE,
-            color = sgui.Color{0, 0, 0, 255},
-            wrap_width = 0,
-        },
-    },
+    text = TextAttributes{},
     button = ButtonAttributes{},
     radio_button = RadioButtonAttributes{},
     draw_box = DrawBoxAttributes{
