@@ -12,6 +12,11 @@ import "../gla"
 import ".."
 import "core:log"
 
+// generic types ///////////////////////////////////////////////////////////////
+
+Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
+Side :: enum { Top, Bottom, Left, Right }
+
 // scrollbar ///////////////////////////////////////////////////////////////////
 
 MIN_SCROLLBAR_THUMB_SIZE :: 10

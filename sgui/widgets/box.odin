@@ -4,11 +4,7 @@ import ".."
 import "../gla"
 import sdl "vendor:sdl3"
 
-
-Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
-
-BorderSide :: enum { Top, Bottom, Left, Right }
-ActiveBorders :: bit_set[BorderSide]
+ActiveBorders :: bit_set[Side]
 
 BoxStyle :: struct {
     background_color: sgui.Color,
