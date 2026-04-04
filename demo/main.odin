@@ -90,6 +90,15 @@ update_data :: proc(ui: ^sgui.Ui, box_widget: ^sgui.Widget, _: rawptr) -> widget
 
 side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
     using widgets
+    // dyanmic text for the switch button
+    switch_button_w := switch_button()
+    switch_button_label := text(proc(sb: rawptr) -> (string, sgui.Color) {
+        switch_button_w := cast(^SwitchButton)sb
+        if switch_button_value(switch_button_w) {
+            return "switch button (on)", sgui.Color{0, 0, 0, 255}
+        }
+        return "switch button (off)", sgui.Color{0, 0, 0, 255}
+    }, switch_button_w)
     widget = hbox(
         vbox(
             text("Side Pannel"),
@@ -97,6 +106,7 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
+            hbox(switch_button_w, switch_button_label, attr = {size_policy = {.FitW, .FitH}, items_spacing = 10}),
             radio_button("radio button"),
             radio_button("radio button 2", on_click = proc(ui: ^sgui.Ui, checked: bool, _: rawptr) {
                 fmt.println("radio button clicked, status = {}", checked);

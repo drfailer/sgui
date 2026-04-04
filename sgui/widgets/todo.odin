@@ -17,9 +17,6 @@ Slider :: struct {
 DropDownSelector :: struct {
 }
 
-SwitchButton :: struct { // add a drawn one and an icon one (two icons for the states)
-}
-
 Tabs :: struct {
 }
 
