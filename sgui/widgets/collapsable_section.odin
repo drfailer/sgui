@@ -4,6 +4,8 @@ import ".."
 import "../gla"
 import sdl "vendor:sdl3"
 
+COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
+COLLAPSABLE_SECTION_SYMBOL_SIZE :: 9
 
 CollapsableSectionStyle :: struct {
     // TODO
@@ -65,7 +67,7 @@ collapsable_section_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sg
     self := cast(^CollapsableSection)widget
     self.label->init(ui, parent)
     self.content->init(ui, parent)
-    self.w = self.label.w
+    self.w = self.label.w + 2 * COLLAPSABLE_SECTION_SYMBOL_PADDING + COLLAPSABLE_SECTION_SYMBOL_SIZE
     self.h = self.label.h
 
     sgui.add_event_handler(ui, self, collapsable_section_mouse_handler)
@@ -76,8 +78,6 @@ collapsable_section_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self.content->fini(ui)
 }
 
-COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
-COLLAPSABLE_SECTION_SYMBOL_SIZE :: 9
 collapsable_section_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^CollapsableSection)widget
     symbol_x := self.x + self.label.w + COLLAPSABLE_SECTION_SYMBOL_PADDING
@@ -115,16 +115,15 @@ collapsable_section_align :: proc(widget: ^sgui.Widget, x, y: f32) {
 collapsable_section_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
     self := cast(^CollapsableSection)widget
 
-    // TODO: add open symbol size
+    header_w := self.label.w + 2 * COLLAPSABLE_SECTION_SYMBOL_PADDING + COLLAPSABLE_SECTION_SYMBOL_SIZE
     if self.opened {
         self.content->resize(w, h)
-        self.w = max(self.label.w, self.content.w)
+        self.w = max(header_w, self.content.w)
         self.h = self.label.h + self.content.h // TODO: spacing???
     } else {
-        self.w = self.label.w
+        self.w = header_w
         self.h = self.label.h
     }
-    self.w += COLLAPSABLE_SECTION_SYMBOL_SIZE
     self.min_w = self.w
     self.min_h = self.h
 }
