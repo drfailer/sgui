@@ -108,10 +108,10 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
                 text("- point 3"),
                 text("- point 4"),
             ),
-            attr = { props = {.FitH, .FitW}, },
+            attr = { size_policy = {.FitH, .FitW}, },
             style = { items_spacing = 10, },
         ),
-        attr = { props = {.FitW}, },
+        attr = { size_policy = {.FitW}, },
         style = {
             background_color = {255, 0, 0, 255},
             padding = {10, 10, 10, 20},
@@ -140,13 +140,13 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
     )
     title := hbox(
         text("Demo App"),
-        attr = { props = {.FitH, .FitW}, },
+        attr = { size_policy = {.FitH, .FitW}, },
         style = { background_color = {0, 100, 0, 255}, },
     )
     header_w := hbox(
         sgui.left(menu_btn),
         sgui.center(title),
-        attr = { props = {.FitH}, },
+        attr = { size_policy = {.FitH}, },
         style = {
             background_color = {0, 0, 255, 255},
             border_thickness = 2,
@@ -173,7 +173,7 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
     footer := sgui.align_widgets(
         vbox(
             sgui.center(text("footer")),
-            attr = { props = {.FitH}, },
+            attr = { size_policy = {.FitH}, },
             style = {
                 background_color = {0, 100, 100, 255},
                 items_spacing = 10,

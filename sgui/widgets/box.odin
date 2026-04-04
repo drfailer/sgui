@@ -21,8 +21,8 @@ BoxLayout :: enum {
     Horizontal,
 }
 
-BoxProperties :: bit_set[BoxProperty]
-BoxProperty :: enum {
+BoxSizePolicy :: bit_set[BoxSizePolicyFlag]
+BoxSizePolicyFlag :: enum {
     FitW,
     FitH,
     FixedW,
@@ -30,7 +30,7 @@ BoxProperty :: enum {
 }
 
 BoxAttributes :: struct {
-    props: BoxProperties,
+    size_policy: BoxSizePolicy,
     w, h: f32,
     min_w, min_h: f32,
 }
@@ -85,20 +85,20 @@ box :: proc(
     box_w.min_w = attr.min_w
     box_w.min_h = attr.min_h
 
-    if .FixedW in attr.props {
+    if .FixedW in attr.size_policy {
         box_w.w = attr.w
         box_w.min_w = attr.w
     }
 
-    if .FixedH in attr.props {
+    if .FixedH in attr.size_policy {
         box_w.h = attr.h
         box_w.min_h = attr.h
     }
 
-    if .FixedW not_in attr.props && .FitW not_in attr.props {
+    if .FixedW not_in attr.size_policy && .FitW not_in attr.size_policy {
         box_w.size_policy |= {.FillW}
     }
-    if .FixedH not_in attr.props && .FitH not_in attr.props {
+    if .FixedH not_in attr.size_policy && .FitH not_in attr.size_policy {
         box_w.size_policy |= {.FillH}
     }
     return box_w
@@ -210,7 +210,7 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
         if child.disabled do continue
         wx, wy: f32
 
-        if .FitH in self.attr.props {
+        if .FitH in self.attr.size_policy {
             wy = top_y
             top_y += child.h + self.style.items_spacing
         } else {
@@ -226,7 +226,7 @@ vbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
         }
 
         // since widgets are added in a column, there is no need to decrease the width
-        if .FitW in self.attr.props {
+        if .FitW in self.attr.size_policy {
             wx = left_x
         } else {
             if .HCenter in child.alignment_policy {
@@ -253,7 +253,7 @@ hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
         wx, wy: f32
 
         // since widgets are added in a row, there is no need to decrease the height
-        if .FitH in self.attr.props {
+        if .FitH in self.attr.size_policy {
             wy = top_y
         } else {
             if .VCenter in child.alignment_policy {
@@ -265,7 +265,7 @@ hbox_align :: proc(widget: ^sgui.Widget, x, y: f32) {
             }
         }
 
-        if .FitW in self.attr.props {
+        if .FitW in self.attr.size_policy {
             wx = left_x
             left_x += child.w + self.style.items_spacing
         } else {
@@ -440,8 +440,8 @@ box_expand_widget :: proc(widget: ^sgui.Widget, w, h: f32) {
 
 box_update_size :: proc(widget: ^sgui.Widget, w, h: f32) {
     self := cast(^Box)widget
-    if .FixedW not_in self.attr.props {
-        if .FitW in self.attr.props {
+    if .FixedW not_in self.attr.size_policy {
+        if .FitW in self.attr.size_policy {
             self.w = self.content_w
             self.min_w = self.content_w
         } else {
@@ -450,8 +450,8 @@ box_update_size :: proc(widget: ^sgui.Widget, w, h: f32) {
         }
         self.w = max(self.min_w, self.w)
     }
-    if .FixedH not_in self.attr.props {
-        if .FitH in self.attr.props {
+    if .FixedH not_in self.attr.size_policy {
+        if .FitH in self.attr.size_policy {
             self.h = self.content_h
             self.min_h = self.content_h
         } else {

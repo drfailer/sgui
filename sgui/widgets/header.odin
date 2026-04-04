@@ -46,9 +46,7 @@ header :: proc(
         label = cast(^Text)text(label),
         content = cast(^Box)vbox(
             ..content,
-            attr = {
-                props = {.FitW, .FitH}
-            },
+            attr = { size_policy = {.FitW, .FitH} },
         ),
         attr = attr,
         style = style,
