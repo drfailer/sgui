@@ -108,23 +108,17 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
                 text("- point 3"),
                 text("- point 4"),
             ),
-            attr = {
-                props = {.FitH, .FitW},
-                style = {
-                    items_spacing = 10,
-                },
-            }
+            attr = { props = {.FitH, .FitW}, },
+            style = { items_spacing = 10, },
         ),
-        attr = {
-            props = {.FitW},
-            style = {
-                background_color = {255, 0, 0, 255},
-                padding = {10, 10, 10, 20},
-                border_thickness = 2,
-                active_borders = {.Right},
-                border_color = {200, 200, 0, 255},
-            },
-        }
+        attr = { props = {.FitW}, },
+        style = {
+            background_color = {255, 0, 0, 255},
+            padding = {10, 10, 10, 20},
+            border_thickness = 2,
+            active_borders = {.Right},
+            border_color = {200, 200, 0, 255},
+        },
     )
     return widget
 }
@@ -148,25 +142,19 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
     )
     title := hbox(
         text("Demo App"),
-        attr = {
-            props = {.FitH, .FitW},
-            style = {
-                background_color = {0, 100, 0, 255},
-            },
-        }
+        attr = { props = {.FitH, .FitW}, },
+        style = { background_color = {0, 100, 0, 255}, },
     )
     header_w := hbox(
         sgui.left(menu_btn),
         sgui.center(title),
-        attr = {
-            props = {.FitH},
-            style = {
-                background_color = {0, 0, 255, 255},
-                border_thickness = 2,
-                active_borders = {.Bottom},
-                border_color = {0, 200, 200, 255},
-                padding = { 10, 10, 10, 10 },
-            },
+        attr = { props = {.FitH}, },
+        style = {
+            background_color = {0, 0, 255, 255},
+            border_thickness = 2,
+            active_borders = {.Bottom},
+            border_color = {0, 200, 200, 255},
+            padding = { 10, 10, 10, 10 },
         },
         z_index = 1, // draw after to allow scrolling in the menu pannel
     )
@@ -182,24 +170,17 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             zoom_step = 0.2,
             scrollbars_attr = OPTS.scrollbars_attr,
         }),
-        attr = BoxAttributes{
-            props = {},
-            style = {
-                background_color = {10, 10, 10, 255},
-            },
-        }
+        style = { background_color = {10, 10, 10, 255}, },
     )
     footer := sgui.align_widgets(
         vbox(
             sgui.center(text("footer")),
-            attr = {
-                props = {.FitH},
-                style = {
-                    background_color = {0, 100, 100, 255},
-                    items_spacing = 10,
-                    padding = { 4, 4, 4, 4 },
-                },
-            }
+            attr = { props = {.FitH}, },
+            style = {
+                background_color = {0, 100, 100, 255},
+                items_spacing = 10,
+                padding = { 4, 4, 4, 4 },
+            },
         ),
         {.Bottom, .HCenter}
     )
