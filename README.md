@@ -28,28 +28,24 @@ example :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             text("Some text"),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
-            collapsable_section("Collapsable Section",
+            header("Collapsable Section",
                 text("some hidden text"),
             ),
             attr = {
                 props = {.FitH, .FitW},
-                style = {
-                    background_color = {255, 255, 255, 255},
-                    border_thickness = 2,
-                    active_borders = {.Top, .Bottom, .Left, .Right},
-                    border_color = {0, 0, 0, 255},
-                    padding = { 10, 10, 10, 10 },
-                    items_spacing = 10,
-                },
+                background_color = {255, 255, 255, 255},
+                border_thickness = 2,
+                active_borders = {.Top, .Bottom, .Left, .Right},
+                border_color = {0, 0, 0, 255},
+                padding = { 10, 10, 10, 10 },
+                items_spacing = 10,
             }
         ),
         image("linux.png", 100, 100),
         attr = {
             props = {.FitH, .FitW},
-            style = {
-                background_color = {255, 255, 255, 255},
-                padding = { 20, 20, 20, 20 },
-            }
+            background_color = {255, 255, 255, 255},
+            padding = { 20, 20, 20, 20 },
         }
     )
 }
@@ -108,17 +104,15 @@ The widgets function should follow this convention:
 The following may change:
 
 The last argument of the widget constructor is named `attr` and contains the
-widget attributes (props, style, data, ...). SGUI currently uses a global
-variable to set the default value:
+widget attributes (props, style, data, ...; this the user configurable data).
+SGUI currently uses a global variable to set the default value:
 
 ```odin
-my_widget :: proc(args..., attr := OPTS.my_widget_attr)
+my_widget :: proc(args..., attr := DEFAULT_ATTRS.my_widget)
 ```
 
-This way, each application can set the default values of the widgets at the
-start so that all the widgets of the same type share the same properties. This
-this is mainly useful for the "style" which might be separated from the
-attributes in the future.
+This provides an easy way to set the defaults for all the widgets and improve
+the readability when creating UIs.
 
 ## Experimentations
 

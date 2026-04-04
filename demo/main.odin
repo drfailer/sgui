@@ -101,30 +101,26 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             radio_button("radio button 2", on_click = proc(ui: ^sgui.Ui, checked: bool, _: rawptr) {
                 fmt.println("radio button clicked, status = {}", checked);
             }),
-            collapsable_section(
-                "Collapsable Section",
+            header(
+                "Header",
                 text("- point 1"),
                 text("- point 2"),
                 text("- point 3"),
                 text("- point 4"),
             ),
             attr = {
-                props = {.FitH, .FitW},
-                style = {
-                    items_spacing = 10,
-                },
-            }
+                size_policy = {.FitH, .FitW},
+                items_spacing = 10,
+            },
         ),
         attr = {
-            props = {.FitW},
-            style = {
-                background_color = {255, 0, 0, 255},
-                padding = {10, 10, 10, 20},
-                border_thickness = 2,
-                active_borders = {.Right},
-                border_color = {200, 200, 0, 255},
-            },
-        }
+            size_policy = {.FitW},
+            background_color = {255, 0, 0, 255},
+            padding = {10, 10, 10, 20},
+            border_thickness = 2,
+            active_borders = {.Right},
+            border_color = {200, 200, 0, 255},
+        },
     )
     return widget
 }
@@ -139,34 +135,28 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
         w = 20,
         h = 20,
         attr = {
-            style = {
-                padding = {4, 4, 4, 4},
-                corner_radius = 5,
-                colors = OPTS.button_attr.style.colors,
-            },
-        }
+            padding = {4, 4, 4, 4},
+            corner_radius = 5,
+            colors = DEFAULT_ATTRS.button.colors,
+        },
     )
     title := hbox(
         text("Demo App"),
         attr = {
-            props = {.FitH, .FitW},
-            style = {
-                background_color = {0, 100, 0, 255},
-            },
-        }
+            size_policy = {.FitH, .FitW},
+            background_color = {0, 100, 0, 255},
+        },
     )
-    header := hbox(
+    header_w := hbox(
         sgui.left(menu_btn),
         sgui.center(title),
         attr = {
-            props = {.FitH},
-            style = {
-                background_color = {0, 0, 255, 255},
-                border_thickness = 2,
-                active_borders = {.Bottom},
-                border_color = {0, 200, 200, 255},
-                padding = { 10, 10, 10, 10 },
-            },
+            size_policy = {.FitH},
+            background_color = {0, 0, 255, 255},
+            border_thickness = 2,
+            active_borders = {.Bottom},
+            border_color = {0, 200, 200, 255},
+            padding = { 10, 10, 10, 10 },
         },
         z_index = 1, // draw after to allow scrolling in the menu pannel
     )
@@ -180,31 +170,24 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             zoom_min = 1.,
             zoom_max = 10.,
             zoom_step = 0.2,
-            scrollbars_attr = OPTS.scrollbars_attr,
+            scrollbars_attr = DEFAULT_ATTRS.scrollbars,
         }),
-        attr = BoxAttributes{
-            props = {},
-            style = {
-                background_color = {10, 10, 10, 255},
-            },
-        }
+        attr = { background_color = {10, 10, 10, 255}, },
     )
     footer := sgui.align_widgets(
         vbox(
             sgui.center(text("footer")),
             attr = {
-                props = {.FitH},
-                style = {
-                    background_color = {0, 100, 100, 255},
-                    items_spacing = 10,
-                    padding = { 4, 4, 4, 4 },
-                },
-            }
+                size_policy = {.FitH},
+                background_color = {0, 100, 100, 255},
+                items_spacing = 10,
+                padding = { 4, 4, 4, 4 },
+            },
         ),
         {.Bottom, .HCenter}
     )
     return vbox(
-        header,
+        header_w,
         content,
         footer,
     )

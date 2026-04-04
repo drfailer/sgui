@@ -180,7 +180,7 @@ update :: proc(ui: ^Ui) {
 // draw ////////////////////////////////////////////////////////////////////////
 
 draw :: proc(ui: ^Ui) {
-    clear_color := OPTS.clear_color
+    clear_color := DEFAULT_ATTRS.clear_color
     sdl.SetRenderDrawColor(ui.renderer, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
     sdl.RenderClear(ui.renderer)
     widget_draw(ui.layers[ui.current_layer], ui)

@@ -20,6 +20,6 @@ Opts :: struct {
     clear_color: Color,
 }
 
-OPTS := Opts{
+DEFAULT_ATTRS := Opts{
     clear_color = Color{0, 0, 0, 255},
 }

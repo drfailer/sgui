@@ -40,7 +40,7 @@ draw_box :: proc(
     init: proc(ui: ^sgui.Ui, widget: ^sgui.Widget, user_data: rawptr) = nil,
     fini: proc(ui: ^sgui.Ui, user_data: rawptr) = nil,
     data: rawptr = nil,
-    attr := OPTS.draw_box_attr,
+    attr := DEFAULT_ATTRS.draw_box,
 ) -> ^sgui.Widget {
     draw_box_w := new(DrawBox)
     draw_box_w^ = DrawBox{

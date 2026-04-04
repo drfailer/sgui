@@ -12,6 +12,11 @@ import "../gla"
 import ".."
 import "core:log"
 
+// generic types ///////////////////////////////////////////////////////////////
+
+Padding :: struct { top: f32, bottom: f32, left: f32, right: f32 }
+Side :: enum { Top, Bottom, Left, Right }
+
 // scrollbar ///////////////////////////////////////////////////////////////////
 
 MIN_SCROLLBAR_THUMB_SIZE :: 10
@@ -23,13 +28,6 @@ MIN_SCROLLBAR_THUMB_SIZE :: 10
 ScrollbarDirection :: enum {
     Vertical,
     Horizontal,
-}
-
-ScrollbarStyle :: struct {
-    track_color: sgui.Color,
-    track_padding: Padding,
-    thumb_color: [sgui.WidgetMouseState]sgui.Color,
-    button_color: [sgui.WidgetMouseState]sgui.Color,
 }
 
 Scrollbar :: struct {
@@ -51,7 +49,7 @@ Scrollbar :: struct {
     thumb_state: sgui.WidgetMouseState,
     button1_state: sgui.WidgetMouseState,
     button2_state: sgui.WidgetMouseState,
-    style: ScrollbarStyle,
+    attr: ScrollbarsAttributes,
 }
 
 scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
@@ -71,9 +69,9 @@ scrollbar_resize :: proc(self: ^Scrollbar, window_size, content_size: f32) {
     self.content_size = content_size
 
     if self.direction == .Vertical {
-        padding = self.style.track_padding.top + self.style.track_padding.bottom
+        padding = self.attr.track_padding.top + self.attr.track_padding.bottom
     } else {
-        padding = self.style.track_padding.left + self.style.track_padding.right
+        padding = self.attr.track_padding.left + self.attr.track_padding.right
     }
 
     self.track_size = window_size - 2 * SCROLLBAR_THICKNESS - padding
@@ -127,14 +125,14 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS - YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + YOFFSET,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
-            self.style.button_color[self.button1_state]
+            self.attr.button_color[self.button1_state]
         )
         sgui.draw_triangle( // v
             ui,
             self.x + XOFFSET,                       self.y + self.window_size - SCROLLBAR_THICKNESS + YOFFSET,
             self.x + SCROLLBAR_THICKNESS / 2,       self.y + self.window_size - YOFFSET,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + self.window_size - SCROLLBAR_THICKNESS + YOFFSET,
-            self.style.button_color[self.button2_state]
+            self.attr.button_color[self.button2_state]
         )
     } else {
         XOFFSET :: 2
@@ -144,14 +142,14 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + YOFFSET,
             self.x + XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
             self.x + SCROLLBAR_THICKNESS - XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
-            self.style.button_color[self.button1_state]
+            self.attr.button_color[self.button1_state]
         )
         sgui.draw_triangle( // >
             ui,
             self.x + self.window_size - SCROLLBAR_THICKNESS + XOFFSET, self.y + YOFFSET,
             self.x + self.window_size - XOFFSET,                       self.y + SCROLLBAR_THICKNESS / 2,
             self.x + self.window_size - SCROLLBAR_THICKNESS + XOFFSET, self.y + SCROLLBAR_THICKNESS - YOFFSET,
-            self.style.button_color[self.button2_state]
+            self.attr.button_color[self.button2_state]
         )
     }
 }
@@ -159,30 +157,30 @@ scrollbar_buttons_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
 scrollbar_draw :: proc(self: ^Scrollbar, ui: ^sgui.Ui) {
     if !self.enabled do return
 
-    // TODO: button background in style
-    // TODO: border in style
-    // TODO: thumb style (rounded/squared/border)
+    // TODO: button background in attr
+    // TODO: border in attr
+    // TODO: thumb attr (rounded/squared/border)
     if self.direction == .Vertical {
-        thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.left + self.style.track_padding.right)
-        sgui.draw_rect(ui, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.style.track_color)
+        thumb_thickness := SCROLLBAR_THICKNESS - (self.attr.track_padding.left + self.attr.track_padding.right)
+        sgui.draw_rect(ui, self.x, self.y, SCROLLBAR_THICKNESS, self.window_size, self.attr.track_color)
         sgui.draw_rounded_box(ui,
-            self.x + self.style.track_padding.left,
+            self.x + self.attr.track_padding.left,
             self.y + self.thumb_position + SCROLLBAR_THICKNESS,
             thumb_thickness,
             self.thumb_size,
             thumb_thickness / 2,
-            self.style.thumb_color[self.thumb_state]
+            self.attr.thumb_color[self.thumb_state]
         )
     } else {
-        thumb_thickness := SCROLLBAR_THICKNESS - (self.style.track_padding.top + self.style.track_padding.bottom)
-        sgui.draw_rect(ui, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.style.track_color)
+        thumb_thickness := SCROLLBAR_THICKNESS - (self.attr.track_padding.top + self.attr.track_padding.bottom)
+        sgui.draw_rect(ui, self.x, self.y, self.window_size, SCROLLBAR_THICKNESS, self.attr.track_color)
         sgui.draw_rounded_box(ui,
             self.x + self.thumb_position + SCROLLBAR_THICKNESS,
-            self.y + self.style.track_padding.top,
+            self.y + self.attr.track_padding.top,
             self.thumb_size,
             thumb_thickness,
             thumb_thickness / 2,
-            self.style.thumb_color[self.thumb_state]
+            self.attr.thumb_color[self.thumb_state]
         )
     }
 
@@ -195,14 +193,14 @@ scrollbar_scroll_handler :: proc(self: ^Scrollbar, scroll_count: i32, scroll_ste
 
 scrollbar_mouse_on_thumb :: proc(self: ^Scrollbar, mx, my: f32) -> (result: bool) {
     if self.direction == .Vertical {
-        tx := self.x + self.style.track_padding.left
+        tx := self.x + self.attr.track_padding.left
         ty := self.y + self.thumb_position + SCROLLBAR_THICKNESS
 
         result = (tx <= mx && mx <= tx + SCROLLBAR_THICKNESS) \
               && (ty <= my && my <= ty + self.thumb_size)
     } else {
         tx := self.x + self.thumb_position + SCROLLBAR_THICKNESS
-        ty := self.y + self.style.track_padding.top
+        ty := self.y + self.attr.track_padding.top
 
         result = (tx <= mx && mx <= tx + self.thumb_size) \
               && (ty <= my && my <= ty + SCROLLBAR_THICKNESS)
@@ -306,26 +304,30 @@ ScrollbarsProperty :: enum {
 }
 
 ScrollbarsAttributes :: struct {
-    style: ScrollbarStyle,
     props: ScrollbarsProperties,
+    track_color: sgui.Color,
+    track_padding: Padding,
+    thumb_color: [sgui.WidgetMouseState]sgui.Color,
+    button_color: [sgui.WidgetMouseState]sgui.Color,
 }
 
 Scrollbars :: struct {
     window_w, window_h: f32,
     vertical: Scrollbar,
     horizontal: Scrollbar,
+    // TODO: we should have a x_offset, and y_offset here (simpler)
     attr: ScrollbarsAttributes,
 }
 
-scrollbars_create :: proc(attr := OPTS.scrollbars_attr) -> Scrollbars {
+scrollbars_create :: proc(attr := DEFAULT_ATTRS.scrollbars) -> Scrollbars {
     return Scrollbars{
         vertical = Scrollbar{
             direction = .Vertical,
-            style = attr.style,
+            attr = attr,
         },
         horizontal = Scrollbar{
             direction = .Horizontal,
-            style = attr.style,
+            attr = attr,
         },
         attr = attr,
     }

@@ -13,18 +13,14 @@ ButtonColors :: struct {
     bg: sgui.Color,
 }
 
-ButtonStyle :: struct {
+ButtonAttributes :: struct {
+    expand_w, expand_h: bool,
     label_font_path: gla.FontPath,
     label_font_size: gla.FontSize,
     padding: Padding,
     border_thickness: f32,
     corner_radius: f32,
     colors: [sgui.WidgetMouseState]ButtonColors,
-}
-
-ButtonAttributes :: struct {
-    style: ButtonStyle,
-    expand_w, expand_h: bool,
 }
 
 IconData :: struct {
@@ -49,7 +45,7 @@ button :: proc(
     label: string,
     on_click: ButtonOnClickProc,
     on_click_data: rawptr = nil,
-    attr := OPTS.button_attr,
+    attr := DEFAULT_ATTRS.button,
 ) -> ^sgui.Widget {
     button_w := new(Button)
     button_w^ = Button{
@@ -76,7 +72,7 @@ icon_button_all_states :: proc(
     w: f32 = 0,
     h: f32 = 0,
     on_click_data: rawptr = nil,
-    attr := OPTS.button_attr,
+    attr := DEFAULT_ATTRS.button,
 ) -> ^sgui.Widget {
     button_w := cast(^Button)button(icons_data[.Idle].file, on_click, on_click_data, attr)
     button_w.icons_data = icons_data
@@ -94,7 +90,7 @@ icon_button_idle_state :: proc(
     w: f32 = 0,
     h: f32 = 0,
     on_click_data: rawptr = nil,
-    attr := OPTS.button_attr,
+    attr := DEFAULT_ATTRS.button,
 ) -> ^sgui.Widget {
     icons_data := [sgui.WidgetMouseState]IconData{ .Idle = icon, .Hovered = icon, .Clicked = icon }
     return icon_button_all_states(icons_data, on_click, w, h, on_click_data, attr)
@@ -120,10 +116,10 @@ button_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, 
 
 button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
     self := cast(^Button)widget
-    self.text = sgui.create_text(ui, self.label, self.attr.style.label_font_path, self.attr.style.label_font_size)
+    self.text = sgui.create_text(ui, self.label, self.attr.label_font_path, self.attr.label_font_size)
     self.w, self.h = gla.text_size(self.text)
-    self.w += self.attr.style.padding.left + self.attr.style.padding.right
-    self.h += self.attr.style.padding.top + self.attr.style.padding.bottom
+    self.w += self.attr.padding.left + self.attr.padding.right
+    self.h += self.attr.padding.top + self.attr.padding.bottom
     self.min_w = self.w
     self.min_h = self.h
     sgui.add_event_handler(ui, self, button_mouse_handler)
@@ -139,11 +135,11 @@ icon_button_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widge
     assert(self.icons_image[.Hovered].w == self.icons_image[.Idle].w)
     assert(self.icons_image[.Hovered].h == self.icons_image[.Idle].h)
     w := self.icons_image[.Idle].w if self.iw == 0 else self.iw
-    w += self.attr.style.padding.left + self.attr.style.padding.right
+    w += self.attr.padding.left + self.attr.padding.right
     self.w = w
     self.min_w = w
     h := self.icons_image[.Idle].h if self.ih == 0 else self.ih
-    h += self.attr.style.padding.top + self.attr.style.padding.bottom
+    h += self.attr.padding.top + self.attr.padding.bottom
     self.h = h
     self.min_h = h
     sgui.add_event_handler(ui, self, button_mouse_handler)
@@ -168,19 +164,19 @@ button_update :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) 
 }
 
 button_draw_background :: proc(self: ^Button, ui: ^sgui.Ui) {
-    bg_color := self.attr.style.colors[self.state].bg
-    border_color := self.attr.style.colors[self.state].border
-    border_thickness := self.attr.style.border_thickness
+    bg_color := self.attr.colors[self.state].bg
+    border_color := self.attr.colors[self.state].border
+    border_thickness := self.attr.border_thickness
 
-    if self.attr.style.corner_radius > 0 {
+    if self.attr.corner_radius > 0 {
         if border_thickness > 0 {
             sgui.draw_rounded_box_with_border(ui, self.x, self.y, self.w, self.h,
-                                              self.attr.style.corner_radius, border_thickness,
+                                              self.attr.corner_radius, border_thickness,
                                               border_color, bg_color)
         } else {
             sgui.draw_rounded_box(ui, self.x + border_thickness, self.y + border_thickness,
                                   self.w - 2 * border_thickness, self.h - 2 * border_thickness,
-                                  self.attr.style.corner_radius, bg_color)
+                                  self.attr.corner_radius, bg_color)
         }
     } else {
         if border_thickness > 0 {
@@ -194,7 +190,7 @@ button_draw_background :: proc(self: ^Button, ui: ^sgui.Ui) {
 
 button_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     self := cast(^Button)widget
-    text_color := self.attr.style.colors[self.state].text
+    text_color := self.attr.colors[self.state].text
 
     gla.text_set_color(self.text, sgui.Color{text_color.r, text_color.g, text_color.b, text_color.a})
     gla.text_update(self.text)
