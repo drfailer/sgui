@@ -53,6 +53,18 @@ DEFAULT_STYLES := WidgetStyles{
             },
         },
     },
+    radio_button = RadioButtonStyle{
+        base_radius = 6,
+        border_thickness = 1,
+        dot_radius = 2,
+        border_color = sgui.Color{0, 0, 0, 255},
+        background_color = sgui.Color{255, 255, 255, 255},
+        dot_color = sgui.Color{0, 0, 0, 255},
+        label_padding = 10,
+        label_color = sgui.Color{0, 0, 0, 255},
+        font = FONT,
+        font_size = FONT_SIZE,
+    }
 }
 
 DEFAULT_ATTRS := WidgetAttrs{
@@ -65,20 +77,7 @@ DEFAULT_ATTRS := WidgetAttrs{
         },
     },
     button = ButtonAttributes{},
-    radio_button = RadioButtonAttributes{
-        style = RadioButtonStyle{
-            base_radius = 6,
-            border_thickness = 1,
-            dot_radius = 2,
-            border_color = sgui.Color{0, 0, 0, 255},
-            background_color = sgui.Color{255, 255, 255, 255},
-            dot_color = sgui.Color{0, 0, 0, 255},
-            label_padding = 10,
-            label_color = sgui.Color{0, 0, 0, 255},
-            font = FONT,
-            font_size = FONT_SIZE,
-        }
-    },
+    radio_button = RadioButtonAttributes{},
     draw_box = DrawBoxAttributes{
         props = DrawBoxProperties{.Zoomable, .WithScrollbar},
         zoom_min = 1, zoom_max = 100, zoom_step = 1,
