@@ -314,6 +314,7 @@ Scrollbars :: struct {
     window_w, window_h: f32,
     vertical: Scrollbar,
     horizontal: Scrollbar,
+    // TODO: we should have a x_offset, and y_offset here (simpler)
     attr: ScrollbarsAttributes,
 }
 

@@ -28,7 +28,7 @@ example :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             text("Some text"),
             button("clickme", proc(ui: ^sgui.Ui, _: rawptr) { fmt.println("clicked!!!") }),
             radio_button("radio button"),
-            collapsable_section("Collapsable Section",
+            header("Collapsable Section",
                 text("some hidden text"),
             ),
             attr = {

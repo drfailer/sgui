@@ -101,8 +101,8 @@ side_pannel_widget :: proc() -> (widget: ^sgui.Widget) {
             radio_button("radio button 2", on_click = proc(ui: ^sgui.Ui, checked: bool, _: rawptr) {
                 fmt.println("radio button clicked, status = {}", checked);
             }),
-            collapsable_section(
-                "Collapsable Section",
+            header(
+                "Header",
                 text("- point 1"),
                 text("- point 2"),
                 text("- point 3"),
@@ -155,7 +155,7 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
             },
         }
     )
-    header := hbox(
+    header_w := hbox(
         sgui.left(menu_btn),
         sgui.center(title),
         attr = {
@@ -204,7 +204,7 @@ main_layer :: proc(ui: ^sgui.Ui) -> ^sgui.Widget {
         {.Bottom, .HCenter}
     )
     return vbox(
-        header,
+        header_w,
         content,
         footer,
     )

@@ -4,21 +4,23 @@ import ".."
 import "../gla"
 import sdl "vendor:sdl3"
 
+// TODO: this should be named header
+
 COLLAPSABLE_SECTION_SYMBOL_PADDING :: 5
 COLLAPSABLE_SECTION_SYMBOL_SIZE :: 9
 
-CollapsableSectionStyle :: struct {
+HeaderStyle :: struct {
     // TODO
     content_padding: Padding,
     // symbol_size???
     // hover_color???
 }
 
-CollapsableSectionAttributes :: struct {
-    style: CollapsableSectionStyle,
+HeaderAttributes :: struct {
+    style: HeaderStyle,
 }
 
-CollapsableSection :: struct {
+Header :: struct {
     using widget: sgui.Widget,
     label: ^Text,
     content: ^Box,
@@ -26,18 +28,18 @@ CollapsableSection :: struct {
     state: sgui.WidgetMouseState,
 }
 
-collapsable_section :: proc(
+header :: proc(
     label: string,
     content: ..^sgui.Widget,
-    attr := CollapsableSectionAttributes{},
+    attr := HeaderAttributes{},
 ) -> ^sgui.Widget {
-    collapsable_section_w := new(CollapsableSection)
-    collapsable_section_w^ = CollapsableSection{
-        init = collapsable_section_init,
-        fini = collapsable_section_fini,
-        draw = collapsable_section_draw,
-        align = collapsable_section_align,
-        resize = collapsable_section_resize,
+    header_w := new(Header)
+    header_w^ = Header{
+        init = header_init,
+        fini = header_fini,
+        draw = header_draw,
+        align = header_align,
+        resize = header_resize,
         label = cast(^Text)text(label),
         content = cast(^Box)vbox(
             ..content,
@@ -46,12 +48,12 @@ collapsable_section :: proc(
             },
         ),
     }
-    return collapsable_section_w
+    return header_w
 }
 
-collapsable_section_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
+header_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
     if event.button != sdl.BUTTON_LEFT || !sgui.widget_is_hovered(widget, event.x, event.y) do return false
-    self := cast(^CollapsableSection)widget
+    self := cast(^Header)widget
 
     if event.down {
         self.state = .Clicked
@@ -63,23 +65,23 @@ collapsable_section_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.Mous
     return true
 }
 
-collapsable_section_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
-    self := cast(^CollapsableSection)widget
+header_init :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui, parent: ^sgui.Widget) {
+    self := cast(^Header)widget
     self.label->init(ui, parent)
     self.content->init(ui, parent)
     self.w = self.label.w + 2 * COLLAPSABLE_SECTION_SYMBOL_PADDING + COLLAPSABLE_SECTION_SYMBOL_SIZE
     self.h = self.label.h
 
-    sgui.add_event_handler(ui, self, collapsable_section_mouse_handler)
+    sgui.add_event_handler(ui, self, header_mouse_handler)
 }
 
-collapsable_section_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
-    self := cast(^CollapsableSection)widget
+header_fini :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+    self := cast(^Header)widget
     self.content->fini(ui)
 }
 
-collapsable_section_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
-    self := cast(^CollapsableSection)widget
+header_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
+    self := cast(^Header)widget
     symbol_x := self.x + self.label.w + COLLAPSABLE_SECTION_SYMBOL_PADDING
     symbol_y := self.y + self.label.h / 2
 
@@ -102,8 +104,8 @@ collapsable_section_draw :: proc(widget: ^sgui.Widget, ui: ^sgui.Ui) {
     }
 }
 
-collapsable_section_align :: proc(widget: ^sgui.Widget, x, y: f32) {
-    self := cast(^CollapsableSection)widget
+header_align :: proc(widget: ^sgui.Widget, x, y: f32) {
+    self := cast(^Header)widget
     self.x = x // TODO: spacing???
     self.y = y
     sgui.widget_align(self.label, x, y)
@@ -112,8 +114,8 @@ collapsable_section_align :: proc(widget: ^sgui.Widget, x, y: f32) {
     }
 }
 
-collapsable_section_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
-    self := cast(^CollapsableSection)widget
+header_resize :: proc(widget: ^sgui.Widget, w, h: f32) {
+    self := cast(^Header)widget
 
     header_w := self.label.w + 2 * COLLAPSABLE_SECTION_SYMBOL_PADDING + COLLAPSABLE_SECTION_SYMBOL_SIZE
     if self.opened {
