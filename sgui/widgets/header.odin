@@ -47,8 +47,8 @@ header :: proc(
 }
 
 header_mouse_handler :: proc(widget: ^sgui.Widget, event: sgui.MouseClickEvent, ui: ^sgui.Ui) -> bool {
-    if event.button != sdl.BUTTON_LEFT || !sgui.widget_is_hovered(widget, event.x, event.y) do return false
     self := cast(^Header)widget
+    if event.button != sdl.BUTTON_LEFT || !sgui.mouse_on_region_ui(ui, self.x, self.y, self.w, self.label.h) do return false
 
     if event.down {
         self.state = .Clicked
